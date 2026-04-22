@@ -1,0 +1,1855 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>實況野球風格 MLB & CPBL 遊戲 - 終極完全版</title>
+    <style>
+        * {
+            margin: 0; padding: 0; box-sizing: border-box;
+            touch-action: none; -webkit-tap-highlight-color: transparent;
+        }
+        body {
+            background: radial-gradient(ellipse at center, #0d1f35 0%, #040c16 100%);
+            display: flex; justify-content: center; align-items: center;
+            min-height: 100vh; min-height: -webkit-fill-available;
+            font-family: "Microsoft JhengHei", "Noto Sans TC", "Meiryo", Arial, sans-serif;
+            overflow: hidden; user-select: none; -webkit-user-select: none;
+        }
+        canvas {
+            display: block; cursor: crosshair;
+            box-shadow: 0 0 0 2px rgba(0,200,100,0.15), 0 0 50px rgba(0,140,60,0.2), 0 0 100px rgba(0,0,0,0.95);
+        }
+        #mobile-overlay {
+            position: fixed; bottom: 0; left: 50%; transform: translateX(-50%);
+            width: min(800px, 100vw); padding: 8px 20px max(16px, env(safe-area-inset-bottom));
+            display: flex; justify-content: space-between; align-items: flex-end;
+            pointer-events: none; z-index: 100;
+        }
+        .mbtn {
+            pointer-events: auto; border: none; border-radius: 50%; cursor: pointer;
+            display: none; flex-direction: column; align-items: center; justify-content: center;
+            font-family: "Microsoft JhengHei", Arial, sans-serif; font-weight: bold;
+            color: white; text-shadow: 0 1px 4px rgba(0,0,0,0.9); line-height: 1.3;
+            transition: transform 0.1s; -webkit-tap-highlight-color: transparent;
+            -webkit-user-select: none; user-select: none;
+        }
+        .mbtn:active { transform: scale(0.86); }
+        #sim-btn {
+            width: 72px; height: 72px; font-size: 12px;
+            background: radial-gradient(circle at 40% 35%, #4466aa, #1a2a44);
+            box-shadow: 0 4px 18px rgba(0,0,0,0.7), 0 0 14px rgba(68,100,200,0.4);
+            border: 2px solid rgba(100,150,255,0.7);
+        }
+        #swing-btn {
+            width: 96px; height: 96px; font-size: 16px;
+            background: radial-gradient(circle at 40% 35%, #ff9922, #cc4400);
+            box-shadow: 0 4px 24px rgba(0,0,0,0.7), 0 0 22px rgba(255,120,0,0.55);
+            border: 3px solid rgba(255,210,80,0.9);
+        }
+        #change-btn {
+            width: 72px; height: 72px; font-size: 12px;
+            background: radial-gradient(circle at 40% 35%, #338844, #115522);
+            box-shadow: 0 4px 18px rgba(0,0,0,0.7), 0 0 14px rgba(50,200,80,0.4);
+            border: 2px solid rgba(80,220,100,0.7);
+        }
+        .mbtn.show { display: flex; }
+    </style>
+</head>
+
+<body>
+    <canvas id="c"></canvas>
+    <div id="mobile-overlay">
+        <button class="mbtn" id="sim-btn">⚡<br>自動</button>
+        <button class="mbtn" id="swing-btn">⚾<br>打擊!</button>
+        <button class="mbtn" id="change-btn">🔄<br>換人</button>
+    </div>
+    <script>
+        const canvas = document.getElementById('c');
+        const ctx = canvas.getContext('2d');
+        const W = 800, H = 600;
+
+        function resize() {
+            const s = Math.min(window.innerWidth / W, window.innerHeight / H);
+            canvas.style.width = W * s + 'px'; canvas.style.height = H * s + 'px';
+            canvas.width = W; canvas.height = H;
+        }
+        resize();
+        window.addEventListener('resize', resize);
+
+        function drawRoundRect(ctx, x, y, w, h, r) {
+            if (w < 2 * r) r = w / 2;
+            if (h < 2 * r) r = h / 2;
+            ctx.beginPath();
+            ctx.moveTo(x + r, y);
+            ctx.arcTo(x + w, y, x + w, y + h, r);
+            ctx.arcTo(x + w, y + h, x, y + h, r);
+            ctx.arcTo(x, y + h, x, y, r);
+            ctx.arcTo(x, y, x + w, y, r);
+            ctx.closePath();
+        }
+
+        // ── 擴充球種資料庫 ─────────────────────────
+        const PITCH_DICT = {
+            0: { name: '直球', mph: 98, bx: 0, by: 0, col: '#FF6666', dir: 'center' },
+            1: { name: '二縫線', mph: 94, bx: -3, by: 5, col: '#FFAA44', dir: 0.15 },
+            2: { name: '滑球', mph: 86, bx: -10, by: 3, col: '#44FF88', dir: Math.PI },
+            3: { name: '橫掃滑', mph: 84, bx: -18, by: 2, col: '#00FFCC', dir: Math.PI * 0.8 },
+            4: { name: '曲球', mph: 79, bx: -6, by: 16, col: '#4488FF', dir: Math.PI * 0.6 },
+            5: { name: '變速球', mph: 84, bx: -6, by: 12, col: '#FF44FF', dir: Math.PI * 0.35 },
+            6: { name: '指叉球', mph: 89, bx: 0, by: 22, col: '#FFFF44', dir: Math.PI * 0.5 },
+            7: { name: '卡特球', mph: 92, bx: -4, by: 2, col: '#AAFF00', dir: -Math.PI * 0.85 },
+            8: { name: '伸卡球', mph: 93, bx: 8, by: 8, col: '#FF88AA', dir: Math.PI * 0.2 },
+        };
+
+        // ── MLB + 中職 6 隊陣容資料庫 ─────────────────────────
+        const ROSTERS = {
+            'LAD': {
+                pitchers: [
+                    { name: '大谷 翔平', vel: 100, ctrl: 85, stm: 90, era: '2.85', k: 18, pitches: [{ id: 0, lv: 7 }, { id: 3, lv: 7 }, { id: 6, lv: 6 }, { id: 4, lv: 4 }, { id: 7, lv: 5 }, { id: 8, lv: 4 }] },
+                    { name: '山本 由伸', vel: 96, ctrl: 92, stm: 85, era: '3.12', k: 14, pitches: [{ id: 0, lv: 6 }, { id: 6, lv: 7 }, { id: 4, lv: 6 }, { id: 7, lv: 5 }, { id: 2, lv: 4 }] },
+                    { name: 'Glasnow', vel: 98, ctrl: 82, stm: 88, era: '3.10', k: 16, pitches: [{ id: 0, lv: 7 }, { id: 2, lv: 6 }, { id: 4, lv: 5 }] },
+                    { name: 'Phillips', vel: 95, ctrl: 88, stm: 60, era: '2.15', k: 20, pitches: [{ id: 0, lv: 6 }, { id: 3, lv: 7 }, { id: 5, lv: 5 }] }
+                ],
+                batters: [
+                    { name: '大谷 翔平', bats: 'L', avg: '.310', hr: 44, rbi: 98, con: 85, pow: 98, spd: 85 },
+                    { name: 'Betts', bats: 'R', avg: '.305', hr: 39, rbi: 85, con: 92, pow: 85, spd: 82 },
+                    { name: 'Freeman', bats: 'L', avg: '.325', hr: 25, rbi: 102, con: 95, pow: 82, spd: 65 },
+                    { name: 'T.Hernandez', bats: 'R', avg: '.265', hr: 28, rbi: 80, con: 75, pow: 88, spd: 70 },
+                    { name: 'Muncy', bats: 'L', avg: '.230', hr: 35, rbi: 88, con: 70, pow: 86, spd: 50 },
+                    { name: 'Smith', bats: 'R', avg: '.275', hr: 20, rbi: 75, con: 82, pow: 80, spd: 60 },
+                    { name: 'Lux', bats: 'L', avg: '.260', hr: 12, rbi: 50, con: 78, pow: 65, spd: 80 },
+                    { name: 'Heyward', bats: 'L', avg: '.255', hr: 15, rbi: 45, con: 72, pow: 70, spd: 70 },
+                    { name: 'K.Hernandez', bats: 'R', avg: '.240', hr: 18, rbi: 55, con: 74, pow: 75, spd: 65 },
+                    { name: 'Rojas', bats: 'R', avg: '.280', hr: 8, rbi: 40, con: 80, pow: 50, spd: 65 },
+                    { name: 'Taylor', bats: 'R', avg: '.220', hr: 15, rbi: 45, con: 65, pow: 75, spd: 75 },
+                    { name: 'Pages', bats: 'R', avg: '.250', hr: 18, rbi: 50, con: 70, pow: 78, spd: 68 }
+                ]
+            },
+            'NYY': {
+                pitchers: [
+                    { name: 'G. Cole', vel: 98, ctrl: 90, stm: 95, era: '2.63', k: 21, pitches: [{ id: 0, lv: 7 }, { id: 2, lv: 6 }, { id: 4, lv: 6 }, { id: 5, lv: 4 }, { id: 7, lv: 5 }] },
+                    { name: 'C. Rodon', vel: 97, ctrl: 75, stm: 85, era: '3.85', k: 12, pitches: [{ id: 0, lv: 6 }, { id: 2, lv: 7 }, { id: 5, lv: 3 }] },
+                    { name: 'Stroman', vel: 93, ctrl: 85, stm: 85, era: '3.50', k: 10, pitches: [{ id: 1, lv: 7 }, { id: 2, lv: 6 }, { id: 5, lv: 5 }] },
+                    { name: 'Holmes', vel: 97, ctrl: 80, stm: 65, era: '2.50', k: 15, pitches: [{ id: 1, lv: 7 }, { id: 2, lv: 6 }, { id: 6, lv: 4 }] }
+                ],
+                batters: [
+                    { name: 'Torres', bats: 'R', avg: '.270', hr: 25, rbi: 68, con: 78, pow: 75, spd: 65 },
+                    { name: 'J. Soto', bats: 'L', avg: '.295', hr: 35, rbi: 105, con: 94, pow: 90, spd: 65 },
+                    { name: 'A. Judge', bats: 'R', avg: '.288', hr: 55, rbi: 120, con: 88, pow: 99, spd: 70 },
+                    { name: 'Stanton', bats: 'R', avg: '.235', hr: 38, rbi: 85, con: 65, pow: 95, spd: 40 },
+                    { name: 'Rizzo', bats: 'L', avg: '.250', hr: 22, rbi: 60, con: 75, pow: 78, spd: 45 },
+                    { name: 'Volpe', bats: 'R', avg: '.245', hr: 18, rbi: 55, con: 76, pow: 68, spd: 85 },
+                    { name: 'Verdugo', bats: 'L', avg: '.275', hr: 15, rbi: 50, con: 82, pow: 65, spd: 60 },
+                    { name: 'Trevino', bats: 'R', avg: '.240', hr: 10, rbi: 40, con: 74, pow: 60, spd: 40 },
+                    { name: 'LeMahieu', bats: 'R', avg: '.265', hr: 12, rbi: 45, con: 80, pow: 55, spd: 50 },
+                    { name: 'Cabrera', bats: 'S', avg: '.240', hr: 12, rbi: 40, con: 72, pow: 65, spd: 70 },
+                    { name: 'Grisham', bats: 'L', avg: '.210', hr: 20, rbi: 45, con: 60, pow: 80, spd: 75 },
+                    { name: 'Wells', bats: 'L', avg: '.250', hr: 15, rbi: 48, con: 75, pow: 75, spd: 45 }
+                ]
+            },
+            'BRO': { // 中信兄弟
+                pitchers: [
+                    { name: '德保拉', vel: 94, ctrl: 88, stm: 90, era: '2.50', k: 18, pitches: [{ id: 0, lv: 6 }, { id: 4, lv: 6 }, { id: 5, lv: 5 }] },
+                    { name: '猛登', vel: 95, ctrl: 82, stm: 85, era: '2.80', k: 15, pitches: [{ id: 0, lv: 6 }, { id: 2, lv: 5 }, { id: 4, lv: 5 }] },
+                    { name: '呂彥青', vel: 92, ctrl: 85, stm: 60, era: '2.10', k: 12, pitches: [{ id: 0, lv: 5 }, { id: 2, lv: 6 }, { id: 5, lv: 6 }] }
+                ],
+                batters: [
+                    { name: '王威晨', bats: 'L', avg: '.310', hr: 2, rbi: 40, con: 88, pow: 55, spd: 85 },
+                    { name: '岳政華', bats: 'L', avg: '.280', hr: 10, rbi: 55, con: 75, pow: 75, spd: 82 },
+                    { name: '陳俊秀', bats: 'R', avg: '.290', hr: 12, rbi: 65, con: 82, pow: 80, spd: 55 },
+                    { name: '許基宏', bats: 'L', avg: '.275', hr: 15, rbi: 70, con: 78, pow: 85, spd: 50 },
+                    { name: '曾頌恩', bats: 'R', avg: '.285', hr: 18, rbi: 75, con: 80, pow: 88, spd: 75 },
+                    { name: '江坤宇', bats: 'R', avg: '.320', hr: 5, rbi: 50, con: 90, pow: 60, spd: 80 },
+                    { name: '岳東華', bats: 'L', avg: '.250', hr: 8, rbi: 45, con: 70, pow: 70, spd: 70 },
+                    { name: '高宇杰', bats: 'R', avg: '.240', hr: 4, rbi: 35, con: 68, pow: 65, spd: 65 },
+                    { name: '宋晟睿', bats: 'R', avg: '.295', hr: 10, rbi: 45, con: 80, pow: 80, spd: 85 },
+                    { name: '詹子賢', bats: 'R', avg: '.280', hr: 12, rbi: 60, con: 78, pow: 82, spd: 60 },
+                    { name: '張志豪', bats: 'L', avg: '.260', hr: 15, rbi: 50, con: 72, pow: 85, spd: 70 },
+                    { name: '蘇緯達', bats: 'L', avg: '.270', hr: 6, rbi: 30, con: 75, pow: 75, spd: 50 }
+                ]
+            },
+            'UNI': { // 統一獅
+                pitchers: [
+                    { name: '古林睿煬', vel: 98, ctrl: 85, stm: 85, era: '2.60', k: 18, pitches: [{ id: 0, lv: 7 }, { id: 4, lv: 5 }, { id: 6, lv: 5 }] },
+                    { name: '布雷克', vel: 92, ctrl: 90, stm: 88, era: '2.80', k: 14, pitches: [{ id: 0, lv: 5 }, { id: 6, lv: 6 }, { id: 2, lv: 5 }] },
+                    { name: '裴瑞茲', vel: 97, ctrl: 80, stm: 60, era: '2.40', k: 16, pitches: [{ id: 0, lv: 7 }, { id: 2, lv: 6 }, { id: 8, lv: 5 }] }
+                ],
+                batters: [
+                    { name: '邱智呈', bats: 'L', avg: '.325', hr: 5, rbi: 45, con: 88, pow: 65, spd: 82 },
+                    { name: '陳傑憲', bats: 'L', avg: '.340', hr: 8, rbi: 60, con: 95, pow: 68, spd: 85 },
+                    { name: '蘇智傑', bats: 'L', avg: '.285', hr: 15, rbi: 75, con: 80, pow: 85, spd: 70 },
+                    { name: '林安可', bats: 'L', avg: '.270', hr: 22, rbi: 85, con: 75, pow: 90, spd: 65 },
+                    { name: '潘傑楷', bats: 'L', avg: '.290', hr: 10, rbi: 65, con: 80, pow: 75, spd: 68 },
+                    { name: '陳鏞基', bats: 'R', avg: '.300', hr: 10, rbi: 60, con: 85, pow: 75, spd: 55 },
+                    { name: '林靖凱', bats: 'R', avg: '.260', hr: 5, rbi: 40, con: 75, pow: 60, spd: 85 },
+                    { name: '林岱安', bats: 'R', avg: '.250', hr: 4, rbi: 35, con: 70, pow: 65, spd: 50 },
+                    { name: '林佳緯', bats: 'L', avg: '.270', hr: 6, rbi: 30, con: 75, pow: 70, spd: 80 },
+                    { name: '胡金龍', bats: 'R', avg: '.280', hr: 8, rbi: 40, con: 80, pow: 72, spd: 50 },
+                    { name: '林益全', bats: 'R', avg: '.290', hr: 8, rbi: 45, con: 82, pow: 75, spd: 45 },
+                    { name: '許哲晏', bats: 'R', avg: '.240', hr: 2, rbi: 20, con: 65, pow: 55, spd: 60 }
+                ]
+            },
+            'RAK': { // 樂天桃猿
+                pitchers: [
+                    { name: '威能帝', vel: 95, ctrl: 88, stm: 88, era: '2.70', k: 15, pitches: [{ id: 0, lv: 6 }, { id: 2, lv: 6 }, { id: 5, lv: 5 }] },
+                    { name: '黃子鵬', vel: 88, ctrl: 92, stm: 90, era: '2.90', k: 10, pitches: [{ id: 1, lv: 6 }, { id: 2, lv: 6 }, { id: 8, lv: 7 }] },
+                    { name: '陳柏豪', vel: 94, ctrl: 82, stm: 60, era: '2.20', k: 14, pitches: [{ id: 0, lv: 6 }, { id: 2, lv: 6 }, { id: 6, lv: 5 }] }
+                ],
+                batters: [
+                    { name: '陳晨威', bats: 'L', avg: '.300', hr: 5, rbi: 45, con: 85, pow: 65, spd: 95 },
+                    { name: '林立', bats: 'R', avg: '.330', hr: 15, rbi: 75, con: 90, pow: 80, spd: 88 },
+                    { name: '梁家榮', bats: 'L', avg: '.310', hr: 10, rbi: 65, con: 85, pow: 75, spd: 65 },
+                    { name: '廖健富', bats: 'L', avg: '.315', hr: 18, rbi: 80, con: 88, pow: 85, spd: 50 },
+                    { name: '朱育賢', bats: 'L', avg: '.280', hr: 22, rbi: 85, con: 78, pow: 92, spd: 55 },
+                    { name: '林承飛', bats: 'R', avg: '.265', hr: 12, rbi: 55, con: 75, pow: 78, spd: 65 },
+                    { name: '林智平', bats: 'R', avg: '.290', hr: 5, rbi: 40, con: 82, pow: 65, spd: 60 },
+                    { name: '嚴宏鈞', bats: 'L', avg: '.230', hr: 4, rbi: 30, con: 65, pow: 65, spd: 55 },
+                    { name: '馬傑森', bats: 'R', avg: '.260', hr: 3, rbi: 35, con: 75, pow: 60, spd: 75 },
+                    { name: '林政華', bats: 'L', avg: '.270', hr: 2, rbi: 25, con: 76, pow: 55, spd: 82 },
+                    { name: '成晉', bats: 'L', avg: '.280', hr: 3, rbi: 30, con: 78, pow: 60, spd: 85 },
+                    { name: '宋嘉翔', bats: 'L', avg: '.250', hr: 5, rbi: 25, con: 70, pow: 70, spd: 60 }
+                ]
+            },
+            'FUB': { // 富邦悍將
+                pitchers: [
+                    { name: '羅戈', vel: 95, ctrl: 85, stm: 85, era: '2.50', k: 16, pitches: [{ id: 0, lv: 6 }, { id: 4, lv: 6 }, { id: 5, lv: 5 }] },
+                    { name: '江少慶', vel: 96, ctrl: 82, stm: 80, era: '3.20', k: 14, pitches: [{ id: 0, lv: 6 }, { id: 2, lv: 6 }, { id: 6, lv: 5 }] },
+                    { name: '富藍戈', vel: 99, ctrl: 80, stm: 60, era: '2.10', k: 18, pitches: [{ id: 0, lv: 7 }, { id: 2, lv: 6 }, { id: 5, lv: 5 }] }
+                ],
+                batters: [
+                    { name: '李宗賢', bats: 'R', avg: '.290', hr: 5, rbi: 45, con: 82, pow: 65, spd: 85 },
+                    { name: '王正棠', bats: 'L', avg: '.300', hr: 8, rbi: 55, con: 85, pow: 72, spd: 75 },
+                    { name: '張育成', bats: 'R', avg: '.285', hr: 20, rbi: 75, con: 88, pow: 90, spd: 80 },
+                    { name: '范國宸', bats: 'R', avg: '.270', hr: 12, rbi: 65, con: 78, pow: 80, spd: 60 },
+                    { name: '申皓瑋', bats: 'R', avg: '.260', hr: 15, rbi: 60, con: 75, pow: 78, spd: 75 },
+                    { name: '董子恩', bats: 'R', avg: '.295', hr: 6, rbi: 45, con: 82, pow: 68, spd: 65 },
+                    { name: '戴培峰', bats: 'L', avg: '.265', hr: 8, rbi: 40, con: 75, pow: 70, spd: 60 },
+                    { name: '池恩齊', bats: 'L', avg: '.250', hr: 2, rbi: 30, con: 72, pow: 55, spd: 85 },
+                    { name: '高國麟', bats: 'R', avg: '.260', hr: 10, rbi: 45, con: 74, pow: 75, spd: 60 },
+                    { name: '張進德', bats: 'L', avg: '.270', hr: 10, rbi: 50, con: 78, pow: 78, spd: 45 },
+                    { name: '蔣智賢', bats: 'L', avg: '.280', hr: 8, rbi: 45, con: 80, pow: 80, spd: 40 },
+                    { name: '辛元旭', bats: 'R', avg: '.265', hr: 5, rbi: 35, con: 75, pow: 65, spd: 65 }
+                ]
+            },
+            'WEI': { // 味全龍
+                pitchers: [
+                    { name: '鋼龍', vel: 93, ctrl: 90, stm: 88, era: '2.70', k: 14, pitches: [{ id: 0, lv: 5 }, { id: 4, lv: 7 }, { id: 5, lv: 6 }] },
+                    { name: '徐若熙', vel: 98, ctrl: 85, stm: 75, era: '2.30', k: 19, pitches: [{ id: 0, lv: 7 }, { id: 2, lv: 6 }, { id: 5, lv: 6 }] },
+                    { name: '陳冠偉', vel: 94, ctrl: 82, stm: 60, era: '2.15', k: 16, pitches: [{ id: 0, lv: 6 }, { id: 6, lv: 7 }, { id: 2, lv: 5 }] }
+                ],
+                batters: [
+                    { name: '李凱威', bats: 'L', avg: '.310', hr: 6, rbi: 50, con: 88, pow: 68, spd: 80 },
+                    { name: '郭天信', bats: 'L', avg: '.290', hr: 5, rbi: 45, con: 85, pow: 65, spd: 88 },
+                    { name: '吉力吉撈', bats: 'R', avg: '.280', hr: 25, rbi: 85, con: 78, pow: 92, spd: 55 },
+                    { name: '劉基鴻', bats: 'R', avg: '.275', hr: 18, rbi: 75, con: 78, pow: 85, spd: 65 },
+                    { name: '張政禹', bats: 'L', avg: '.265', hr: 3, rbi: 35, con: 76, pow: 60, spd: 85 },
+                    { name: '林孝程', bats: 'L', avg: '.260', hr: 4, rbi: 40, con: 74, pow: 62, spd: 90 },
+                    { name: '蔣少宏', bats: 'R', avg: '.250', hr: 6, rbi: 35, con: 70, pow: 68, spd: 60 },
+                    { name: '瑪仕革斯', bats: 'R', avg: '.270', hr: 12, rbi: 50, con: 75, pow: 82, spd: 50 },
+                    { name: '拿莫伊漾', bats: 'R', avg: '.255', hr: 10, rbi: 45, con: 72, pow: 75, spd: 70 },
+                    { name: '陳思仲', bats: 'R', avg: '.240', hr: 2, rbi: 20, con: 68, pow: 55, spd: 75 },
+                    { name: '林智勝', bats: 'R', avg: '.280', hr: 8, rbi: 40, con: 80, pow: 80, spd: 40 },
+                    { name: '陳品捷', bats: 'L', avg: '.260', hr: 5, rbi: 30, con: 75, pow: 65, spd: 75 }
+                ]
+            },
+            'TSG': { // 台鋼雄鷹
+                pitchers: [
+                    { name: '哈瑪星', vel: 94, ctrl: 88, stm: 85, era: '2.80', k: 13, pitches: [{ id: 0, lv: 6 }, { id: 2, lv: 5 }, { id: 5, lv: 6 }] },
+                    { name: '陳柏清', vel: 92, ctrl: 82, stm: 80, era: '3.50', k: 11, pitches: [{ id: 0, lv: 5 }, { id: 2, lv: 6 }, { id: 5, lv: 5 }] },
+                    { name: '雷公', vel: 98, ctrl: 75, stm: 60, era: '2.90', k: 16, pitches: [{ id: 0, lv: 7 }, { id: 2, lv: 6 }, { id: 6, lv: 5 }] }
+                ],
+                batters: [
+                    { name: '曾子祐', bats: 'R', avg: '.290', hr: 5, rbi: 45, con: 85, pow: 65, spd: 80 },
+                    { name: '陳文杰', bats: 'L', avg: '.275', hr: 8, rbi: 55, con: 78, pow: 70, spd: 82 },
+                    { name: '魔鷹', bats: 'L', avg: '.300', hr: 30, rbi: 95, con: 85, pow: 95, spd: 55 },
+                    { name: '吳念庭', bats: 'L', avg: '.285', hr: 10, rbi: 60, con: 82, pow: 75, spd: 65 },
+                    { name: '王博玄', bats: 'L', avg: '.280', hr: 4, rbi: 40, con: 80, pow: 62, spd: 75 },
+                    { name: '杜家明', bats: 'R', avg: '.270', hr: 6, rbi: 45, con: 76, pow: 68, spd: 60 },
+                    { name: '張肇元', bats: 'R', avg: '.260', hr: 5, rbi: 35, con: 74, pow: 65, spd: 55 },
+                    { name: '藍寅倫', bats: 'L', avg: '.265', hr: 8, rbi: 40, con: 75, pow: 72, spd: 65 },
+                    { name: '林家鋐', bats: 'L', avg: '.250', hr: 2, rbi: 25, con: 70, pow: 55, spd: 80 },
+                    { name: '郭阜林', bats: 'L', avg: '.260', hr: 10, rbi: 45, con: 72, pow: 78, spd: 50 },
+                    { name: '吳明鴻', bats: 'R', avg: '.240', hr: 2, rbi: 20, con: 68, pow: 55, spd: 60 },
+                    { name: '王柏融', bats: 'L', avg: '.275', hr: 12, rbi: 55, con: 78, pow: 82, spd: 60 }
+                ]
+            }
+        };
+
+        const TEAMS = [
+            { abbr: '道奇', name: 'Dodgers', c1: '#005A9C', c2: '#EF3E42', c3: '#FFF', roster: ROSTERS['LAD'] },
+            { abbr: '洋基', name: 'Yankees', c1: '#003087', c2: '#C4CED4', c3: '#FFF', roster: ROSTERS['NYY'] },
+            { abbr: '兄弟', name: 'Brothers', c1: '#FFD700', c2: '#000080', c3: '#FFF', roster: ROSTERS['BRO'] },
+            { abbr: '統一', name: 'Lions', c1: '#FF6600', c2: '#006600', c3: '#FFF', roster: ROSTERS['UNI'] },
+            { abbr: '樂天', name: 'Monkeys', c1: '#990000', c2: '#FFFFFF', c3: '#000', roster: ROSTERS['RAK'] },
+            { abbr: '富邦', name: 'Guardians', c1: '#003366', c2: '#FFFFFF', c3: '#000', roster: ROSTERS['FUB'] },
+            { abbr: '味全', name: 'Dragons', c1: '#DD0000', c2: '#FFFFFF', c3: '#000', roster: ROSTERS['WEI'] },
+            { abbr: '台鋼', name: 'Hawks', c1: '#006633', c2: '#FFCC00', c3: '#FFF', roster: ROSTERS['TSG'] }
+        ];
+
+        const SCR = { TITLE: 0, SELECT: 1, GAME: 2, OVER: 3 };
+        const PH = { INNING_START: 0, PITCH_SELECT: 1, AIM: 2, POWER_GAUGE: 3, WAIT_PITCH: 4, BALL_FLIGHT: 5, BATTING: 6, RESULT: 7, SUB_MENU: 8 };
+        let G = {};
+
+        const SZcx = W / 2, SZcy = 400, SZw = 110, SZh = 110;
+
+        function initState() {
+            G = {
+                scr: SCR.TITLE, selStep: 0, cursor: 0, awayIdx: 0, homeIdx: 1,
+                inning: 1, half: 0, outs: 0, balls: 0, strikes: 0,
+                score: [0, 0], runners: [false, false, false], innScores: [[], []],
+                playerSide: 1, difficulty: 1,
+                batOrder: [0, 0],
+
+                lineups: [[0, 1, 2, 3, 4, 5, 6, 7, 8], [0, 1, 2, 3, 4, 5, 6, 7, 8]],
+                pitchers: [0, 0],
+                usedBatters: [[], []],
+                usedPitchers: [[], []],
+                subType: '', prevPhase: 0,
+
+                phase: PH.INNING_START, phaseTimer: 0,
+                pitchChoice: 0, hoveredPitchChoice: -1, aimX: 0, aimY: 0, gaugePos: 0, gaugeDir: 1, gaugePower: 0,
+                ballActive: false, ballFrame: 0, ballDur: 0,
+                ballSX: 0, ballSY: 0, ballEX: 0, ballEY: 0, ballCX: 0, ballCY: 0,
+                aiSwing: false, aiSwingFrame: 0, aiCX: 0, aiCY: 0,
+                curX: 0, curY: 0, phPos: 0, phSpeed: 0.022, phPressed: false, phValue: 0, phDone: false,
+                resText: '', resSub: '', resCol: '#fff', resTimer: 0, resEndHalf: false, _continueAtBat: false,
+                frame: 0, readyPulse: 0, batSwingFrame: -999, hitEffectFrame: -999, hitType: ''
+            };
+        }
+        initState();
+
+        const keys = {}, jp = {};
+        let mouseX = W / 2, mouseY = H / 2, isMouseJustPressed = false;
+
+        document.addEventListener('keydown', e => { if (!keys[e.code]) jp[e.code] = true; keys[e.code] = true; });
+        document.addEventListener('keyup', e => { keys[e.code] = false; delete jp[e.code]; });
+
+        function updatePointerPos(clientX, clientY) {
+            const rect = canvas.getBoundingClientRect();
+            mouseX = (clientX - rect.left) * (canvas.width / rect.width);
+            mouseY = (clientY - rect.top) * (canvas.height / rect.height);
+        }
+
+        canvas.addEventListener('mousemove', e => updatePointerPos(e.clientX, e.clientY));
+        canvas.addEventListener('mousedown', e => { updatePointerPos(e.clientX, e.clientY); isMouseJustPressed = true; });
+        canvas.addEventListener('touchstart', e => {
+            e.preventDefault();
+            if (e.touches.length > 0) {
+                updatePointerPos(e.touches[0].clientX, e.touches[0].clientY);
+                isMouseJustPressed = true;
+            }
+        }, { passive: false });
+        canvas.addEventListener('touchmove', e => {
+            e.preventDefault();
+            if (e.touches.length > 0) updatePointerPos(e.touches[0].clientX, e.touches[0].clientY);
+        }, { passive: false });
+
+        function J(c) { return jp[c]; }
+        function clearInput() { for (let k in jp) delete jp[k]; isMouseJustPressed = false; }
+        function actionTrigger() { return J('KeyZ') || J('Space') || isMouseJustPressed; }
+
+        const rnd = (a, b) => Math.random() * (b - a) + a;
+        const rndI = (a, b) => Math.floor(rnd(a, b + 1));
+        const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+        const lerp = (a, b, t) => a + (b - a) * t;
+
+        function drawRetroPanel(x, y, w, h, col1, col2) {
+            ctx.fillStyle = col1;
+            ctx.fillRect(x, y, w, h);
+            ctx.strokeStyle = col2;
+            ctx.lineWidth = 2;
+            ctx.strokeRect(x + 2, y + 2, w - 4, h - 4);
+        }
+
+        function drawGlossyPill(x, y, w, h, hover, label, baseCol = '#002266', topCol = '#1144AA', textCol = '#FFF') {
+            ctx.save();
+            const grad = ctx.createLinearGradient(x, y, x, y + h);
+            grad.addColorStop(0, hover ? '#4488FF' : topCol);
+            grad.addColorStop(1, hover ? '#0033AA' : baseCol);
+
+            ctx.fillStyle = grad;
+            ctx.shadowColor = 'rgba(0,0,0,0.5)';
+            ctx.shadowBlur = 4;
+            ctx.shadowOffsetY = 2;
+
+            drawRoundRect(ctx, x, y, w, h, h / 2); ctx.fill();
+
+            ctx.shadowBlur = 0; ctx.shadowOffsetY = 0;
+            ctx.strokeStyle = '#FFFFFF'; ctx.lineWidth = 2; ctx.stroke();
+
+            ctx.strokeStyle = 'rgba(255,255,255,0.4)'; ctx.lineWidth = 1;
+            drawRoundRect(ctx, x + 2, y + 2, w - 4, h - 4, (h - 4) / 2); ctx.stroke();
+
+            txt(label, x + w / 2, y + h / 2 + 6, 18, textCol, 'center', 'Microsoft JhengHei', false);
+            ctx.restore();
+        }
+
+        function txt(s, x, y, sz, col, align = 'center', font = 'Microsoft JhengHei', stroke = true) {
+            ctx.font = `bold ${sz}px ${font}`; ctx.textAlign = align;
+            if (stroke) {
+                ctx.strokeStyle = '#000'; ctx.lineWidth = 3; ctx.lineJoin = "round";
+                ctx.strokeText(s, x, y);
+            }
+            ctx.fillStyle = col; ctx.fillText(s, x, y);
+        }
+
+        function playerBatting() { return G.half === G.playerSide; }
+        function batTeamInfo() { return TEAMS[G.half === 0 ? G.awayIdx : G.homeIdx]; }
+        function pitTeamInfo() { return TEAMS[G.half === 0 ? G.homeIdx : G.awayIdx]; }
+
+        function getBatter() { return batTeamInfo().roster.batters[G.lineups[G.half][G.batOrder[G.half]]]; }
+        function getPitcher() { return pitTeamInfo().roster.pitchers[G.pitchers[G.half === 0 ? 1 : 0]]; }
+
+        function startAtBat(isContinue = false) {
+            if (!isContinue) { G.balls = 0; G.strikes = 0; }
+            G.ballActive = false; G.batSwingFrame = -999;
+            if (playerBatting()) {
+                G.phase = PH.WAIT_PITCH; G.phaseTimer = 80; G.curX = 0; G.curY = 0;
+                G.phPos = 0; G.phPressed = false; G.phDone = false; G.phValue = 0;
+            } else {
+                G.phase = PH.PITCH_SELECT; G.pitchChoice = 0; G.aimX = 0; G.aimY = 0; G.gaugePos = 0; G.gaugeDir = 1;
+            }
+        }
+
+        function throwBall(controlPower) {
+            const pitcher = getPitcher();
+            const pitchObj = pitcher.pitches[G.pitchChoice];
+            const pDef = PITCH_DICT[pitchObj.id];
+            const speedMult = 0.7 + controlPower * 0.6;
+            const good = controlPower >= 0.60 && controlPower <= 0.90;
+            const over = controlPower > 0.90;
+
+            const cMod = (100 - pitcher.ctrl) / 20;
+            let devX = 0, devY = 0;
+            if (over) { devX = rnd(-15, 15) * cMod; devY = rnd(5, 15) * cMod; }
+            else if (good) { devX = rnd(-3, 3) * cMod; devY = rnd(-3, 3) * cMod; }
+            else { devX = rnd(-10, 10) * cMod; devY = rnd(-6, 10) * cMod; }
+
+            G.ballActive = true; G.ballFrame = G.frame;
+            const baseMph = pDef.mph + (pitcher.vel - 90) / 2;
+            G.ballDur = Math.round((50 - (baseMph - 80) * 0.3) / speedMult);
+
+            G.ballSX = W / 2; G.ballSY = 230;
+            G.ballEX = SZcx + G.aimX * (SZw / 2) + devX; G.ballEY = SZcy + G.aimY * (SZh / 2) + devY;
+
+            const breakMult = pitchObj.lv * 0.45;
+            G.ballCX = pDef.bx * breakMult; G.ballCY = pDef.by * breakMult;
+
+            G._actualAimX = (G.ballEX - SZcx) / (SZw / 2);
+            G._actualAimY = (G.ballEY - SZcy) / (SZh / 2);
+
+            if (!playerBatting()) {
+                const batter = getBatter();
+                const inZone = Math.abs(G._actualAimX) <= 1 && Math.abs(G._actualAimY) <= 1;
+                const aiSwingMult = [0.45, 1.0, 1.45][G.difficulty];
+                const aiErrMult = [2.2, 1.0, 0.45][G.difficulty];
+                G.aiSwing = Math.random() < (inZone ? (0.50 + batter.con / 200) * aiSwingMult : 0.12 * aiSwingMult);
+                G.aiCX = G._actualAimX + rnd(-0.3, 0.3) * (100 - batter.con) / 30 * aiErrMult;
+                G.aiCY = G._actualAimY + rnd(-0.3, 0.3) * (100 - batter.con) / 30 * aiErrMult;
+                G.aiSwingFrame = G.ballFrame + G.ballDur + rndI(-8, 8);
+                G.phase = PH.BALL_FLIGHT;
+            } else {
+                G.phase = PH.BATTING; G.phPos = 0; G.phPressed = false; G.phDone = false; G.phValue = 0;
+                const phMult = [0.55, 0.80, 1.20][G.difficulty];
+                G.phSpeed = (0.008 + speedMult * 0.005) * phMult;
+            }
+        }
+
+        function ballProgress() { return clamp((G.frame - G.ballFrame) / G.ballDur, 0, 1); }
+
+        function resolveSwing(phVal, cx, cy) {
+            G.batSwingFrame = G.frame;
+            const timingDist = Math.abs(phVal - 0.50);
+            const timingScore = clamp(1 - timingDist * 1.4, 0, 1);
+            const batter = getBatter();
+            const contactDist = Math.sqrt(Math.pow(cx - G._actualAimX, 2) + Math.pow(cy - G._actualAimY, 2));
+            const contactScore = clamp(1 - contactDist / (1.3 + (batter.con / 100) * 0.9), 0, 1);
+            const qualAdj = playerBatting() ? [0.20, 0, -0.20][G.difficulty] : [-0.20, 0, 0.20][G.difficulty];
+            const quality = clamp(timingScore * 0.55 + contactScore * 0.45 + qualAdj, 0, 1);
+
+            let type;
+            if (quality > 0.78) {
+                const hrChance = (batter.pow - 50) / 80;
+                type = Math.random() < hrChance ? 'HR' : (Math.random() < 0.5 ? '2B' : '1B');
+            } else if (quality > 0.55) {
+                type = Math.random() < 0.72 ? '1B' : 'OUT';
+            } else if (quality > 0.32) {
+                type = Math.random() < 0.42 ? '1B' : 'OUT';
+            } else if (quality > 0.14) {
+                type = Math.random() < 0.18 ? '1B' : 'OUT';
+            } else {
+                type = 'K';
+            }
+
+            if (type === 'HR' || type === '1B' || type === '2B') {
+                G.hitEffectFrame = G.frame;
+                G.hitType = type;
+            }
+
+            applyPlay(type);
+        }
+
+        function resolveNoSwing() {
+            const inZone = Math.abs(G._actualAimX) <= 1 && Math.abs(G._actualAimY) <= 1;
+            if (inZone) {
+                G.strikes++;
+                if (G.strikes >= 3) { applyPlay('K'); } else { showRes('好球！', 'STRIKE', '#FF8844', false); G._continueAtBat = true; }
+            } else {
+                G.balls++;
+                if (G.balls >= 4) { applyPlay('BB'); } else { showRes('壞球', 'BALL', '#4488FF', false); G._continueAtBat = true; }
+            }
+        }
+
+        function applyPlay(type) {
+            G._continueAtBat = false; const bat = G.half;
+            let text = '', sub = '', col = '#fff', endHalf = false;
+            if (type === 'HR') {
+                const runs = 1 + G.runners.filter(r => r).length;
+                G.score[bat] += runs; G.runners = [false, false, false];
+                text = '全壘打！'; sub = 'HOMERUN'; col = '#FFD700';
+            } else if (type === '2B') {
+                if (G.runners[2]) G.score[bat]++; if (G.runners[1]) G.score[bat]++;
+                G.runners = [false, true, G.runners[0] && Math.random() < 0.5]; text = '二壘安打！'; sub = '2 BASE HIT'; col = '#44FF88';
+            } else if (type === '1B') {
+                if (G.runners[2]) G.score[bat]++;
+                const r2 = G.runners[1] && Math.random() < 0.5; const r1 = G.runners[0];
+                G.runners = [true, r1, r2]; text = '安打！'; sub = 'HIT'; col = '#44FF88';
+            } else if (type === 'BB') {
+                if (G.runners[0] && G.runners[1] && G.runners[2]) G.score[bat]++;
+                if (G.runners[0] && G.runners[1]) G.runners[2] = true;
+                if (G.runners[0]) G.runners[1] = true;
+                G.runners[0] = true; text = '四壞球保送！'; sub = 'WALK'; col = '#4488FF';
+            } else if (type === 'OUT') {
+                G.outs++; text = '出局！'; sub = 'OUT'; col = '#FF6644'; if (G.outs >= 3) endHalf = true;
+            } else if (type === 'K') {
+                G.outs++; text = '三振出局！'; sub = 'STRIKEOUT'; col = '#FF4444'; if (G.outs >= 3) endHalf = true;
+            }
+            if (type !== 'BB' && !G._continueAtBat) G.batOrder[G.half] = (G.batOrder[G.half] + 1) % 9;
+            showRes(text, sub, col, endHalf);
+        }
+
+        function showRes(text, sub, col, endHalf) {
+            G.phase = PH.RESULT; G.resText = text; G.resSub = sub; G.resCol = col;
+            G.resTimer = 95; G.resEndHalf = endHalf;
+        }
+
+        function endHalf() {
+            const p0 = G.innScores[0].reduce((a, b) => a + b, 0), p1 = G.innScores[1].reduce((a, b) => a + b, 0);
+            if (G.half === 0) G.innScores[0].push(G.score[0] - p0); else G.innScores[1].push(G.score[1] - p1);
+            if (G.inning >= 9 && G.half === 1 && G.score[1] > G.score[0]) { G.scr = SCR.OVER; return; }
+            G.half++; if (G.half > 1) { G.half = 0; G.inning++; }
+            if (G.inning > 9) { G.scr = SCR.OVER; return; }
+            G.runners = [false, false, false]; G.outs = 0; G.balls = 0; G.strikes = 0;
+            G.phase = PH.INNING_START; G.phaseTimer = 100;
+        }
+
+        function simAtBat(batter, pitcher) {
+            const diffPitchAdj = [0.7, 1.0, 1.3][G.difficulty];
+            const ctrl = clamp(pitcher.ctrl / 100 * diffPitchAdj, 0.3, 1.0);
+            const vel = clamp(pitcher.vel / 100 * diffPitchAdj, 0.5, 1.0);
+            const con = batter.con / 100;
+            const pow = batter.pow / 100;
+            const kProb = clamp(0.28 * ctrl - 0.08 * con, 0.06, 0.45);
+            const bbProb = clamp(0.12 - 0.09 * ctrl, 0.02, 0.14);
+            const hrProb = clamp(0.06 * pow - 0.02 * vel, 0.01, 0.14);
+            const hitProb = clamp(0.22 * con - 0.06 * vel, 0.05, 0.28);
+            const r = Math.random();
+            if (r < kProb) return 'K';
+            if (r < kProb + bbProb) return 'BB';
+            if (r < kProb + bbProb + hrProb) return 'HR';
+            if (r < kProb + bbProb + hrProb + hitProb * 0.28) return '2B';
+            if (r < kProb + bbProb + hrProb + hitProb) return '1B';
+            return 'OUT';
+        }
+
+        function simulateHalf() {
+            const pitcher = getPitcher();
+            let outs = G.outs, runners = [...G.runners], score = 0, atBats = 0;
+            while (outs < 3 && atBats < 27) {
+                const batIdx = (G.batOrder[G.half] + atBats) % 9;
+                const batter = batTeamInfo().roster.batters[G.lineups[G.half][batIdx]];
+                const result = simAtBat(batter, pitcher);
+                atBats++;
+                if (result === 'K' || result === 'OUT') {
+                    outs++;
+                } else if (result === 'BB') {
+                    if (runners[0] && runners[1] && runners[2]) score++;
+                    if (runners[0] && runners[1]) runners[2] = true;
+                    if (runners[0]) runners[1] = true;
+                    runners[0] = true;
+                } else if (result === '1B') {
+                    if (runners[2]) score++;
+                    const r2 = runners[1] && Math.random() < 0.5; const r1 = runners[0];
+                    runners = [true, r1, r2];
+                } else if (result === '2B') {
+                    if (runners[2]) score++; if (runners[1]) score++;
+                    runners = [false, true, runners[0] && Math.random() < 0.5];
+                } else if (result === 'HR') {
+                    score += 1 + runners.filter(r => r).length; runners = [false, false, false];
+                }
+            }
+            G.score[G.half] += score;
+            G.runners = runners;
+            G.outs = 3;
+            G.batOrder[G.half] = (G.batOrder[G.half] + atBats) % 9;
+            const scoreText = score > 0 ? `得 ${score} 分！` : '零封！';
+            showRes(`自動模擬 ${G.inning}局${G.half === 0 ? '上' : '下'}`, scoreText, score > 0 ? '#44FF88' : '#AAAAAA', true);
+        }
+
+        function update() {
+            G.frame++;
+            if (G.scr === SCR.TITLE) { if (actionTrigger()) { G.scr = SCR.SELECT; G.selStep = 0; G.cursor = 0; } clearInput(); return; }
+
+            if (G.scr === SCR.SELECT) {
+                if (isMouseJustPressed) {
+                    if (G.selStep <= 1) {
+                        const cols = 4;
+                        const btnW = 150, btnH = 80, spacingX = 20, spacingY = 20;
+                        const totalW = cols * btnW + (cols - 1) * spacingX;
+                        const startX = W / 2 - totalW / 2;
+                        const startY = 180;
+
+                        TEAMS.forEach((t, i) => {
+                            const c = i % cols;
+                            const r = Math.floor(i / cols);
+                            const x = startX + c * (btnW + spacingX);
+                            const y = startY + r * (btnH + spacingY);
+
+                            if (mouseX >= x && mouseX <= x + btnW && mouseY >= y && mouseY <= y + btnH) {
+                                G.cursor = i;
+                                if (G.selStep === 0) { G.awayIdx = G.cursor; G.selStep = 1; G.cursor = (G.cursor + 1) % TEAMS.length; }
+                                else if (G.cursor !== G.awayIdx) { G.homeIdx = G.cursor; G.selStep = 2; }
+                            }
+                        });
+                    } else if (G.selStep === 2) {
+                        const diffs = ['簡單', '普通', '困難'];
+                        diffs.forEach((_, di) => {
+                            const bx = W / 2 - 195 + di * 135, by = 400; // 移動按鈕位置避免重疊
+                            if (mouseX >= bx && mouseX <= bx + 120 && mouseY >= by && mouseY <= by + 70) {
+                                G.difficulty = di;
+                                G.inning = 1; G.half = 0; G.outs = 0; G.balls = 0; G.strikes = 0; G.score = [0, 0]; G.batOrder = [0, 0];
+
+                                G.lineups = [[0, 1, 2, 3, 4, 5, 6, 7, 8], [0, 1, 2, 3, 4, 5, 6, 7, 8]];
+                                G.pitchers = [0, 0];
+                                G.usedBatters = [Array(TEAMS[G.awayIdx].roster.batters.length).fill(false), Array(TEAMS[G.homeIdx].roster.batters.length).fill(false)];
+                                G.usedPitchers = [Array(TEAMS[G.awayIdx].roster.pitchers.length).fill(false), Array(TEAMS[G.homeIdx].roster.pitchers.length).fill(false)];
+
+                                for (let i = 0; i < 9; i++) { G.usedBatters[0][i] = true; G.usedBatters[1][i] = true; }
+                                G.usedPitchers[0][0] = true; G.usedPitchers[1][0] = true;
+
+                                G.scr = SCR.GAME; G.phase = PH.INNING_START; G.phaseTimer = 100; G.ballActive = false;
+                            }
+                        });
+                    }
+                }
+                clearInput(); return;
+            }
+
+            if (G.scr === SCR.OVER) { if (actionTrigger()) initState(); clearInput(); return; }
+
+            switch (G.phase) {
+                case PH.SUB_MENU:
+                    if (isMouseJustPressed) {
+                        const panelW = 440, panelH = 380;
+                        const px = W / 2 - panelW / 2, py = H / 2 - panelH / 2;
+
+                        const cHover = mouseX >= px + 120 && mouseX <= px + 320 && mouseY >= py + panelH - 60 && mouseY <= py + panelH - 20;
+                        if (cHover) {
+                            G.phase = G.prevPhase;
+                            break;
+                        }
+
+                        let teamIdx = G.subType === 'P' ? (G.half === 0 ? 1 : 0) : G.half;
+                        const roster = G.subType === 'P' ? TEAMS[teamIdx].roster.pitchers : TEAMS[teamIdx].roster.batters;
+                        let drawY = py + 70;
+
+                        for (let i = 0; i < roster.length; i++) {
+                            let isAvail = G.subType === 'P' ? (!G.usedPitchers[teamIdx][i] && G.pitchers[teamIdx] !== i) : !G.usedBatters[teamIdx][i];
+                            if (isAvail) {
+                                if (mouseX >= px + 20 && mouseX <= px + panelW - 20 && mouseY >= drawY && mouseY <= drawY + 50) {
+                                    if (G.subType === 'P') {
+                                        G.pitchers[teamIdx] = i;
+                                        G.usedPitchers[teamIdx][i] = true;
+                                    } else {
+                                        let curOrder = G.batOrder[teamIdx];
+                                        G.lineups[teamIdx][curOrder] = i;
+                                        G.usedBatters[teamIdx][i] = true;
+                                    }
+                                    G.phase = G.prevPhase;
+                                    break;
+                                }
+                                drawY += 60;
+                            }
+                        }
+                    }
+                    break;
+
+                case PH.INNING_START:
+                    G.phaseTimer--; if (G.phaseTimer <= 0) startAtBat(); break;
+
+                case PH.PITCH_SELECT: {
+                    const pitcher = getPitcher();
+                    const cx = W / 2, cy = 160;
+                    const dx = mouseX - cx, dy = mouseY - cy;
+                    const dist = Math.sqrt(dx * dx + dy * dy);
+                    let hovered = -1;
+
+                    if (dist < 120) {
+                        if (dist < 25) {
+                            hovered = pitcher.pitches.findIndex(p => PITCH_DICT[p.id].dir === 'center');
+                        } else {
+                            let mouseAngle = Math.atan2(dy, dx);
+                            let minDist = 999;
+                            pitcher.pitches.forEach((p, i) => {
+                                const pd = PITCH_DICT[p.id];
+                                if (pd.dir !== 'center') {
+                                    let adist = Math.abs(mouseAngle - pd.dir);
+                                    if (adist > Math.PI) adist = Math.PI * 2 - adist;
+                                    if (adist < Math.PI / 4 && adist < minDist) {
+                                        minDist = adist;
+                                        hovered = i;
+                                    }
+                                }
+                            });
+                        }
+                    }
+                    G.hoveredPitchChoice = hovered;
+
+                    if (isMouseJustPressed && !playerBatting()) {
+                        const sbx = 10, sby = H - 50;
+                        if (mouseX >= sbx && mouseX <= sbx + 120 && mouseY >= sby && mouseY <= sby + 38) {
+                            simulateHalf(); break;
+                        }
+
+                        const pbx = W - 130, pby = H - 50;
+                        if (mouseX >= pbx && mouseX <= pbx + 120 && mouseY >= pby && mouseY <= pby + 38) {
+                            G.subType = 'P'; G.prevPhase = G.phase; G.phase = PH.SUB_MENU; break;
+                        }
+
+                        if (hovered !== -1) {
+                            G.pitchChoice = hovered;
+                            G.phase = PH.AIM;
+                            break;
+                        }
+                    }
+                    break;
+                }
+                case PH.AIM: {
+                    G.aimX = clamp((mouseX - SZcx) / (SZw / 2), -1.3, 1.3);
+                    G.aimY = clamp((mouseY - SZcy) / (SZh / 2), -1.3, 1.3);
+                    if (actionTrigger()) { G.phase = PH.POWER_GAUGE; G.gaugePos = 0; G.gaugeDir = 1; }
+                    break;
+                }
+                case PH.POWER_GAUGE:
+                    G.gaugePos += G.gaugeDir * 0.025;
+                    if (G.gaugePos >= 1) { G.gaugePos = 1; G.gaugeDir = -1; }
+                    if (G.gaugePos <= 0) { G.gaugePos = 0; G.gaugeDir = 1; }
+                    if (actionTrigger()) { G.gaugePower = G.gaugePos; throwBall(G.gaugePower); }
+                    break;
+                case PH.WAIT_PITCH: {
+                    G.curX = clamp((mouseX - SZcx) / (SZw / 2), -1.5, 1.5);
+                    G.curY = clamp((mouseY - SZcy) / (SZh / 2), -1.5, 1.5);
+                    G.readyPulse = (G.readyPulse + 0.08) % (Math.PI * 2);
+
+                    if (playerBatting() && isMouseJustPressed) {
+                        const bbx = W - 130, bby = H - 50;
+                        if (mouseX >= bbx && mouseX <= bbx + 120 && mouseY >= bby && mouseY <= bby + 38) {
+                            G.subType = 'B'; G.prevPhase = G.phase; G.phase = PH.SUB_MENU; break;
+                        }
+                    }
+
+                    if (mouseY < H - 80 || !playerBatting()) {
+                        G.phaseTimer--;
+                    }
+
+                    if (G.phaseTimer <= 0) {
+                        G.pitchChoice = rndI(0, getPitcher().pitches.length - 1);
+                        G.aimX = rnd(-0.82, 0.82); G.aimY = rnd(-0.82, 0.82);
+                        G._actualAimX = G.aimX; G._actualAimY = G.aimY;
+                        throwBall(0.72 + rnd(-0.08, 0.08));
+                    }
+                    break;
+                }
+                case PH.BALL_FLIGHT: {
+                    const prog = ballProgress();
+                    if (G.aiSwing && G.frame >= G.aiSwingFrame) resolveSwing(0.50 + rnd(-0.12, 0.12), G.aiCX, G.aiCY);
+                    else if (prog >= 1) resolveNoSwing();
+                    break;
+                }
+                case PH.BATTING: {
+                    G.curX = clamp((mouseX - SZcx) / (SZw / 2), -1.5, 1.5);
+                    G.curY = clamp((mouseY - SZcy) / (SZh / 2), -1.5, 1.5);
+                    const prog = ballProgress();
+                    if (prog > 0.15 && !G.phDone) {
+                        G.phPos += G.phSpeed; if (G.phPos >= 1) { G.phPos = 1; G.phDone = true; }
+                    }
+                    if (actionTrigger() && !G.phPressed) {
+                        G.phPressed = true; G.phValue = G.phPos; resolveSwing(G.phValue, G.curX, G.curY);
+                    } else if (G.phDone && !G.phPressed) resolveNoSwing();
+                    break;
+                }
+                case PH.RESULT:
+                    G.resTimer--;
+                    if (G.resTimer <= 0) {
+                        if (G.resEndHalf) endHalf(); else if (G._continueAtBat) { G._continueAtBat = false; startAtBat(true); } else startAtBat();
+                    }
+                    break;
+            }
+            clearInput();
+        }
+
+        function render() {
+            ctx.clearRect(0, 0, W, H);
+            if (G.scr === SCR.TITLE) renderTitle();
+            else if (G.scr === SCR.SELECT) renderSelect();
+            else if (G.scr === SCR.GAME) renderGame();
+            else if (G.scr === SCR.OVER) renderOver();
+        }
+
+        function renderTitle() {
+            // Dark atmospheric stadium background
+            const bg = ctx.createRadialGradient(W/2, H*0.42, 20, W/2, H*0.42, W);
+            bg.addColorStop(0, '#0c2240'); bg.addColorStop(0.55, '#061528'); bg.addColorStop(1, '#020810');
+            ctx.fillStyle = bg; ctx.fillRect(0, 0, W, H);
+
+            // Subtle stadium grass glow at bottom
+            const grassGlow = ctx.createRadialGradient(W/2, H+30, 20, W/2, H+30, 350);
+            grassGlow.addColorStop(0, 'rgba(0,140,50,0.18)'); grassGlow.addColorStop(1, 'rgba(0,0,0,0)');
+            ctx.fillStyle = grassGlow; ctx.fillRect(0, H/2, W, H/2);
+
+            // Animated star sparkles
+            for (let i = 0; i < 90; i++) {
+                const px = (i * 197.3 + G.frame * 0.12) % W;
+                const py = (i * 83.7 + Math.sin(i) * 40) % (H * 0.78);
+                const alpha = (0.15 + 0.55 * Math.abs(Math.sin(G.frame * 0.055 + i * 0.9))) * 0.7;
+                const sz = 0.7 + (i % 4) * 0.55;
+                ctx.fillStyle = `rgba(210,235,255,${alpha})`;
+                ctx.beginPath(); ctx.arc(px, py, sz, 0, Math.PI*2); ctx.fill();
+            }
+
+            // Stadium arc lights suggestion
+            const lgGrad = ctx.createRadialGradient(W/2, H*0.28, 0, W/2, H*0.28, 280);
+            lgGrad.addColorStop(0, 'rgba(160,220,255,0.05)'); lgGrad.addColorStop(1, 'rgba(0,0,0,0)');
+            ctx.fillStyle = lgGrad; ctx.fillRect(0, 0, W, H);
+
+            // Title with green glow
+            ctx.save();
+            ctx.shadowColor = '#22ff88'; ctx.shadowBlur = 45;
+            ctx.font = 'bold 88px "Microsoft JhengHei"'; ctx.textAlign = 'center';
+            ctx.strokeStyle = 'rgba(0,40,15,0.95)'; ctx.lineWidth = 9; ctx.lineJoin = 'round';
+            ctx.strokeText('實況野球', W/2, H*0.35);
+            const titleGrad = ctx.createLinearGradient(W/2-170, H*0.27, W/2+170, H*0.35);
+            titleGrad.addColorStop(0, '#ffffff'); titleGrad.addColorStop(0.45, '#e0ffe8'); titleGrad.addColorStop(1, '#99ffcc');
+            ctx.fillStyle = titleGrad; ctx.fillText('實況野球', W/2, H*0.35);
+            ctx.restore();
+
+            // Subtitle with colour gradient
+            ctx.save();
+            const subGrad = ctx.createLinearGradient(W/2-190, 0, W/2+190, 0);
+            subGrad.addColorStop(0, '#ff8866'); subGrad.addColorStop(0.35, '#ffdd88');
+            subGrad.addColorStop(0.65, '#88ddff'); subGrad.addColorStop(1, '#cc88ff');
+            ctx.font = 'bold 30px Arial'; ctx.textAlign = 'center';
+            ctx.strokeStyle = '#000'; ctx.lineWidth = 5; ctx.lineJoin = 'round';
+            ctx.strokeText('CPBL × MLB EDITION', W/2, H*0.495);
+            ctx.fillStyle = subGrad; ctx.fillText('CPBL × MLB EDITION', W/2, H*0.495);
+            ctx.restore();
+
+            ctx.font = '13px Arial'; ctx.textAlign = 'center';
+            ctx.fillStyle = 'rgba(150,190,255,0.5)';
+            ctx.fillText('2024-25 SEASON  •  MLB & CPBL ROSTERS', W/2, H*0.575);
+
+            // Animated START button with pulse
+            const pulse = 0.94 + 0.06 * Math.sin(G.frame * 0.09);
+            const bW = 310, bH = 60;
+            ctx.save(); ctx.translate(W/2, H*0.72); ctx.scale(pulse, pulse);
+            ctx.shadowColor = 'rgba(0,220,80,0.65)'; ctx.shadowBlur = 28;
+            const btnGrad = ctx.createLinearGradient(-bW/2, -bH/2, -bW/2, bH/2);
+            btnGrad.addColorStop(0, '#18c050'); btnGrad.addColorStop(0.45, '#22e060'); btnGrad.addColorStop(1, '#0a8030');
+            ctx.fillStyle = btnGrad;
+            drawRoundRect(ctx, -bW/2, -bH/2, bW, bH, bH/2); ctx.fill();
+            ctx.shadowBlur = 0;
+            ctx.strokeStyle = 'rgba(255,255,255,0.88)'; ctx.lineWidth = 2.5;
+            drawRoundRect(ctx, -bW/2, -bH/2, bW, bH, bH/2); ctx.stroke();
+            ctx.strokeStyle = 'rgba(255,255,255,0.22)'; ctx.lineWidth = 1;
+            drawRoundRect(ctx, -bW/2+4, -bH/2+4, bW-8, bH*0.46, (bH*0.46)/2); ctx.stroke();
+            txt('▶  點擊畫面開始遊戲  ◀', 0, 9, 22, '#fff');
+            ctx.restore();
+
+            // Team row at bottom
+            ctx.save(); ctx.globalAlpha = 0.72;
+            const teamY = H*0.9;
+            TEAMS.forEach((t, i) => {
+                const tx = W/2 + (i - 3.5) * 92;
+                ctx.fillStyle = t.c1;
+                ctx.beginPath(); ctx.arc(tx, teamY-10, 6, 0, Math.PI*2); ctx.fill();
+                ctx.strokeStyle = 'rgba(255,255,255,0.5)'; ctx.lineWidth = 1; ctx.stroke();
+                ctx.font = 'bold 13px "Microsoft JhengHei"'; ctx.textAlign = 'center';
+                ctx.fillStyle = '#ddeeff'; ctx.fillText(t.abbr, tx, teamY+8);
+            });
+            ctx.restore();
+        }
+
+        function renderSelect() {
+            const bg = ctx.createLinearGradient(0, 0, 0, H);
+            bg.addColorStop(0, '#07141f'); bg.addColorStop(1, '#030c12');
+            ctx.fillStyle = bg; ctx.fillRect(0, 0, W, H);
+            // Decorative separator line
+            const hLine = ctx.createLinearGradient(0,0,W,0);
+            hLine.addColorStop(0,'transparent'); hLine.addColorStop(0.3,'rgba(0,210,100,0.45)');
+            hLine.addColorStop(0.7,'rgba(0,210,100,0.45)'); hLine.addColorStop(1,'transparent');
+            ctx.fillStyle = hLine; ctx.fillRect(0, 120, W, 1);
+
+            if (G.selStep === 2) {
+                // Difficulty screen
+                ctx.fillStyle = 'rgba(0,0,0,0.45)';
+                drawRoundRect(ctx, W/2-265, 22, 530, 68, 12); ctx.fill();
+                ctx.strokeStyle = 'rgba(255,255,255,0.15)'; ctx.lineWidth = 1;
+                drawRoundRect(ctx, W/2-265, 22, 530, 68, 12); ctx.stroke();
+                txt('選擇難易度', W/2, 66, 30, '#ffeeaa');
+
+                const aw = TEAMS[G.awayIdx], hw = TEAMS[G.homeIdx];
+                const mY = 195;
+                // Away panel
+                const awGrad = ctx.createLinearGradient(W/2-285, mY-32, W/2-285, mY+32);
+                awGrad.addColorStop(0, aw.c1+'bb'); awGrad.addColorStop(1, 'rgba(0,0,0,0.7)');
+                ctx.fillStyle = awGrad;
+                drawRoundRect(ctx, W/2-285, mY-34, 245, 68, 10); ctx.fill();
+                ctx.strokeStyle = aw.c1; ctx.lineWidth = 2;
+                drawRoundRect(ctx, W/2-285, mY-34, 245, 68, 10); ctx.stroke();
+                txt(aw.abbr, W/2-162, mY+10, 30, '#fff');
+                ctx.font='11px Arial'; ctx.textAlign='left'; ctx.fillStyle='rgba(255,255,255,0.65)';
+                ctx.fillText('客隊 (AWAY)', W/2-278, mY-18);
+                // Home panel
+                const hwGrad = ctx.createLinearGradient(W/2+40, mY-32, W/2+40, mY+32);
+                hwGrad.addColorStop(0, hw.c1+'bb'); hwGrad.addColorStop(1, 'rgba(0,0,0,0.7)');
+                ctx.fillStyle = hwGrad;
+                drawRoundRect(ctx, W/2+40, mY-34, 245, 68, 10); ctx.fill();
+                ctx.strokeStyle = hw.c1; ctx.lineWidth = 2;
+                drawRoundRect(ctx, W/2+40, mY-34, 245, 68, 10); ctx.stroke();
+                txt(hw.abbr, W/2+162, mY+10, 30, '#fff');
+                ctx.font='11px Arial'; ctx.textAlign='right'; ctx.fillStyle='rgba(255,255,255,0.65)';
+                ctx.fillText('主隊 (HOME) ← 你', W/2+278, mY-18);
+                // VS
+                ctx.save(); ctx.shadowColor='#ffcc00'; ctx.shadowBlur=18;
+                txt('VS', W/2, mY+10, 34, '#ffcc00'); ctx.restore();
+
+                const diffs = [
+                    {label:'簡單', sub:'EASY', col:'#44cc88', dk:'#1a5535'},
+                    {label:'普通', sub:'NORMAL', col:'#ffcc00', dk:'#554400'},
+                    {label:'困難', sub:'HARD', col:'#ff5533', dk:'#551111'}
+                ];
+                diffs.forEach((d, di) => {
+                    const bx = W/2-195+di*135, by=400, bw=120, bh=70;
+                    const hover = mouseX>=bx && mouseX<=bx+bw && mouseY>=by && mouseY<=by+bh;
+                    const bg2 = ctx.createLinearGradient(bx,by,bx,by+bh);
+                    bg2.addColorStop(0, hover ? d.col+'cc' : d.dk+'cc');
+                    bg2.addColorStop(1, d.dk+'88');
+                    ctx.fillStyle = bg2;
+                    drawRoundRect(ctx, bx, by, bw, bh, 10); ctx.fill();
+                    ctx.strokeStyle = hover ? '#fff' : d.col+'aa'; ctx.lineWidth = hover ? 2.5 : 1.5;
+                    drawRoundRect(ctx, bx, by, bw, bh, 10); ctx.stroke();
+                    txt(d.label, bx+bw/2, by+38, 24, hover?'#fff':d.col);
+                    ctx.font='10px Arial'; ctx.textAlign='center';
+                    ctx.fillStyle='rgba(255,255,255,0.5)'; ctx.fillText(d.sub, bx+bw/2, by+58);
+                });
+                txt('你將扮演主隊（後攻）進行打擊', W/2, H-28, 13, 'rgba(160,190,255,0.55)', 'center','Arial',false);
+                return;
+            }
+
+            // Team grid title
+            const titleText = G.selStep===0 ? '選擇客隊 (先攻)' : '選擇主隊 (後攻 · 你的隊伍)';
+            const titleCol = G.selStep===0 ? '#88ffee' : '#ffcc88';
+            ctx.fillStyle='rgba(0,0,0,0.55)';
+            drawRoundRect(ctx, W/2-245, 16, 490, 62, 10); ctx.fill();
+            txt(titleText, W/2, 56, 24, titleCol);
+
+            const cols = 4, btnW=150, btnH=80, spacingX=20, spacingY=20;
+            const totalW = cols*btnW+(cols-1)*spacingX;
+            const startX = W/2-totalW/2, startY = 140;
+
+            TEAMS.forEach((t, i) => {
+                const c=i%cols, r=Math.floor(i/cols);
+                const x=startX+c*(btnW+spacingX), y=startY+r*(btnH+spacingY);
+                const hover = mouseX>=x && mouseX<=x+btnW && mouseY>=y && mouseY<=y+btnH;
+                const isSelected = G.selStep===1 && i===G.awayIdx;
+
+                const cGrad = ctx.createLinearGradient(x,y,x,y+btnH);
+                if (isSelected) { cGrad.addColorStop(0,t.c1+'dd'); cGrad.addColorStop(1,t.c1+'44'); }
+                else if (hover) { cGrad.addColorStop(0,t.c1+'88'); cGrad.addColorStop(1,'rgba(0,0,0,0.75)'); }
+                else { cGrad.addColorStop(0,'rgba(15,30,50,0.92)'); cGrad.addColorStop(1,'rgba(4,12,22,0.96)'); }
+                ctx.fillStyle=cGrad;
+                drawRoundRect(ctx,x,y,btnW,btnH,8); ctx.fill();
+
+                ctx.shadowBlur = (isSelected||hover) ? 10 : 0;
+                ctx.shadowColor = t.c1;
+                ctx.strokeStyle = isSelected?'#fff':hover?t.c1:'rgba(80,120,160,0.35)';
+                ctx.lineWidth = isSelected?3:hover?2:1;
+                drawRoundRect(ctx,x,y,btnW,btnH,8); ctx.stroke();
+                ctx.shadowBlur=0;
+
+                // Color bar on left
+                const barGrad = ctx.createLinearGradient(x+5,y+8,x+5,y+btnH-8);
+                barGrad.addColorStop(0,t.c1); barGrad.addColorStop(1,t.c2||t.c1);
+                ctx.fillStyle=barGrad;
+                drawRoundRect(ctx,x+6,y+8,9,btnH-16,4); ctx.fill();
+
+                txt(t.abbr, x+btnW/2+9, y+btnH/2+10, 28, (hover||isSelected)?'#fff':'#cce8ff');
+                ctx.font='10px Arial'; ctx.textAlign='center';
+                ctx.fillStyle='rgba(160,200,255,0.45)'; ctx.fillText(t.name, x+btnW/2+9, y+btnH-9);
+
+                if (isSelected) {
+                    ctx.font='bold 10px Arial'; ctx.textAlign='center';
+                    ctx.fillStyle='#ffff88'; ctx.fillText('✓ 已選', x+btnW/2+9, y+15);
+                }
+            });
+            txt(G.selStep===0?'選擇挑戰的客隊球隊':'選擇您要操控的主隊球隊', W/2, H-25, 13, 'rgba(160,190,255,0.5)','center','Arial',false);
+        }
+
+        function renderGame() {
+            renderPowerProsField();
+            drawPawapuroPitcher();
+            drawPawapuroBatter();
+
+            if (!playerBatting()) renderPitchingZone();
+            else renderBattingZone();
+
+            if (G.ballActive) renderBall();
+            if (playerBatting() && (G.phase === PH.WAIT_PITCH || G.phase === PH.BATTING)) renderBatCursor();
+
+            renderHitEffect();
+            renderClassicUI();
+            renderPhaseUI();
+
+            if (G.phase === PH.SUB_MENU) renderSubMenu();
+
+            renderResult();
+        }
+
+        function renderSubMenu() {
+            ctx.fillStyle = 'rgba(0,0,0,0.7)'; ctx.fillRect(0, 0, W, H);
+
+            const panelW = 440, panelH = 380;
+            const px = W / 2 - panelW / 2, py = H / 2 - panelH / 2;
+            drawRetroPanel(px, py, panelW, panelH, '#002244', '#FFF');
+
+            let teamIdx, isPitcher = G.subType === 'P';
+            let availableCount = 0;
+
+            if (isPitcher) {
+                teamIdx = G.half === 0 ? 1 : 0;
+                txt('更換後援投手 (Bullpen)', W / 2, py + 40, 24, '#FFD700');
+                const roster = TEAMS[teamIdx].roster.pitchers;
+                let drawY = py + 70;
+                roster.forEach((p, i) => {
+                    if (!G.usedPitchers[teamIdx][i] && G.pitchers[teamIdx] !== i) {
+                        availableCount++;
+                        const btnHover = mouseX >= px + 20 && mouseX <= px + panelW - 20 && mouseY >= drawY && mouseY <= drawY + 50;
+                        drawGlossyPill(px + 20, drawY, panelW - 40, 50, btnHover, `${p.name} (防 ${p.era} / 體力 ${p.stm})`, '#113355', '#225588');
+                        drawY += 60;
+                    }
+                });
+            } else {
+                teamIdx = G.half;
+                txt('啟用代打 (Pinch Hitter)', W / 2, py + 40, 24, '#FFD700');
+                const roster = TEAMS[teamIdx].roster.batters;
+                let drawY = py + 70;
+                roster.forEach((b, i) => {
+                    if (!G.usedBatters[teamIdx][i]) {
+                        availableCount++;
+                        const btnHover = mouseX >= px + 20 && mouseX <= px + panelW - 20 && mouseY >= drawY && mouseY <= drawY + 50;
+                        drawGlossyPill(px + 20, drawY, panelW - 40, 50, btnHover, `${b.name} (率 ${b.avg} / 力量 ${b.pow})`, '#113355', '#225588');
+                        drawY += 60;
+                    }
+                });
+            }
+
+            if (availableCount === 0) {
+                txt('已無可用球員', W / 2, py + 150, 20, '#AAA');
+            }
+
+            const cHover = mouseX >= px + 120 && mouseX <= px + 320 && mouseY >= py + panelH - 60 && mouseY <= py + panelH - 20;
+            drawGlossyPill(px + 120, py + panelH - 60, 200, 40, cHover, '取消 (Cancel)', '#551111', '#882222');
+        }
+
+        function renderPowerProsField() {
+            // Base outfield grass
+            ctx.fillStyle = '#1a7f35'; ctx.fillRect(0, 0, W, H);
+
+            // Alternating horizontal grass stripes (TV broadcast style)
+            for (let sy = 0; sy < H; sy += 28) {
+                ctx.fillStyle = sy % 56 === 0 ? 'rgba(0,0,0,0.07)' : 'rgba(255,255,255,0.03)';
+                ctx.fillRect(0, sy, W, 28);
+            }
+
+            // Warning track at very top (sandy strip)
+            const wt = ctx.createLinearGradient(0,0,0,32);
+            wt.addColorStop(0,'rgba(130,85,45,0.5)'); wt.addColorStop(1,'rgba(130,85,45,0)');
+            ctx.fillStyle=wt; ctx.fillRect(0,0,W,32);
+
+            // Outfield wall hint (distant)
+            ctx.fillStyle='rgba(60,40,20,0.12)'; ctx.fillRect(0,0,W,6);
+
+            // Main infield dirt (wide trapezoid)
+            ctx.fillStyle = '#b87e52';
+            ctx.beginPath();
+            ctx.moveTo(W/2, 545); ctx.lineTo(W/2+420, 148); ctx.lineTo(W/2-420, 148);
+            ctx.fill();
+
+            // Infield grass diamond (covers centre of dirt)
+            ctx.fillStyle = '#1e8838';
+            ctx.beginPath();
+            ctx.moveTo(W/2, 462); ctx.lineTo(W/2+258, 148); ctx.lineTo(W/2-258, 148);
+            ctx.fill();
+
+            // Grass stripe inside infield
+            for (let i=0;i<6;i++) {
+                const f=i/6, f2=(i+1)/6;
+                const y1=148+(462-148)*f, y2=148+(462-148)*f2;
+                const x1=258*f, x2=258*f2;
+                ctx.fillStyle = i%2===0?'rgba(0,0,0,0.05)':'rgba(255,255,255,0.02)';
+                ctx.beginPath();
+                ctx.moveTo(W/2-x1,y1); ctx.lineTo(W/2+x1,y1);
+                ctx.lineTo(W/2+x2,y2); ctx.lineTo(W/2-x2,y2);
+                ctx.fill();
+            }
+
+            // Foul lines
+            ctx.strokeStyle='rgba(255,255,255,0.75)'; ctx.lineWidth=2;
+            ctx.beginPath(); ctx.moveTo(W/2,545); ctx.lineTo(W/2+420,148); ctx.stroke();
+            ctx.beginPath(); ctx.moveTo(W/2,545); ctx.lineTo(W/2-420,148); ctx.stroke();
+
+            // Base path arc
+            ctx.strokeStyle='rgba(255,255,255,0.12)'; ctx.lineWidth=1;
+            ctx.beginPath(); ctx.arc(W/2,540,235,-Math.PI*0.72,-Math.PI*0.28); ctx.stroke();
+
+            // Pitcher's mound (slightly raised look)
+            const moundGrad = ctx.createRadialGradient(W/2,228,0,W/2,235,85);
+            moundGrad.addColorStop(0,'#cc8f5e'); moundGrad.addColorStop(1,'#b07040');
+            ctx.fillStyle=moundGrad;
+            ctx.beginPath(); ctx.ellipse(W/2,232,82,27,0,0,Math.PI*2); ctx.fill();
+            ctx.strokeStyle='rgba(0,0,0,0.2)'; ctx.lineWidth=1;
+            ctx.beginPath(); ctx.ellipse(W/2,232,82,27,0,0,Math.PI*2); ctx.stroke();
+            // Rubber
+            ctx.fillStyle='#fff'; ctx.fillRect(W/2-16,229,32,5);
+
+            // Home plate dirt area
+            const hpGrad = ctx.createRadialGradient(W/2,540,20,W/2,540,190);
+            hpGrad.addColorStop(0,'#c48855'); hpGrad.addColorStop(1,'rgba(180,120,70,0)');
+            ctx.fillStyle=hpGrad;
+            ctx.beginPath(); ctx.ellipse(W/2,540,185,52,0,0,Math.PI*2); ctx.fill();
+
+            // Batter's boxes
+            ctx.strokeStyle='rgba(255,255,255,0.82)'; ctx.lineWidth=2;
+            ctx.strokeRect(W/2-142,492,80,66); ctx.strokeRect(W/2+62,492,80,66);
+
+            // Home plate (pentagon)
+            ctx.fillStyle='#fff';
+            ctx.beginPath();
+            ctx.moveTo(W/2-18,513); ctx.lineTo(W/2+18,513);
+            ctx.lineTo(W/2+18,524); ctx.lineTo(W/2,538); ctx.lineTo(W/2-18,524);
+            ctx.fill();
+        }
+
+        function drawPawapuroPitcher() {
+            const team = pitTeamInfo();
+            const px = W / 2, py = 210;
+            ctx.save(); ctx.translate(px, py);
+            ctx.scale(0.5, 0.5);
+
+            ctx.fillStyle = 'rgba(0,0,0,0.3)'; ctx.beginPath(); ctx.ellipse(0, 35, 25, 8, 0, 0, Math.PI * 2); ctx.fill();
+
+            const f = G.ballActive ? (G.frame - G.ballFrame) : 999;
+            const inWindup = (G.phase === PH.POWER_GAUGE || G.phase === PH.AIM) && !playerBatting();
+            const wu = inWindup ? G.gaugePos : 0;
+
+            function head() {
+                ctx.fillStyle = '#FFE0BD'; ctx.beginPath(); ctx.arc(0, -30, 24, 0, Math.PI * 2); ctx.fill();
+                ctx.fillStyle = '#000';
+                ctx.beginPath(); ctx.ellipse(-9, -32, 3.5, 6, 0, 0, Math.PI * 2); ctx.fill();
+                ctx.beginPath(); ctx.ellipse(9, -32, 3.5, 6, 0, 0, Math.PI * 2); ctx.fill();
+                ctx.fillStyle = team.c1; ctx.beginPath(); ctx.arc(0, -32, 25, Math.PI, 0); ctx.fill();
+                ctx.fillRect(-25, -32, 50, 6);
+            }
+            function body() {
+                ctx.fillStyle = '#FFF';
+                ctx.beginPath(); ctx.ellipse(0, 5, 24, 26, 0, 0, Math.PI * 2); ctx.fill();
+                ctx.strokeStyle = team.c1; ctx.lineWidth = 3;
+                ctx.beginPath(); ctx.moveTo(-12, -15); ctx.lineTo(-12, 25); ctx.stroke();
+                ctx.beginPath(); ctx.moveTo(12, -15); ctx.lineTo(12, 25); ctx.stroke();
+                ctx.beginPath(); ctx.arc(0, -15, 10, 0, Math.PI); ctx.stroke();
+            }
+            function hand(tx, ty) {
+                ctx.fillStyle = '#FFF'; ctx.beginPath(); ctx.arc(tx, ty, 9, 0, Math.PI * 2); ctx.fill();
+                ctx.strokeStyle = '#CCC'; ctx.lineWidth = 1; ctx.stroke();
+            }
+            function glove(tx, ty) {
+                ctx.fillStyle = '#8B4513'; ctx.beginPath(); ctx.arc(tx, ty, 12, 0, Math.PI * 2); ctx.fill();
+            }
+            function foot(tx, ty, isFront) {
+                ctx.save(); ctx.translate(tx, ty);
+                ctx.fillStyle = team.c2;
+                ctx.beginPath(); ctx.ellipse(0, 0, 16, 9, 0, 0, Math.PI * 2); ctx.fill();
+                ctx.fillStyle = '#FFF';
+                ctx.beginPath(); ctx.ellipse(isFront ? 10 : -10, 0, 6, 7, 0, 0, Math.PI * 2); ctx.fill();
+                ctx.restore();
+            }
+
+            if (f < 25) {
+                const t = clamp(f / 10, 0, 1);
+                ctx.rotate(-0.2 + t * 0.1);
+                foot(-15, 30, false); foot(25, 25, true);
+                body(); head();
+                hand(25 - t * 10, -10 + t * 30);
+                glove(-20, 10);
+            } else if (wu > 0.02) {
+                ctx.rotate(wu * 0.1);
+                foot(15, 30, true);
+                const liftY = 30 - wu * 20;
+                foot(-15, liftY, false);
+                body(); head();
+                hand(25, -20);
+                glove(-25, 0);
+            } else {
+                foot(-12, 30, false); foot(12, 30, true);
+                body(); head();
+                hand(18, 5);
+                glove(-18, 5);
+            }
+            ctx.restore();
+        }
+
+        function drawPawapuroBatter() {
+            const batter = getBatter();
+            const team = batTeamInfo();
+            const isLeft = batter.bats === 'L';
+            const bx = W / 2 + (isLeft ? 90 : -90);
+            const by = 500;
+
+            const swingTime = G.frame - G.batSwingFrame;
+            const isSwinging = (playerBatting() && G.phPressed && swingTime >= 0) ||
+                (!playerBatting() && G.aiSwing && G.frame >= G.aiSwingFrame - 10);
+            const swingProg = isSwinging ? Math.min(swingTime / 15, 1) : 0;
+
+            ctx.save(); ctx.translate(bx, by);
+            if (isLeft) ctx.scale(-1, 1);
+            ctx.scale(1.4, 1.4);
+
+            ctx.fillStyle = 'rgba(0,0,0,0.4)'; ctx.beginPath(); ctx.ellipse(0, 35, 25, 8, 0, 0, Math.PI * 2); ctx.fill();
+
+            if (isSwinging) {
+                ctx.translate(swingProg * 8, 0);
+                ctx.rotate(swingProg * 0.2);
+            }
+
+            function foot(tx, ty, isFront) {
+                ctx.save(); ctx.translate(tx, ty);
+                ctx.fillStyle = team.c2;
+                ctx.beginPath(); ctx.ellipse(0, 0, 14, 8, 0, 0, Math.PI * 2); ctx.fill();
+                ctx.fillStyle = '#FFF';
+                ctx.beginPath(); ctx.ellipse(isFront ? 8 : -8, 0, 5, 6, 0, 0, Math.PI * 2); ctx.fill();
+                ctx.restore();
+            }
+            foot(-15, 30, false); foot(15, 30, true);
+
+            ctx.fillStyle = '#FFF';
+            ctx.beginPath(); ctx.ellipse(0, 10, 22, 22, 0, 0, Math.PI * 2); ctx.fill();
+            ctx.strokeStyle = team.c1; ctx.lineWidth = 3;
+            ctx.beginPath(); ctx.moveTo(-10, -10); ctx.lineTo(-10, 25); ctx.stroke();
+            ctx.beginPath(); ctx.moveTo(10, -10); ctx.lineTo(10, 25); ctx.stroke();
+
+            ctx.fillStyle = '#8B4513';
+
+            if (isSwinging) {
+                const batAngle = lerp(Math.PI / 6, -Math.PI / 0.9, swingProg);
+                ctx.save();
+                ctx.translate(15, 0);
+                ctx.rotate(batAngle);
+                ctx.fillRect(-5, -60, 10, 75);
+                ctx.fillStyle = '#5c2e0b'; ctx.beginPath(); ctx.arc(0, 15, 6, 0, Math.PI * 2); ctx.fill();
+                ctx.restore();
+
+                ctx.fillStyle = '#FFF';
+                ctx.beginPath(); ctx.arc(15 + Math.cos(batAngle) * 5, Math.sin(batAngle) * 5, 8, 0, Math.PI * 2); ctx.fill();
+                ctx.strokeStyle = '#CCC'; ctx.stroke();
+            } else {
+                ctx.save();
+                ctx.translate(20, 5);
+                ctx.rotate(Math.PI / 8);
+                ctx.fillRect(-5, -70, 10, 80);
+                ctx.restore();
+
+                ctx.fillStyle = '#FFF';
+                ctx.beginPath(); ctx.arc(20, 5, 8, 0, Math.PI * 2); ctx.fill();
+                ctx.strokeStyle = '#CCC'; ctx.stroke();
+            }
+
+            ctx.fillStyle = '#FFDAB9'; ctx.beginPath(); ctx.arc(0, -20, 22, 0, Math.PI * 2); ctx.fill();
+
+            ctx.fillStyle = '#000';
+            ctx.beginPath(); ctx.ellipse(12, -22, 3, 5, 0, 0, Math.PI * 2); ctx.fill();
+
+            ctx.fillStyle = team.c1;
+            ctx.beginPath(); ctx.arc(0, -24, 23, -Math.PI * 0.1, Math.PI * 1.1, true); ctx.fill();
+            ctx.beginPath(); ctx.ellipse(12, -24, 18, 5, Math.PI / 8, 0, Math.PI * 2); ctx.fill();
+            ctx.beginPath(); ctx.arc(-5, -20, 10, 0, Math.PI * 2); ctx.fill();
+
+            ctx.fillStyle = 'rgba(255,255,255,0.3)';
+            ctx.beginPath(); ctx.ellipse(-8, -35, 10, 5, -Math.PI / 6, 0, Math.PI * 2); ctx.fill();
+
+            ctx.restore();
+        }
+
+        function renderHitEffect() {
+            const eTime = G.frame - G.hitEffectFrame;
+            if (eTime >= 0 && eTime < 25) {
+                const cx = SZcx + G.curX * (SZw / 2);
+                const cy = SZcy + G.curY * (SZh / 2);
+
+                ctx.save();
+                ctx.translate(cx, cy);
+
+                const alpha = 1 - eTime / 25;
+                ctx.globalAlpha = alpha;
+
+                if (G.hitType === 'HR' && eTime < 5) {
+                    ctx.fillStyle = `rgba(255, 255, 255, ${0.5 - eTime * 0.1})`;
+                    ctx.fillRect(-W, -H, W * 2, H * 2);
+                }
+
+                ctx.fillStyle = G.hitType === 'HR' ? '#FFD700' : '#FFF';
+                for (let i = 0; i < 8; i++) {
+                    const angle = (Math.PI * 2 / 8) * i + eTime * 0.1;
+                    const dist = eTime * 8;
+                    ctx.beginPath();
+                    ctx.arc(Math.cos(angle) * dist, Math.sin(angle) * dist, 6 + (G.hitType === 'HR' ? 4 : 0), 0, Math.PI * 2);
+                    ctx.fill();
+                }
+
+                ctx.strokeStyle = G.hitType === 'HR' ? '#FF4444' : '#00FFFF';
+                ctx.lineWidth = 5;
+                ctx.beginPath(); ctx.arc(0, 0, eTime * 12, 0, Math.PI * 2); ctx.stroke();
+
+                ctx.restore();
+            }
+        }
+
+        function renderClassicUI() {
+            const aw = TEAMS[G.awayIdx], hw = TEAMS[G.homeIdx];
+            const batTeam = G.half===0?aw:hw, pitTeam = G.half===0?hw:aw;
+            const batter = getBatter(), pitcher = getPitcher();
+
+            // ── Score / SBO Panel (top-left) ──────────────────
+            const spX=8, spY=8, spW=205, spH=148;
+            const spBg = ctx.createLinearGradient(spX,spY,spX,spY+spH);
+            spBg.addColorStop(0,'rgba(8,18,32,0.93)'); spBg.addColorStop(1,'rgba(3,8,16,0.96)');
+            ctx.fillStyle=spBg; drawRoundRect(ctx,spX,spY,spW,spH,9); ctx.fill();
+            ctx.strokeStyle='rgba(80,130,190,0.3)'; ctx.lineWidth=1;
+            drawRoundRect(ctx,spX,spY,spW,spH,9); ctx.stroke();
+
+            // Inning
+            txt(`第 ${G.inning} 回  ${G.half===0?'表':'裏'}`, spX+spW/2, spY+26, 17, '#88ccff');
+
+            // Team abbr + score
+            const scY=spY+58;
+            ctx.font='bold 22px "Microsoft JhengHei"'; ctx.textAlign='left';
+            ctx.fillStyle=aw.c1; ctx.fillText(aw.abbr.charAt(0), spX+14, scY);
+            txt(`${G.score[0]}`, spX+62, scY, 28, '#fff');
+            ctx.font='bold 16px Arial'; ctx.textAlign='center';
+            ctx.fillStyle='rgba(180,200,220,0.7)'; ctx.fillText('−', spX+spW/2, scY-2);
+            txt(`${G.score[1]}`, spX+spW-62, scY, 28, '#fff');
+            ctx.font='bold 22px "Microsoft JhengHei"'; ctx.textAlign='right';
+            ctx.fillStyle=hw.c1; ctx.fillText(hw.abbr.charAt(0), spX+spW-14, scY);
+
+            ctx.strokeStyle='rgba(80,130,190,0.3)'; ctx.lineWidth=1;
+            ctx.beginPath(); ctx.moveTo(spX+8,scY+8); ctx.lineTo(spX+spW-8,scY+8); ctx.stroke();
+
+            // SBO dots
+            const sboY=spY+88;
+            function drawDots(label,lx,y,count,max,onCol) {
+                ctx.font='bold 12px Arial'; ctx.textAlign='left';
+                ctx.fillStyle='rgba(180,200,220,0.8)'; ctx.fillText(label,lx,y+4);
+                for (let i=0;i<max;i++) {
+                    ctx.beginPath(); ctx.arc(lx+22+i*17,y,5.5,0,Math.PI*2);
+                    if (i<count) { ctx.fillStyle=onCol; ctx.shadowColor=onCol; ctx.shadowBlur=7; }
+                    else { ctx.fillStyle='rgba(50,70,95,0.85)'; ctx.shadowBlur=0; }
+                    ctx.fill(); ctx.shadowBlur=0;
+                    ctx.strokeStyle='rgba(255,255,255,0.2)'; ctx.lineWidth=0.5; ctx.stroke();
+                }
+            }
+            drawDots('S',spX+14,sboY,G.strikes,2,'#ffee00');
+            drawDots('B',spX+14,sboY+20,G.balls,3,'#33ffaa');
+            drawDots('O',spX+14,sboY+40,G.outs,2,'#ff5533');
+
+            // ── Runner Diamonds ──────────────────
+            const rdX=spX+spW+8, rdY=spY, rdW=62, rdH=62;
+            const rdBg = ctx.createLinearGradient(rdX,rdY,rdX,rdY+rdH);
+            rdBg.addColorStop(0,'rgba(8,18,32,0.93)'); rdBg.addColorStop(1,'rgba(3,8,16,0.96)');
+            ctx.fillStyle=rdBg; drawRoundRect(ctx,rdX,rdY,rdW,rdH,9); ctx.fill();
+            ctx.strokeStyle='rgba(80,130,190,0.3)'; ctx.lineWidth=1;
+            drawRoundRect(ctx,rdX,rdY,rdW,rdH,9); ctx.stroke();
+            function rDia(x,y,on) {
+                ctx.save(); ctx.translate(x,y); ctx.rotate(Math.PI/4);
+                if(on){ctx.fillStyle='#ffdd00';ctx.shadowColor='#ffaa00';ctx.shadowBlur=10;}
+                else ctx.fillStyle='rgba(45,65,90,0.8)';
+                ctx.fillRect(-7,-7,14,14); ctx.shadowBlur=0;
+                ctx.strokeStyle=on?'rgba(255,200,0,0.5)':'rgba(80,110,145,0.35)';
+                ctx.lineWidth=1.5; ctx.strokeRect(-7,-7,14,14); ctx.restore();
+            }
+            rDia(rdX+rdW/2, rdY+14, G.runners[1]);
+            rDia(rdX+rdW-14, rdY+rdH/2, G.runners[0]);
+            rDia(rdX+14, rdY+rdH/2, G.runners[2]);
+
+            // ── Batter Panel (bottom-left) ──────────────────
+            const bpX=8, bpY=H-122, bpW=236, bpH=114;
+            const bpBg = ctx.createLinearGradient(bpX,bpY,bpX,bpY+bpH);
+            bpBg.addColorStop(0,batTeam.c1+'3a'); bpBg.addColorStop(1,'rgba(4,10,18,0.93)');
+            ctx.fillStyle=bpBg; drawRoundRect(ctx,bpX,bpY,bpW,bpH,9); ctx.fill();
+            ctx.strokeStyle=batTeam.c1+'88'; ctx.lineWidth=1.5;
+            drawRoundRect(ctx,bpX,bpY,bpW,bpH,9); ctx.stroke();
+
+            // Order badge
+            ctx.fillStyle=batTeam.c1;
+            ctx.beginPath(); ctx.arc(bpX+22,bpY+23,14,0,Math.PI*2); ctx.fill();
+            ctx.font='bold 13px Arial'; ctx.textAlign='center';
+            ctx.fillStyle='#fff'; ctx.fillText(G.batOrder[G.half]+1, bpX+22, bpY+27);
+            // Name
+            ctx.font='bold 20px "Microsoft JhengHei"'; ctx.textAlign='left';
+            ctx.fillStyle='#fff'; ctx.fillText(batter.name, bpX+44, bpY+28);
+            // Chibi face
+            const cfX=bpX+bpW-26, cfY=bpY+22;
+            ctx.fillStyle='#4488ee'; ctx.beginPath(); ctx.arc(cfX,cfY,13,0,Math.PI*2); ctx.fill();
+            ctx.fillStyle='#000';
+            ctx.beginPath(); ctx.arc(cfX-4,cfY-3,2,0,Math.PI*2); ctx.fill();
+            ctx.beginPath(); ctx.arc(cfX+4,cfY-3,2,0,Math.PI*2); ctx.fill();
+            ctx.strokeStyle='#000'; ctx.lineWidth=1.5;
+            ctx.beginPath(); ctx.arc(cfX,cfY+2,5,0,Math.PI); ctx.stroke();
+            // Stats
+            ctx.font='13px Arial'; ctx.textAlign='left';
+            ctx.fillStyle='rgba(200,220,255,0.9)';
+            ctx.fillText(`率 ${batter.avg}`, bpX+12, bpY+52);
+            ctx.fillText(`${batter.hr}本`, bpX+115, bpY+52);
+            ctx.fillText(`${batter.rbi}打點`, bpX+165, bpY+52);
+            // Power bar
+            const pBx=bpX+10, pBy=bpY+66, pBw=bpW-20, pBh=14;
+            ctx.fillStyle='rgba(0,0,0,0.55)'; drawRoundRect(ctx,pBx,pBy,pBw,pBh,pBh/2); ctx.fill();
+            const pwG=ctx.createLinearGradient(pBx,0,pBx+pBw,0);
+            pwG.addColorStop(0,'#00cc44'); pwG.addColorStop(0.6,'#aaee00'); pwG.addColorStop(0.85,'#ffcc00'); pwG.addColorStop(1,'#ff4400');
+            ctx.save(); ctx.beginPath(); drawRoundRect(ctx,pBx,pBy,pBw,pBh,pBh/2); ctx.clip();
+            ctx.fillStyle=pwG; ctx.fillRect(pBx,pBy,(batter.pow/100)*pBw,pBh); ctx.restore();
+            ctx.strokeStyle='rgba(255,255,255,0.28)'; ctx.lineWidth=1;
+            drawRoundRect(ctx,pBx,pBy,pBw,pBh,pBh/2); ctx.stroke();
+            const condLbl=batter.pow>=85?'絕好調':batter.pow>=70?'好調':'普通';
+            ctx.font='bold 11px Arial'; ctx.textAlign='left';
+            ctx.fillStyle=batter.pow>=85?'#ff8822':batter.pow>=70?'#44ff88':'#aaa';
+            ctx.fillText(condLbl, pBx, pBy+pBh+14);
+            ctx.font='10px Arial'; ctx.textAlign='right';
+            ctx.fillStyle='rgba(255,255,255,0.5)'; ctx.fillText('力量', pBx+pBw, pBy+pBh+14);
+
+            // ── Pitcher Panel (right) ──────────────────
+            const ppX=W-218, ppY=198, ppW=208, ppH=78;
+            const ppBg=ctx.createLinearGradient(ppX,ppY,ppX,ppY+ppH);
+            ppBg.addColorStop(0,pitTeam.c1+'55'); ppBg.addColorStop(1,'rgba(4,10,18,0.92)');
+            ctx.fillStyle=ppBg; drawRoundRect(ctx,ppX,ppY,ppW,ppH,9); ctx.fill();
+            ctx.strokeStyle=pitTeam.c1+'99'; ctx.lineWidth=1.5;
+            drawRoundRect(ctx,ppX,ppY,ppW,ppH,9); ctx.stroke();
+            ctx.font='bold 21px "Microsoft JhengHei"'; ctx.textAlign='left';
+            ctx.fillStyle='#fff'; ctx.fillText(pitcher.name, ppX+14, ppY+29);
+            // Pitcher face
+            const pfX=ppX+ppW-24, pfY=ppY+22;
+            ctx.fillStyle=pitTeam.c1||'#ff88aa'; ctx.beginPath(); ctx.arc(pfX,pfY,13,0,Math.PI*2); ctx.fill();
+            ctx.fillStyle='#000';
+            ctx.beginPath(); ctx.arc(pfX-4,pfY-3,2,0,Math.PI*2); ctx.fill();
+            ctx.beginPath(); ctx.arc(pfX+4,pfY-3,2,0,Math.PI*2); ctx.fill();
+            ctx.strokeStyle='#000'; ctx.lineWidth=1.5;
+            ctx.beginPath(); ctx.arc(pfX,pfY+2,5,0,Math.PI); ctx.stroke();
+            ctx.font='14px Arial'; ctx.textAlign='left';
+            ctx.fillStyle='rgba(200,220,255,0.9)';
+            ctx.fillText(`防 ${pitcher.era}`, ppX+14, ppY+57);
+            ctx.fillText(`K  ${pitcher.k}`, ppX+115, ppY+57);
+        }
+
+        function renderPitchingZone() {
+            ctx.fillStyle = 'rgba(245, 245, 255, 0.85)';
+            ctx.fillRect(SZcx - SZw / 2, SZcy - SZh / 2, SZw, SZh);
+
+            ctx.strokeStyle = '#003388'; ctx.lineWidth = 1;
+            ctx.beginPath(); ctx.moveTo(SZcx - SZw / 6, SZcy - SZh / 2); ctx.lineTo(SZcx - SZw / 6, SZcy + SZh / 2); ctx.stroke();
+            ctx.beginPath(); ctx.moveTo(SZcx + SZw / 6, SZcy - SZh / 2); ctx.lineTo(SZcx + SZw / 6, SZcy + SZh / 2); ctx.stroke();
+            ctx.beginPath(); ctx.moveTo(SZcx - SZw / 2, SZcy - SZh / 6); ctx.lineTo(SZcx + SZw / 2, SZcy - SZh / 6); ctx.stroke();
+            ctx.beginPath(); ctx.moveTo(SZcx - SZw / 2, SZcy + SZh / 6); ctx.lineTo(SZcx + SZw / 2, SZcy + SZh / 6); ctx.stroke();
+
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.7)'; ctx.lineWidth = 2;
+            const bD = 15, pad = 10;
+            const l = SZcx - SZw / 2 - pad, r = SZcx + SZw / 2 + pad, t = SZcy - SZh / 2 - pad, b = SZcy + SZh / 2 + pad;
+            ctx.beginPath(); ctx.moveTo(l + bD, t); ctx.lineTo(l, t); ctx.lineTo(l, t + bD); ctx.stroke();
+            ctx.beginPath(); ctx.moveTo(l, b - bD); ctx.lineTo(l, b); ctx.lineTo(l + bD, b); ctx.stroke();
+            ctx.beginPath(); ctx.moveTo(r - bD, t); ctx.lineTo(r, t); ctx.lineTo(r, t + bD); ctx.stroke();
+            ctx.beginPath(); ctx.moveTo(r, b - bD); ctx.lineTo(r, b); ctx.lineTo(r - bD, b); ctx.stroke();
+
+            if (G.phase === PH.AIM || G.phase === PH.POWER_GAUGE) {
+                const cx = SZcx + G.aimX * (SZw / 2), cy = SZcy + G.aimY * (SZh / 2);
+                ctx.strokeStyle = '#00FFFF'; ctx.lineWidth = 2;
+                ctx.beginPath(); ctx.moveTo(cx - 14, cy); ctx.lineTo(cx - 4, cy); ctx.stroke();
+                ctx.beginPath(); ctx.moveTo(cx + 4, cy); ctx.lineTo(cx + 14, cy); ctx.stroke();
+                ctx.beginPath(); ctx.moveTo(cx, cy - 14); ctx.lineTo(cx, cy - 4); ctx.stroke();
+                ctx.beginPath(); ctx.moveTo(cx, cy + 4); ctx.lineTo(cx, cy + 14); ctx.stroke();
+                ctx.fillStyle = '#00FFFF'; ctx.beginPath(); ctx.arc(cx, cy, 2, 0, Math.PI * 2); ctx.fill();
+            }
+        }
+
+        function renderBattingZone() {
+            // 經典紫紅色好球帶外框
+            ctx.strokeStyle = 'rgba(200, 0, 150, 0.8)'; ctx.lineWidth = 2;
+            ctx.strokeRect(SZcx - SZw / 2, SZcy - SZh / 2, SZw, SZh);
+        }
+
+        // ── 【重大更新】經典實況野球 打擊橢圓框 (Meat Cursor) ──
+        function renderBatCursor() {
+            const batter = getBatter();
+            const cx = SZcx + G.curX * (SZw / 2), cy = SZcy + G.curY * (SZh / 2);
+
+            // 根據遊戲難易度調整游標大小：簡單=1.3倍, 普通=1.0倍, 困難=0.7倍
+            const diffMult = [1.3, 1.0, 0.7][G.difficulty];
+
+            // 基礎橢圓形半徑，取決於打者本身的框(Contact)能力
+            const rx = (30 + (batter.con / 100) * 20) * diffMult;
+            const ry = (18 + (batter.con / 100) * 12) * diffMult;
+
+            // 繪製黃色橢圓框 (Meat Cursor)
+            ctx.fillStyle = 'rgba(255, 255, 0, 0.3)';
+            ctx.beginPath(); ctx.ellipse(cx, cy, rx, ry, 0, 0, Math.PI * 2); ctx.fill();
+            ctx.strokeStyle = '#FFFF00'; ctx.lineWidth = 2; ctx.stroke();
+
+            // 繪製中心十字與甜蜜點
+            ctx.fillStyle = '#FFFFFF';
+            ctx.beginPath(); ctx.arc(cx, cy, 3, 0, Math.PI * 2); ctx.fill();
+            ctx.strokeStyle = '#000000'; ctx.lineWidth = 1; ctx.stroke();
+
+            ctx.strokeStyle = 'rgba(0, 0, 0, 0.8)'; ctx.lineWidth = 1;
+            ctx.beginPath(); ctx.moveTo(cx - rx, cy); ctx.lineTo(cx + rx, cy); ctx.stroke();
+            ctx.beginPath(); ctx.moveTo(cx, cy - ry); ctx.lineTo(cx, cy + ry); ctx.stroke();
+        }
+
+        function renderBall() {
+            const t = ballProgress(); if (t <= 0 || t > 1.05) return;
+            const x = lerp(G.ballSX, G.ballEX + G.ballCX * t, t), y = lerp(G.ballSY, G.ballEY + G.ballCY * t, t);
+            const sz = lerp(2, 14, t);
+
+            ctx.shadowColor = 'rgba(0,0,0,0.5)'; ctx.shadowBlur = 5;
+            ctx.fillStyle = '#FFF'; ctx.beginPath(); ctx.arc(x, y, sz, 0, Math.PI * 2); ctx.fill();
+            ctx.shadowBlur = 0;
+
+            if (sz > 4) {
+                ctx.strokeStyle = '#FF3333'; ctx.lineWidth = sz * 0.15;
+                ctx.beginPath(); ctx.arc(x - sz * 0.4, y, sz * 0.7, -Math.PI / 3, Math.PI / 3); ctx.stroke();
+                ctx.beginPath(); ctx.arc(x + sz * 0.4, y, sz * 0.7, Math.PI - Math.PI / 3, Math.PI + Math.PI / 3); ctx.stroke();
+            }
+        }
+
+        function renderPhaseUI() {
+            if (G.phase === PH.INNING_START) {
+                ctx.fillStyle = 'rgba(0,0,0,0.7)'; ctx.fillRect(0, H / 2 - 50, W, 100);
+                txt(`第 ${G.inning} 回  ${G.half === 0 ? '表' : '裏'}`, W / 2, H / 2 + 15, 40, '#FFF'); return;
+            }
+
+            // ── 【全方位放射狀投球選單 (Radial Menu)】 ──
+            if (G.phase === PH.PITCH_SELECT && !playerBatting()) {
+                const pitcher = getPitcher();
+                const cx = W / 2, cy = 160;
+
+                ctx.fillStyle = '#FFF'; ctx.beginPath(); ctx.arc(cx, cy, 22, 0, Math.PI * 2); ctx.fill();
+                ctx.strokeStyle = '#000'; ctx.lineWidth = 2; ctx.stroke();
+                ctx.strokeStyle = '#FF3333'; ctx.lineWidth = 1.5;
+                ctx.beginPath(); ctx.arc(cx - 13, cy, 10, -Math.PI / 3, Math.PI / 3); ctx.stroke();
+                ctx.beginPath(); ctx.arc(cx + 13, cy, 10, Math.PI - Math.PI / 3, Math.PI + Math.PI / 3); ctx.stroke();
+
+                pitcher.pitches.forEach((p, i) => {
+                    const pd = PITCH_DICT[p.id];
+                    const isHover = (i === G.hoveredPitchChoice);
+
+                    if (pd.dir === 'center') {
+                        if (isHover) {
+                            ctx.fillStyle = 'rgba(255,255,0,0.5)';
+                            ctx.beginPath(); ctx.arc(cx, cy, 22, 0, Math.PI * 2); ctx.fill();
+                        }
+                    } else {
+                        ctx.save();
+                        ctx.translate(cx, cy);
+                        ctx.rotate(pd.dir);
+
+                        ctx.fillStyle = isHover ? '#FFFF00' : '#4488FF';
+                        ctx.strokeStyle = '#FFF'; ctx.lineWidth = 2;
+
+                        const len = p.lv * 6;
+                        ctx.beginPath();
+                        ctx.moveTo(26, -8);
+                        ctx.lineTo(26 + len, -8);
+                        ctx.lineTo(26 + len, -14);
+                        ctx.lineTo(26 + len + 15, 0);
+                        ctx.lineTo(26 + len, 14);
+                        ctx.lineTo(26 + len, 8);
+                        ctx.lineTo(26, 8);
+                        ctx.closePath();
+                        ctx.fill(); ctx.stroke();
+
+                        ctx.translate(26 + len + 15, 0);
+                        ctx.rotate(-pd.dir);
+                        ctx.fillStyle = '#003388';
+                        ctx.beginPath(); ctx.arc(0, 0, 11, 0, Math.PI * 2); ctx.fill();
+                        ctx.stroke();
+                        txt(p.lv, 0, 4, 13, '#FFF', 'center', 'Arial', false);
+
+                        ctx.restore();
+                    }
+                });
+
+                if (G.hoveredPitchChoice !== -1) {
+                    const selP = pitcher.pitches[G.hoveredPitchChoice];
+                    drawGlossyPill(cx - 70, cy + 90, 140, 36, true, PITCH_DICT[selP.id].name, '#001144', '#0033AA');
+                }
+
+                const sbx = 10, sby = H - 50;
+                const sHover = mouseX >= sbx && mouseX <= sbx + 120 && mouseY >= sby && mouseY <= sby + 38;
+                drawGlossyPill(sbx, sby, 120, 38, sHover, '⚡ 自動', '#443300', '#886600', sHover ? '#FFD700' : '#FFF');
+
+                const pbx = W - 130, pby = H - 50;
+                const pHover = mouseX >= pbx && mouseX <= pbx + 120 && mouseY >= pby && mouseY <= pby + 38;
+                drawGlossyPill(pbx, pby, 120, 38, pHover, '🔄 換投手', '#004422', '#007733', pHover ? '#FFD700' : '#FFF');
+            }
+
+            if (G.phase === PH.WAIT_PITCH && playerBatting()) {
+                const bbx = W - 130, bby = H - 50;
+                const bHover = mouseX >= bbx && mouseX <= bbx + 120 && mouseY >= bby && mouseY <= bby + 38;
+                drawGlossyPill(bbx, bby, 120, 38, bHover, '🔄 換代打', '#004422', '#007733', bHover ? '#FFD700' : '#FFF');
+
+                if (mouseY >= H - 80) {
+                    txt('－ 投球暫停中 (思考戰術) －', W / 2, H - 20, 16, '#00FFFF', 'center', 'Microsoft JhengHei', false);
+                }
+            }
+
+            if (G.phase === PH.POWER_GAUGE && !playerBatting()) {
+                const gx = W / 2 - 100, gy = SZcy - SZh / 2 - 60, gw = 220, gh = 24;
+
+                ctx.fillStyle = '#FFF'; ctx.beginPath(); ctx.arc(gx - 10, gy + gh / 2, 18, 0, Math.PI * 2); ctx.fill();
+                ctx.strokeStyle = '#003388'; ctx.lineWidth = 3; ctx.stroke();
+                ctx.strokeStyle = '#FF3333'; ctx.lineWidth = 2;
+                ctx.beginPath(); ctx.arc(gx - 20, gy + gh / 2, 10, -Math.PI / 3, Math.PI / 3); ctx.stroke();
+                ctx.beginPath(); ctx.arc(gx, gy + gh / 2, 10, Math.PI - Math.PI / 3, Math.PI + Math.PI / 3); ctx.stroke();
+
+                ctx.fillStyle = '#FFF';
+                drawRoundRect(ctx, gx - 2, gy - 4, gw + 8, gh + 8, (gh + 8) / 2); ctx.fill();
+                ctx.strokeStyle = '#003388'; ctx.lineWidth = 2; ctx.stroke();
+
+                ctx.fillStyle = '#222'; drawRoundRect(ctx, gx + 10, gy, gw - 10, gh, gh / 2); ctx.fill();
+
+                ctx.save();
+                ctx.beginPath(); drawRoundRect(ctx, gx + 10, gy, gw - 10, gh, gh / 2); ctx.clip();
+                ctx.fillStyle = '#00DD00'; ctx.fillRect(gx + 10, gy, gw * 0.7, gh);
+                ctx.fillStyle = '#DDDD00'; ctx.fillRect(gx + 10 + gw * 0.7, gy, gw * 0.2, gh);
+                ctx.fillStyle = '#DD0000'; ctx.fillRect(gx + 10 + gw * 0.9, gy, gw * 0.1, gh);
+                ctx.restore();
+
+                const curX = gx + 10 + G.gaugePos * (gw - 10);
+                ctx.fillStyle = '#FF8800'; ctx.strokeStyle = '#FFF'; ctx.lineWidth = 1;
+                ctx.beginPath(); ctx.moveTo(curX, gy - 2); ctx.lineTo(curX - 7, gy - 12); ctx.lineTo(curX + 7, gy - 12); ctx.closePath(); ctx.fill(); ctx.stroke();
+                ctx.beginPath(); ctx.moveTo(curX, gy + gh + 2); ctx.lineTo(curX - 7, gy + gh + 12); ctx.lineTo(curX + 7, gy + gh + 12); ctx.closePath(); ctx.fill(); ctx.stroke();
+            }
+
+            if (G.phase === PH.BATTING && playerBatting()) {
+                const tbW=380, tbH=28, tbX=W/2-tbW/2, tbY=552;
+                // Background track
+                ctx.fillStyle='rgba(0,0,0,0.65)'; drawRoundRect(ctx,tbX-4,tbY-4,tbW+8,tbH+8,tbH/2+4); ctx.fill();
+                ctx.strokeStyle='rgba(100,130,180,0.4)'; ctx.lineWidth=1;
+                drawRoundRect(ctx,tbX-4,tbY-4,tbW+8,tbH+8,tbH/2+4); ctx.stroke();
+                // Colour zones (clipped)
+                ctx.save(); ctx.beginPath(); drawRoundRect(ctx,tbX,tbY,tbW,tbH,tbH/2); ctx.clip();
+                // Miss zones (dark red)
+                ctx.fillStyle='#441111'; ctx.fillRect(tbX,tbY,tbW*0.22,tbH);
+                ctx.fillStyle='#441111'; ctx.fillRect(tbX+tbW*0.78,tbY,tbW*0.22,tbH);
+                // Good zones (orange)
+                ctx.fillStyle='#aa4400'; ctx.fillRect(tbX+tbW*0.22,tbY,tbW*0.16,tbH);
+                ctx.fillStyle='#aa4400'; ctx.fillRect(tbX+tbW*0.62,tbY,tbW*0.16,tbH);
+                // Sweet zone (gold)
+                const swG=ctx.createLinearGradient(tbX+tbW*0.38,0,tbX+tbW*0.62,0);
+                swG.addColorStop(0,'#cc8800'); swG.addColorStop(0.5,'#ffdd00'); swG.addColorStop(1,'#cc8800');
+                ctx.fillStyle=swG; ctx.fillRect(tbX+tbW*0.38,tbY,tbW*0.24,tbH);
+                // Divider ticks
+                ctx.strokeStyle='rgba(255,255,255,0.15)'; ctx.lineWidth=1;
+                [0.22,0.38,0.62,0.78].forEach(f=>{ctx.beginPath();ctx.moveTo(tbX+tbW*f,tbY);ctx.lineTo(tbX+tbW*f,tbY+tbH);ctx.stroke();});
+                ctx.restore();
+                // Zone labels
+                ctx.font='bold 9px Arial'; ctx.textAlign='center';
+                ctx.fillStyle='rgba(255,220,80,0.9)'; ctx.fillText('SWEET', tbX+tbW*0.5, tbY+tbH+12);
+                ctx.fillStyle='rgba(255,150,60,0.7)'; ctx.fillText('GOOD', tbX+tbW*0.3, tbY+tbH+12);
+                ctx.fillText('GOOD', tbX+tbW*0.7, tbY+tbH+12);
+                // Cursor bar
+                if (!G.phDone) {
+                    const cursorX = tbX+G.phPos*tbW;
+                    ctx.save();
+                    ctx.shadowColor='#fff'; ctx.shadowBlur=12;
+                    ctx.fillStyle='#fff';
+                    ctx.fillRect(cursorX-3,tbY-6,6,tbH+12);
+                    ctx.shadowBlur=0; ctx.restore();
+                    // Timing label
+                    ctx.font='bold 11px Arial'; ctx.textAlign='center';
+                    ctx.fillStyle='rgba(255,255,255,0.7)';
+                    ctx.fillText('タイミング  TIMING', W/2, tbY-10);
+                }
+            }
+        }
+
+        function renderResult() {
+            if (G.phase !== PH.RESULT || G.resTimer <= 0) return;
+            const alpha = Math.min(1, G.resTimer / 10);
+            ctx.save(); ctx.globalAlpha = alpha;
+
+            // Dark band
+            const rBg = ctx.createLinearGradient(0, H/2-70, 0, H/2+70);
+            rBg.addColorStop(0,'rgba(0,0,0,0)');
+            rBg.addColorStop(0.2,'rgba(0,0,0,0.75)');
+            rBg.addColorStop(0.8,'rgba(0,0,0,0.75)');
+            rBg.addColorStop(1,'rgba(0,0,0,0)');
+            ctx.fillStyle=rBg; ctx.fillRect(0,H/2-70,W,140);
+
+            // Coloured accent line
+            ctx.fillStyle=G.resCol+'88'; ctx.fillRect(0,H/2-70,W,3);
+            ctx.fillStyle=G.resCol+'88'; ctx.fillRect(0,H/2+67,W,3);
+
+            // Shadow glow + main text
+            ctx.shadowColor=G.resCol; ctx.shadowBlur=30;
+            txt(G.resText, W/2, H/2+12, 66, G.resCol);
+            ctx.shadowBlur=0;
+
+            // Sub text
+            if (G.resSub) {
+                ctx.font='bold 20px Arial'; ctx.textAlign='center';
+                ctx.fillStyle='rgba(255,255,255,0.65)';
+                ctx.fillText(G.resSub, W/2, H/2+40);
+            }
+            ctx.restore();
+        }
+
+        function renderOver() {
+            // Background
+            const bg = ctx.createRadialGradient(W/2,H/2,0,W/2,H/2,W*0.8);
+            bg.addColorStop(0,'#0c1a2e'); bg.addColorStop(1,'#030810');
+            ctx.fillStyle=bg; ctx.fillRect(0,0,W,H);
+
+            // Firework particles
+            for (let i=0;i<40;i++) {
+                const t=(G.frame*0.02+i*0.7)%(Math.PI*2);
+                const r=80+Math.sin(t*3+i)*60;
+                const fx=W/2+Math.cos(i*2.4)*r*1.4;
+                const fy=H*0.3+Math.sin(i*1.8)*r*0.8;
+                const a=0.3+0.5*Math.abs(Math.sin(G.frame*0.08+i));
+                ctx.fillStyle=`hsla(${(i*37+G.frame*2)%360},90%,65%,${a})`;
+                ctx.beginPath(); ctx.arc(fx,fy,2.5,0,Math.PI*2); ctx.fill();
+            }
+
+            // GAME SET title
+            ctx.save(); ctx.shadowColor='#fff'; ctx.shadowBlur=25;
+            txt('GAME SET', W/2, 120, 62, '#fff'); ctx.restore();
+
+            // Winner banner
+            const winner = G.score[0]>G.score[1]?G.awayIdx:G.score[1]>G.score[0]?G.homeIdx:-1;
+            if (winner>=0) {
+                const wt=TEAMS[winner];
+                ctx.save(); ctx.shadowColor=wt.c1; ctx.shadowBlur=20;
+                txt(`🏆  ${wt.abbr}  勝利！`, W/2, 175, 28, wt.c1); ctx.restore();
+            } else {
+                txt('平局', W/2, 175, 28, '#aaa');
+            }
+
+            // Score panel
+            const aw=TEAMS[G.awayIdx], hw=TEAMS[G.homeIdx];
+            const pX=W/2-220, pY=210, pW=440, pH=130;
+            const pBg=ctx.createLinearGradient(pX,pY,pX,pY+pH);
+            pBg.addColorStop(0,'rgba(15,30,55,0.95)'); pBg.addColorStop(1,'rgba(5,12,25,0.98)');
+            ctx.fillStyle=pBg; drawRoundRect(ctx,pX,pY,pW,pH,12); ctx.fill();
+            ctx.strokeStyle='rgba(100,150,220,0.35)'; ctx.lineWidth=1.5;
+            drawRoundRect(ctx,pX,pY,pW,pH,12); ctx.stroke();
+
+            // Away team
+            ctx.font='bold 28px "Microsoft JhengHei"'; ctx.textAlign='center';
+            ctx.fillStyle=aw.c1; ctx.fillText(aw.abbr, pX+90, pY+55);
+            ctx.font='13px Arial'; ctx.fillStyle='rgba(180,200,255,0.6)';
+            ctx.fillText('客隊 AWAY', pX+90, pY+78);
+            // Home team
+            ctx.font='bold 28px "Microsoft JhengHei"'; ctx.textAlign='center';
+            ctx.fillStyle=hw.c1; ctx.fillText(hw.abbr, pX+pW-90, pY+55);
+            ctx.font='13px Arial'; ctx.fillStyle='rgba(180,200,255,0.6)';
+            ctx.fillText('主隊 HOME', pX+pW-90, pY+78);
+            // Score
+            ctx.save(); ctx.shadowColor='#00ffcc'; ctx.shadowBlur=15;
+            txt(`${G.score[0]}`, pX+165, pY+68, 52, G.score[0]>G.score[1]?'#ffdd44':'#fff');
+            ctx.restore();
+            ctx.font='bold 28px Arial'; ctx.textAlign='center';
+            ctx.fillStyle='rgba(150,180,220,0.7)'; ctx.fillText('−', pX+pW/2, pY+62);
+            ctx.save(); ctx.shadowColor='#00ffcc'; ctx.shadowBlur=15;
+            txt(`${G.score[1]}`, pX+pW-165, pY+68, 52, G.score[1]>G.score[0]?'#ffdd44':'#fff');
+            ctx.restore();
+
+            // Inning scores summary
+            const innY=pY+pH-18;
+            ctx.font='11px Arial'; ctx.textAlign='center'; ctx.fillStyle='rgba(160,190,255,0.55)';
+            G.innScores[0].forEach((s,i)=>{
+                const x=pX+50+i*38;
+                ctx.fillStyle='rgba(160,190,255,0.4)'; ctx.fillText(i+1+'回', x, innY-10);
+                ctx.fillStyle=aw.c1+'cc'; ctx.fillText(s, x, innY+4);
+                ctx.fillStyle=hw.c1+'cc'; ctx.fillText(G.innScores[1][i]??'-', x, innY+18);
+            });
+
+            // Return prompt
+            if (Math.floor(G.frame/30)%2===0) {
+                txt('點擊畫面返回標題', W/2, H-45, 18, 'rgba(180,210,255,0.75)');
+            }
+        }
+
+        // ── Mobile overlay buttons ─────────────────────────
+        function updateMobileOverlay() {
+            const simBtn    = document.getElementById('sim-btn');
+            const swingBtn  = document.getElementById('swing-btn');
+            const changeBtn = document.getElementById('change-btn');
+            if (!swingBtn) return;
+            const batting  = G.scr===SCR.GAME && playerBatting() && (G.phase===PH.BATTING||G.phase===PH.WAIT_PITCH);
+            const pitching = G.scr===SCR.GAME && !playerBatting() && G.phase===PH.PITCH_SELECT;
+            swingBtn.classList.toggle('show', batting);
+            simBtn.classList.toggle('show', pitching);
+            changeBtn.classList.toggle('show', batting||pitching);
+        }
+
+        document.getElementById('swing-btn').addEventListener('touchstart', e=>{
+            e.preventDefault(); isMouseJustPressed=true;
+        },{passive:false});
+        document.getElementById('swing-btn').addEventListener('mousedown', e=>{
+            e.preventDefault(); isMouseJustPressed=true;
+        });
+        document.getElementById('sim-btn').addEventListener('touchstart', e=>{
+            e.preventDefault();
+            if (G.scr===SCR.GAME && !playerBatting() && G.phase===PH.PITCH_SELECT) simulateHalf();
+        },{passive:false});
+        document.getElementById('sim-btn').addEventListener('mousedown', e=>{
+            e.preventDefault();
+            if (G.scr===SCR.GAME && !playerBatting() && G.phase===PH.PITCH_SELECT) simulateHalf();
+        });
+        document.getElementById('change-btn').addEventListener('touchstart', e=>{
+            e.preventDefault();
+            if (G.scr!==SCR.GAME) return;
+            if (!playerBatting() && G.phase===PH.PITCH_SELECT) { G.subType='P'; G.prevPhase=G.phase; G.phase=PH.SUB_MENU; }
+            else if (playerBatting() && G.phase===PH.WAIT_PITCH) { G.subType='B'; G.prevPhase=G.phase; G.phase=PH.SUB_MENU; }
+        },{passive:false});
+        document.getElementById('change-btn').addEventListener('mousedown', e=>{
+            e.preventDefault();
+            if (G.scr!==SCR.GAME) return;
+            if (!playerBatting() && G.phase===PH.PITCH_SELECT) { G.subType='P'; G.prevPhase=G.phase; G.phase=PH.SUB_MENU; }
+            else if (playerBatting() && G.phase===PH.WAIT_PITCH) { G.subType='B'; G.prevPhase=G.phase; G.phase=PH.SUB_MENU; }
+        });
+
+        function loop() { update(); render(); updateMobileOverlay(); requestAnimationFrame(loop); }
+        loop();
+    </script>
+</body>
+
+</html>
