@@ -333,10 +333,109 @@
                 curX: 0, curY: 0, phPos: 0, phSpeed: 0.022, phPressed: false, phValue: 0, phDone: false,
                 dragStartX: 0, dragStartY: 0, baseCurX: 0, baseCurY: 0, isDraggingBat: false, aimState: 0,
                 resText: '', resSub: '', resCol: '#fff', resTimer: 0, resEndHalf: false, _continueAtBat: false,
-                frame: 0, readyPulse: 0, batSwingFrame: -999, hitEffectFrame: -999, hitType: '', hitFlyDir: 0
+                frame: 0, readyPulse: 0, batSwingFrame: -999, hitEffectFrame: -999, hitType: '', hitFlyDir: 0,
+                pitchCounts: [0, 0]
             };
         }
         initState();
+
+        // ── Web Audio Sound Engine ─────────────────────────────────────
+        const SFX = (() => {
+            let ctx2 = null;
+            const init = () => { if (!ctx2) ctx2 = new (window.AudioContext || window.webkitAudioContext)(); };
+            const play = (fn) => { try { init(); fn(ctx2); } catch(e) {} };
+            const env = (g, t, a, d, s, r) => {
+                g.gain.setValueAtTime(0, t);
+                g.gain.linearRampToValueAtTime(a, t + 0.01);
+                g.gain.linearRampToValueAtTime(s, t + 0.01 + d);
+                g.gain.exponentialRampToValueAtTime(0.0001, t + 0.01 + d + r);
+                g.gain.setValueAtTime(0, t + 0.01 + d + r);
+            };
+            return {
+                pitch() { play(c => {
+                    const o = c.createOscillator(), g = c.createGain();
+                    o.connect(g); g.connect(c.destination);
+                    o.type = 'sawtooth'; o.frequency.setValueAtTime(220, c.currentTime);
+                    o.frequency.exponentialRampToValueAtTime(80, c.currentTime + 0.18);
+                    env(g, c.currentTime, 0.12, 0, 0.06, 0.18);
+                    o.start(c.currentTime); o.stop(c.currentTime + 0.3);
+                }); },
+                crack() { play(c => {
+                    // noise burst for bat crack
+                    const buf = c.createBuffer(1, c.sampleRate * 0.15, c.sampleRate);
+                    const d = buf.getChannelData(0);
+                    for (let i = 0; i < d.length; i++) d[i] = (Math.random() * 2 - 1) * (1 - i / d.length);
+                    const src = c.createBufferSource(), g = c.createGain();
+                    const filt = c.createBiquadFilter();
+                    filt.type = 'bandpass'; filt.frequency.value = 2200; filt.Q.value = 0.8;
+                    src.buffer = buf; src.connect(filt); filt.connect(g); g.connect(c.destination);
+                    env(g, c.currentTime, 0.9, 0, 0.3, 0.12);
+                    src.start(c.currentTime);
+                }); },
+                homerun() { play(c => {
+                    const buf = c.createBuffer(1, c.sampleRate * 0.25, c.sampleRate);
+                    const d = buf.getChannelData(0);
+                    for (let i = 0; i < d.length; i++) d[i] = (Math.random() * 2 - 1) * (1 - i / d.length * 0.6);
+                    const src = c.createBufferSource(), g = c.createGain();
+                    const filt = c.createBiquadFilter();
+                    filt.type = 'bandpass'; filt.frequency.value = 1800; filt.Q.value = 0.5;
+                    src.buffer = buf; src.connect(filt); filt.connect(g); g.connect(c.destination);
+                    env(g, c.currentTime, 1.2, 0, 0.5, 0.4);
+                    src.start(c.currentTime);
+                    // crowd cheer
+                    const buf2 = c.createBuffer(1, c.sampleRate * 1.2, c.sampleRate);
+                    const d2 = buf2.getChannelData(0);
+                    for (let i = 0; i < d2.length; i++) d2[i] = (Math.random() * 2 - 1) * Math.pow(Math.sin(i / d2.length * Math.PI), 0.5);
+                    const src2 = c.createBufferSource(), g2 = c.createGain();
+                    const filt2 = c.createBiquadFilter();
+                    filt2.type = 'bandpass'; filt2.frequency.value = 900; filt2.Q.value = 0.3;
+                    src2.buffer = buf2; src2.connect(filt2); filt2.connect(g2); g2.connect(c.destination);
+                    env(g2, c.currentTime + 0.1, 0.4, 0.3, 0.3, 0.7);
+                    src2.start(c.currentTime + 0.1);
+                }); },
+                strike() { play(c => {
+                    const o = c.createOscillator(), g = c.createGain();
+                    o.connect(g); g.connect(c.destination);
+                    o.type = 'sine'; o.frequency.setValueAtTime(880, c.currentTime);
+                    o.frequency.exponentialRampToValueAtTime(660, c.currentTime + 0.12);
+                    env(g, c.currentTime, 0.35, 0, 0.2, 0.18);
+                    o.start(c.currentTime); o.stop(c.currentTime + 0.4);
+                }); },
+                ball() { play(c => {
+                    const o = c.createOscillator(), g = c.createGain();
+                    o.connect(g); g.connect(c.destination);
+                    o.type = 'sine'; o.frequency.setValueAtTime(330, c.currentTime);
+                    env(g, c.currentTime, 0.2, 0, 0.08, 0.2);
+                    o.start(c.currentTime); o.stop(c.currentTime + 0.3);
+                }); },
+                out() { play(c => {
+                    const o = c.createOscillator(), g = c.createGain();
+                    o.connect(g); g.connect(c.destination);
+                    o.type = 'square'; o.frequency.setValueAtTime(200, c.currentTime);
+                    o.frequency.exponentialRampToValueAtTime(120, c.currentTime + 0.2);
+                    env(g, c.currentTime, 0.25, 0, 0.08, 0.25);
+                    o.start(c.currentTime); o.stop(c.currentTime + 0.4);
+                }); },
+                steal_ok() { play(c => {
+                    [0, 0.12].forEach((dt, i) => {
+                        const o = c.createOscillator(), g = c.createGain();
+                        o.connect(g); g.connect(c.destination);
+                        o.type = 'sine'; o.frequency.value = i === 0 ? 660 : 880;
+                        env(g, c.currentTime + dt, 0.3, 0, 0.1, 0.15);
+                        o.start(c.currentTime + dt); o.stop(c.currentTime + dt + 0.28);
+                    });
+                }); },
+                steal_fail() { play(c => {
+                    [0, 0.12].forEach((dt, i) => {
+                        const o = c.createOscillator(), g = c.createGain();
+                        o.connect(g); g.connect(c.destination);
+                        o.type = 'square'; o.frequency.value = i === 0 ? 300 : 220;
+                        env(g, c.currentTime + dt, 0.2, 0, 0.08, 0.18);
+                        o.start(c.currentTime + dt); o.stop(c.currentTime + dt + 0.25);
+                    });
+                }); }
+            };
+        })();
 
         const keys = {}, jp = {};
         let mouseX = W / 2, mouseY = H / 2, isMouseJustPressed = false, isMouseJustReleased = false;
@@ -444,13 +543,19 @@
 
         function throwBall(controlPower) {
             const pitcher = getPitcher();
+            const pitcherSide = G.half === 0 ? 1 : 0;
+            G.pitchCounts[pitcherSide]++;
+            SFX.pitch();
+
             const pitchObj = pitcher.pitches[G.pitchChoice];
             const pDef = PITCH_DICT[pitchObj.id];
             const speedMult = 0.7 + controlPower * 0.6;
             const good = controlPower >= 0.60 && controlPower <= 0.90;
             const over = controlPower > 0.90;
 
-            const cMod = (100 - pitcher.ctrl) / 20;
+            // Fatigue: extra deviation when pitch count exceeds stamina threshold
+            const fatigueMod = Math.max(0, (G.pitchCounts[pitcherSide] - pitcher.stm * 0.6) / (pitcher.stm * 0.4));
+            const cMod = (100 - pitcher.ctrl) / 20 * (1 + fatigueMod * 0.8);
             let devX = 0, devY = 0;
             if (over) { devX = rnd(-15, 15) * cMod; devY = rnd(5, 15) * cMod; }
             else if (good) { devX = rnd(-3, 3) * cMod; devY = rnd(-3, 3) * cMod; }
@@ -490,6 +595,7 @@
 
         function resolveSwing(phVal, cx, cy) {
             G.batSwingFrame = G.frame;
+            SFX.crack();
             const timingDist = Math.abs(phVal - 0.50);
             const timingScore = clamp(1 - timingDist * 1.4, 0, 1);
             const batter = getBatter();
@@ -540,6 +646,7 @@
             if (success) {
                 if (from === 1) { G.runners[2] = true; G.runners[1] = false; }
                 else { G.runners[1] = true; G.runners[0] = false; }
+                SFX.steal_ok();
                 showRes('盜壘成功！', 'STOLEN BASE', '#FFD700', false);
                 G._continueAtBat = true;
             } else {
@@ -547,7 +654,8 @@
                 const endHalf = G.outs >= 3;
                 if (from === 1) G.runners[1] = false;
                 else G.runners[0] = false;
-                showRes('盜壘失敗！', 'CAUGHT STEALING', '#FF4444', endHalf);
+                SFX.steal_fail();
+                showRes('盛%��失敗！', 'CAUGHT STEALING', '#FF4444', endHalf);
             }
         }
 
@@ -555,9 +663,11 @@
             const inZone = Math.abs(G._actualAimX) <= 1 && Math.abs(G._actualAimY) <= 1;
             if (inZone) {
                 G.strikes++;
+                SFX.strike();
                 if (G.strikes >= 3) { applyPlay('K'); } else { showRes('好球！', 'STRIKE', '#FF8844', false); G._continueAtBat = true; }
             } else {
                 G.balls++;
+                SFX.ball();
                 if (G.balls >= 4) { applyPlay('BB'); } else { showRes('壞球', 'BALL', '#4488FF', false); G._continueAtBat = true; }
             }
         }
@@ -569,22 +679,28 @@
                 const runs = 1 + G.runners.filter(r => r).length;
                 G.score[bat] += runs; G.runners = [false, false, false];
                 text = '全壘打！'; sub = 'HOMERUN'; col = '#FFD700';
+                SFX.homerun();
             } else if (type === '2B') {
                 if (G.runners[2]) G.score[bat]++; if (G.runners[1]) G.score[bat]++;
                 G.runners = [false, true, G.runners[0] && Math.random() < 0.5]; text = '二壘安打！'; sub = '2 BASE HIT'; col = '#44FF88';
+                SFX.crack();
             } else if (type === '1B') {
                 if (G.runners[2]) G.score[bat]++;
                 const r2 = G.runners[1] && Math.random() < 0.5; const r1 = G.runners[0];
                 G.runners = [true, r1, r2]; text = '安打！'; sub = 'HIT'; col = '#44FF88';
+                SFX.crack();
             } else if (type === 'BB') {
                 if (G.runners[0] && G.runners[1] && G.runners[2]) G.score[bat]++;
                 if (G.runners[0] && G.runners[1]) G.runners[2] = true;
                 if (G.runners[0]) G.runners[1] = true;
                 G.runners[0] = true; text = '四壞球保送！'; sub = 'WALK'; col = '#4488FF';
+                SFX.ball();
             } else if (type === 'OUT') {
                 G.outs++; text = '出局！'; sub = 'OUT'; col = '#FF6644'; if (G.outs >= 3) endHalf = true;
+                SFX.out();
             } else if (type === 'K') {
                 G.outs++; text = '三振出局！'; sub = 'STRIKEOUT'; col = '#FF4444'; if (G.outs >= 3) endHalf = true;
+                SFX.out();
             }
             if (type !== 'BB' && !G._continueAtBat) G.batOrder[G.half] = (G.batOrder[G.half] + 1) % 9;
             showRes(text, sub, col, endHalf);
@@ -709,7 +825,7 @@
 
             if (G.scr === SCR.LINEUP) {
                 G.introTimer++;
-                if (actionTrigger() || G.introTimer > 300) { 
+               if (actionTrigger() || G.introTimer > 300) { 
                     G.scr = SCR.GAME; G.phase = PH.INNING_START; G.phaseTimer = 60; 
                 } 
                 clearInput(); return;
@@ -904,6 +1020,17 @@
             else if (G.scr === SCR.LINEUP) renderLineup();
             else if (G.scr === SCR.GAME) renderGame();
             else if (G.scr === SCR.OVER) renderOver();
+            // Portrait mode overlay
+            if (isMobile && window.innerHeight > window.innerWidth * 1.2) {
+                ctx.fillStyle = 'rgba(0,0,0,0.82)';
+                ctx.fillRect(0, 0, W, H);
+                ctx.save();
+                ctx.translate(W/2, H/2);
+                txt('📱→📺', W/2, 0, 52, '#FFD700', 'center', 'Arial', false);
+                ctx.restore();
+                txt('請橫向使用手機', W/2, H/2+60, 26, '#FFFFFF');
+                txt('ROTATE DEVICE FOR BEST EXPERIENCE', W/2, H/2+95, 14, 'rgba(180,200,255,0.7)');
+            }
         }
 
         function renderTitle() {
@@ -1613,10 +1740,19 @@
             ctx.beginPath(); ctx.arc(pfX+4,pfY-3,2,0,Math.PI*2); ctx.fill();
             ctx.strokeStyle='#000'; ctx.lineWidth=1.5;
             ctx.beginPath(); ctx.arc(pfX,pfY+2,5,0,Math.PI); ctx.stroke();
+            const pitcherSideIdx = G.half === 0 ? 1 : 0;
+            const pc = G.pitchCounts[pitcherSideIdx];
+            const fatigued = pc >= pitcher.stm * 0.6;
             ctx.font='14px Arial'; ctx.textAlign='left';
             ctx.fillStyle='rgba(200,220,255,0.9)';
             ctx.fillText(`防 ${pitcher.era}`, ppX+14, ppY+57);
-            ctx.fillText(`K  ${pitcher.k}`, ppX+115, ppY+57);
+            ctx.fillText(`K  ${pitcher.k}`, ppX+100, ppY+57);
+            ctx.fillStyle = fatigued ? '#FF6644' : 'rgba(200,220,255,0.75)';
+            ctx.fillText(`球${pc}`, ppX+160, ppY+57);
+            if (fatigued) {
+                ctx.fillStyle='#FF4444'; ctx.font='bold 11px Arial';
+                ctx.fillText('疲勞', ppX+ppW-48, ppY+20);
+            }
         }
 
         function renderPitchingZone() {
@@ -1652,6 +1788,14 @@
             // 經典紫紅色好球帶外框
             ctx.strokeStyle = 'rgba(200, 0, 150, 0.8)'; ctx.lineWidth = 2;
             ctx.strokeRect(SZcx - SZw / 2, SZcy - SZh / 2, SZw, SZh);
+            // Mobile drag hint (first 5 seconds of WAIT_PITCH)
+            if (isMobile && G.phase === PH.WAIT_PITCH && G.phaseTimer > 55) {
+                const hint = '← 拖曳移動打擊位置 →';
+                ctx.font = 'bold 13px "Microsoft JhengHei"';
+                ctx.textAlign = 'center';
+                ctx.fillStyle = `rgba(255,255,150,${(G.phaseTimer - 55) / 25 * 0.85})`;
+                ctx.fillText(hint, SZcx, SZcy + SZh / 2 + 22);
+            }
         }
 
         // ── 【重大更新】經典實況野球 打擊橢圓框 (Meat Cursor) ──
@@ -1876,7 +2020,7 @@
                     const shadowY = lerp(startY, groundY, t);
                     const by = shadowY - Math.sin(t * Math.PI) * arc;
                     
-                    const bSize = lerp(8, isHR ? 15 : 12, Math.sin(t * Math.PI)); // scale up as it flies close, then normal
+                    const bSize = lerp(8, isHR ? 15 : 12, Math.sin(t * Math.PI));
 
                     ctx.fillStyle = 'rgba(0, 0, 0, 0.4)';
                     ctx.beginPath(); ctx.ellipse(bx, shadowY, bSize * 1.6, bSize * 0.6, 0, 0, Math.PI * 2); ctx.fill();
