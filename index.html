@@ -14,7 +14,7 @@
             background: radial-gradient(ellipse at center, #0d1f35 0%, #040c16 100%);
             display: flex; justify-content: center; align-items: center;
             min-height: 100vh; min-height: -webkit-fill-available;
-            font-family: "Microsoft JhengHei", "Noto Sans TC", "Meiryo", Arial, sans-serif;
+            font-family: "PingFang TC", "Microsoft JhengHei", "Noto Sans TC", Arial, sans-serif;
             overflow: hidden; user-select: none; -webkit-user-select: none;
         }
         canvas {
@@ -30,7 +30,7 @@
         .mbtn {
             pointer-events: auto; border: none; border-radius: 50%; cursor: pointer;
             display: none; flex-direction: column; align-items: center; justify-content: center;
-            font-family: "Microsoft JhengHei", Arial, sans-serif; font-weight: bold;
+            font-family: "PingFang TC", "Microsoft JhengHei", Arial, sans-serif; font-weight: bold;
             color: white; text-shadow: 0 1px 4px rgba(0,0,0,0.9); line-height: 1.3;
             transition: transform 0.1s; -webkit-tap-highlight-color: transparent;
             -webkit-user-select: none; user-select: none;
@@ -97,7 +97,6 @@
             ctx.closePath();
         }
 
-        // ── 擴充球種資料庫 ─────────────────────────
         const PITCH_DICT = {
             0: { name: '直球', mph: 98, bx: 0, by: 0, col: '#FF6666', dir: 'center' },
             1: { name: '二縫線', mph: 94, bx: -3, by: 5, col: '#FFAA44', dir: 0.15 },
@@ -110,7 +109,6 @@
             8: { name: '伸卡球', mph: 93, bx: 8, by: 8, col: '#FF88AA', dir: Math.PI * 0.2 },
         };
 
-        // ── MLB + 中職 6 隊陣容資料庫 ─────────────────────────
         const isMobile = ('ontouchstart' in window || navigator.maxTouchPoints > 0);
         const ROSTERS = {
             'LAD': {
@@ -157,7 +155,7 @@
                     { name: 'Wells', bats: 'L', avg: '.250', hr: 15, rbi: 48, con: 75, pow: 75, spd: 45 }
                 ]
             },
-            'BRO': { // 中信兄弟
+            'BRO': { 
                 pitchers: [
                     { name: '德保拉', vel: 94, ctrl: 88, stm: 90, era: '2.50', k: 18, pitches: [{ id: 0, lv: 6 }, { id: 4, lv: 6 }, { id: 5, lv: 5 }] },
                     { name: '猛登', vel: 95, ctrl: 82, stm: 85, era: '2.80', k: 15, pitches: [{ id: 0, lv: 6 }, { id: 2, lv: 5 }, { id: 4, lv: 5 }] },
@@ -178,7 +176,7 @@
                     { name: '蘇緯達', bats: 'L', avg: '.270', hr: 6, rbi: 30, con: 75, pow: 75, spd: 50 }
                 ]
             },
-            'UNI': { // 統一獅
+            'UNI': { 
                 pitchers: [
                     { name: '古林睿煬', vel: 98, ctrl: 85, stm: 85, era: '2.60', k: 18, pitches: [{ id: 0, lv: 7 }, { id: 4, lv: 5 }, { id: 6, lv: 5 }] },
                     { name: '布雷克', vel: 92, ctrl: 90, stm: 88, era: '2.80', k: 14, pitches: [{ id: 0, lv: 5 }, { id: 6, lv: 6 }, { id: 2, lv: 5 }] },
@@ -200,7 +198,7 @@
                     { name: '廖宣皓', bats: 'L', avg: '.285', hr: 10, rbi: 55, con: 80, pow: 75, spd: 82 }
                 ]
             },
-            'RAK': { // 樂天桃猿
+            'RAK': { 
                 pitchers: [
                     { name: '威能帝', vel: 95, ctrl: 88, stm: 88, era: '2.70', k: 15, pitches: [{ id: 0, lv: 6 }, { id: 2, lv: 6 }, { id: 5, lv: 5 }] },
                     { name: '黃子鵬', vel: 88, ctrl: 92, stm: 90, era: '2.90', k: 10, pitches: [{ id: 1, lv: 6 }, { id: 2, lv: 6 }, { id: 8, lv: 7 }] },
@@ -221,7 +219,7 @@
                     { name: '宋嘉翔', bats: 'L', avg: '.250', hr: 5, rbi: 25, con: 70, pow: 70, spd: 60 }
                 ]
             },
-            'FUB': { // 富邦悍將
+            'FUB': { 
                 pitchers: [
                     { name: '羅戈', vel: 95, ctrl: 85, stm: 85, era: '2.50', k: 16, pitches: [{ id: 0, lv: 6 }, { id: 4, lv: 6 }, { id: 5, lv: 5 }] },
                     { name: '江少慶', vel: 96, ctrl: 82, stm: 80, era: '3.20', k: 14, pitches: [{ id: 0, lv: 6 }, { id: 2, lv: 6 }, { id: 6, lv: 5 }] },
@@ -242,7 +240,7 @@
                     { name: '辛元旭', bats: 'R', avg: '.265', hr: 5, rbi: 35, con: 75, pow: 65, spd: 65 }
                 ]
             },
-            'WEI': { // 味全龍
+            'WEI': { 
                 pitchers: [
                     { name: '鋼龍', vel: 93, ctrl: 90, stm: 88, era: '2.70', k: 14, pitches: [{ id: 0, lv: 5 }, { id: 4, lv: 7 }, { id: 5, lv: 6 }] },
                     { name: '徐若熙', vel: 98, ctrl: 85, stm: 75, era: '2.30', k: 19, pitches: [{ id: 0, lv: 7 }, { id: 2, lv: 6 }, { id: 5, lv: 6 }] },
@@ -263,7 +261,7 @@
                     { name: '陳品捷', bats: 'L', avg: '.260', hr: 5, rbi: 30, con: 75, pow: 65, spd: 75 }
                 ]
             },
-            'TSG': { // 台鋼雄鷹
+            'TSG': { 
                 pitchers: [
                     { name: '哈瑪星', vel: 94, ctrl: 88, stm: 85, era: '2.80', k: 13, pitches: [{ id: 0, lv: 6 }, { id: 2, lv: 5 }, { id: 5, lv: 6 }] },
                     { name: '陳柏清', vel: 92, ctrl: 82, stm: 80, era: '3.50', k: 11, pitches: [{ id: 0, lv: 5 }, { id: 2, lv: 6 }, { id: 5, lv: 5 }] },
@@ -287,199 +285,200 @@
             // ── WBC Teams ──────────────────────────────────────────────
             'CTW': { // 中華隊 Chinese Taipei
                 pitchers: [
-                    { name: '陳偉殷', vel: 92, ctrl: 90, stm: 88, era: '2.95', k: 13, pitches: [{ id: 0, lv: 5 }, { id: 5, lv: 7 }, { id: 4, lv: 6 }, { id: 2, lv: 5 }] },
-                    { name: '王維中', vel: 96, ctrl: 82, stm: 82, era: '3.20', k: 15, pitches: [{ id: 0, lv: 6 }, { id: 2, lv: 6 }, { id: 6, lv: 5 }] },
-                    { name: '鄭浩均', vel: 93, ctrl: 88, stm: 78, era: '2.80', k: 12, pitches: [{ id: 0, lv: 5 }, { id: 4, lv: 6 }, { id: 5, lv: 5 }] },
-                    { name: '呂彥青', vel: 91, ctrl: 85, stm: 60, era: '2.50', k: 11, pitches: [{ id: 0, lv: 5 }, { id: 2, lv: 6 }, { id: 5, lv: 6 }] }
+                    { name: '林昱珉', vel: 94, ctrl: 85, stm: 85, era: '3.15', k: 16, pitches: [{ id: 0, lv: 6 }, { id: 5, lv: 7 }, { id: 2, lv: 6 }, { id: 4, lv: 5 }] },
+                    { name: '徐若熙', vel: 98, ctrl: 82, stm: 82, era: '2.60', k: 18, pitches: [{ id: 0, lv: 7 }, { id: 4, lv: 5 }, { id: 6, lv: 6 }] },
+                    { name: '古林睿煬', vel: 99, ctrl: 85, stm: 75, era: '2.30', k: 19, pitches: [{ id: 0, lv: 7 }, { id: 2, lv: 6 }, { id: 5, lv: 6 }] },
+                    { name: '孫易磊', vel: 96, ctrl: 82, stm: 70, era: '2.90', k: 15, pitches: [{ id: 0, lv: 6 }, { id: 2, lv: 5 }, { id: 6, lv: 6 }] }
                 ],
                 batters: [
-                    { name: '陳傑憲', bats: 'L', avg: '.330', hr: 6, rbi: 50, con: 93, pow: 65, spd: 82 },
-                    { name: '張育成', bats: 'R', avg: '.285', hr: 18, rbi: 72, con: 86, pow: 88, spd: 78 },
-                    { name: '陳鏞基', bats: 'R', avg: '.295', hr: 10, rbi: 58, con: 84, pow: 74, spd: 55 },
-                    { name: '吳念庭', bats: 'L', avg: '.280', hr: 12, rbi: 60, con: 82, pow: 76, spd: 65 },
-                    { name: '蘇智傑', bats: 'L', avg: '.275', hr: 14, rbi: 68, con: 78, pow: 82, spd: 68 },
-                    { name: '林益全', bats: 'R', avg: '.285', hr: 10, rbi: 52, con: 82, pow: 76, spd: 45 },
-                    { name: '陳子豪', bats: 'L', avg: '.275', hr: 8, rbi: 45, con: 80, pow: 70, spd: 72 },
-                    { name: '林安可', bats: 'L', avg: '.265', hr: 20, rbi: 78, con: 74, pow: 88, spd: 62 },
-                    { name: '高宇傑', bats: 'R', avg: '.250', hr: 5, rbi: 35, con: 72, pow: 60, spd: 80 },
-                    { name: '林哲瑄', bats: 'L', avg: '.270', hr: 6, rbi: 40, con: 78, pow: 65, spd: 88 },
-                    { name: '王威晨', bats: 'L', avg: '.305', hr: 3, rbi: 38, con: 88, pow: 55, spd: 86 },
-                    { name: '江坤宇', bats: 'R', avg: '.310', hr: 5, rbi: 48, con: 90, pow: 60, spd: 80 }
+                    { name: '陳傑憲', bats: 'L', avg: '.335', hr: 6, rbi: 50, con: 95, pow: 65, spd: 85 },
+                    { name: '費爾柴德', bats: 'R', avg: '.270', hr: 15, rbi: 45, con: 80, pow: 80, spd: 88 },
+                    { name: '張育成', bats: 'R', avg: '.285', hr: 22, rbi: 75, con: 85, pow: 92, spd: 78 },
+                    { name: '吉力吉撈', bats: 'R', avg: '.275', hr: 25, rbi: 82, con: 78, pow: 92, spd: 55 },
+                    { name: '林安可', bats: 'L', avg: '.270', hr: 20, rbi: 78, con: 75, pow: 88, spd: 65 },
+                    { name: '鄭宗哲', bats: 'L', avg: '.280', hr: 10, rbi: 50, con: 82, pow: 75, spd: 90 },
+                    { name: '江坤宇', bats: 'R', avg: '.310', hr: 5, rbi: 48, con: 92, pow: 60, spd: 80 },
+                    { name: '陳晨威', bats: 'L', avg: '.300', hr: 5, rbi: 45, con: 85, pow: 65, spd: 95 },
+                    { name: '李灝宇', bats: 'R', avg: '.290', hr: 12, rbi: 55, con: 84, pow: 80, spd: 75 },
+                    { name: '吳念庭', bats: 'L', avg: '.280', hr: 8, rbi: 60, con: 85, pow: 70, spd: 65 },
+                    { name: '林子偉', bats: 'L', avg: '.265', hr: 10, rbi: 45, con: 80, pow: 75, spd: 75 },
+                    { name: '林家正', bats: 'R', avg: '.250', hr: 5, rbi: 35, con: 75, pow: 65, spd: 50 }
                 ]
             },
             'JPN': { // 日本
                 pitchers: [
-                    { name: '大谷翔平', vel: 100, ctrl: 88, stm: 92, era: '2.35', k: 22, pitches: [{ id: 0, lv: 7 }, { id: 3, lv: 7 }, { id: 6, lv: 6 }, { id: 4, lv: 5 }, { id: 7, lv: 5 }] },
-                    { name: '山本由伸', vel: 97, ctrl: 95, stm: 88, era: '1.98', k: 20, pitches: [{ id: 0, lv: 6 }, { id: 6, lv: 7 }, { id: 4, lv: 7 }, { id: 7, lv: 5 }] },
-                    { name: '佐々木朗希', vel: 100, ctrl: 82, stm: 80, era: '2.02', k: 24, pitches: [{ id: 0, lv: 7 }, { id: 6, lv: 7 }, { id: 4, lv: 6 }] },
-                    { name: 'ダルビッシュ', vel: 95, ctrl: 92, stm: 85, era: '2.80', k: 15, pitches: [{ id: 0, lv: 6 }, { id: 2, lv: 7 }, { id: 4, lv: 6 }, { id: 5, lv: 5 }, { id: 7, lv: 6 }] }
+                    { name: '山本由伸', vel: 97, ctrl: 95, stm: 88, era: '2.95', k: 20, pitches: [{ id: 0, lv: 6 }, { id: 6, lv: 7 }, { id: 4, lv: 7 }, { id: 7, lv: 5 }] },
+                    { name: '菊池雄星', vel: 97, ctrl: 85, stm: 85, era: '3.20', k: 20, pitches: [{ id: 0, lv: 7 }, { id: 2, lv: 6 }, { id: 5, lv: 5 }] },
+                    { name: '高橋宏斗', vel: 99, ctrl: 88, stm: 88, era: '2.10', k: 24, pitches: [{ id: 0, lv: 7 }, { id: 6, lv: 7 }, { id: 2, lv: 6 }] },
+                    { name: '翁田大勢', vel: 100, ctrl: 82, stm: 60, era: '1.80', k: 18, pitches: [{ id: 0, lv: 7 }, { id: 6, lv: 7 }] }
                 ],
                 batters: [
-                    { name: 'ヌートバー', bats: 'L', avg: '.315', hr: 15, rbi: 55, con: 88, pow: 72, spd: 88 },
-                    { name: '源田壮亮', bats: 'L', avg: '.275', hr: 5, rbi: 40, con: 85, pow: 55, spd: 90 },
-                    { name: '大谷翔平', bats: 'L', avg: '.304', hr: 44, rbi: 95, con: 88, pow: 99, spd: 86 },
-                    { name: '吉田正尚', bats: 'L', avg: '.290', hr: 18, rbi: 72, con: 90, pow: 82, spd: 65 },
-                    { name: '村上宗隆', bats: 'R', avg: '.285', hr: 32, rbi: 88, con: 84, pow: 95, spd: 60 },
-                    { name: '鈴木誠也', bats: 'R', avg: '.295', hr: 20, rbi: 75, con: 88, pow: 85, spd: 80 },
-                    { name: '牧秀悟', bats: 'R', avg: '.280', hr: 18, rbi: 65, con: 82, pow: 80, spd: 60 },
-                    { name: '中村悠平', bats: 'R', avg: '.245', hr: 5, rbi: 38, con: 75, pow: 60, spd: 45 },
-                    { name: '山田哲人', bats: 'R', avg: '.260', hr: 22, rbi: 65, con: 80, pow: 85, spd: 82 },
-                    { name: '近藤健介', bats: 'L', avg: '.310', hr: 12, rbi: 58, con: 92, pow: 72, spd: 62 },
-                    { name: '岡本和真', bats: 'R', avg: '.270', hr: 30, rbi: 90, con: 80, pow: 92, spd: 55 },
-                    { name: '周東佑京', bats: 'L', avg: '.255', hr: 3, rbi: 28, con: 78, pow: 48, spd: 98 }
+                    { name: '大谷翔平', bats: 'L', avg: '.310', hr: 50, rbi: 120, con: 90, pow: 99, spd: 85 },
+                    { name: '鈴木誠也', bats: 'R', avg: '.285', hr: 22, rbi: 80, con: 86, pow: 88, spd: 75 },
+                    { name: '村上宗隆', bats: 'L', avg: '.275', hr: 35, rbi: 95, con: 82, pow: 96, spd: 60 },
+                    { name: '岡本和真', bats: 'R', avg: '.280', hr: 30, rbi: 90, con: 84, pow: 92, spd: 55 },
+                    { name: '吉田正尚', bats: 'L', avg: '.295', hr: 15, rbi: 68, con: 92, pow: 80, spd: 60 },
+                    { name: '近藤健介', bats: 'L', avg: '.310', hr: 12, rbi: 58, con: 95, pow: 75, spd: 62 },
+                    { name: '牧秀悟', bats: 'R', avg: '.285', hr: 22, rbi: 75, con: 85, pow: 85, spd: 60 },
+                    { name: '源田壯亮', bats: 'L', avg: '.270', hr: 5, rbi: 40, con: 84, pow: 55, spd: 90 },
+                    { name: '森下翔太', bats: 'R', avg: '.275', hr: 18, rbi: 65, con: 80, pow: 82, spd: 70 },
+                    { name: '佐藤輝明', bats: 'L', avg: '.260', hr: 24, rbi: 80, con: 75, pow: 88, spd: 65 },
+                    { name: '周東佑京', bats: 'L', avg: '.260', hr: 2, rbi: 28, con: 80, pow: 45, spd: 99 },
+                    { name: '中村悠平', bats: 'R', avg: '.255', hr: 5, rbi: 35, con: 78, pow: 60, spd: 50 }
                 ]
             },
-            'KOR': { // 韓國
+            'KOR': { 
                 pitchers: [
-                    { name: '양현종', vel: 91, ctrl: 92, stm: 88, era: '2.85', k: 12, pitches: [{ id: 0, lv: 5 }, { id: 5, lv: 7 }, { id: 4, lv: 6 }, { id: 2, lv: 5 }] },
-                    { name: '김광현', vel: 93, ctrl: 88, stm: 85, era: '3.10', k: 14, pitches: [{ id: 0, lv: 5 }, { id: 2, lv: 7 }, { id: 4, lv: 5 }, { id: 5, lv: 5 }] },
-                    { name: '고우석', vel: 98, ctrl: 80, stm: 60, era: '2.20', k: 18, pitches: [{ id: 0, lv: 7 }, { id: 2, lv: 6 }, { id: 7, lv: 5 }] },
-                    { name: '안우진', vel: 96, ctrl: 82, stm: 80, era: '2.50', k: 16, pitches: [{ id: 0, lv: 6 }, { id: 2, lv: 6 }, { id: 6, lv: 5 }] }
+                    { name: '郭彬', vel: 95, ctrl: 85, stm: 85, era: '2.90', k: 15, pitches: [{ id: 0, lv: 6 }, { id: 4, lv: 6 }, { id: 2, lv: 5 }, { id: 6, lv: 5 }] },
+                    { name: '文東珠', vel: 98, ctrl: 80, stm: 82, era: '3.10', k: 17, pitches: [{ id: 0, lv: 7 }, { id: 2, lv: 6 }, { id: 4, lv: 5 }] },
+                    { name: '朴英賢', vel: 96, ctrl: 88, stm: 60, era: '2.20', k: 18, pitches: [{ id: 0, lv: 7 }, { id: 5, lv: 6 }, { id: 2, lv: 5 }] },
+                    { name: '元兌仁', vel: 93, ctrl: 86, stm: 80, era: '3.00', k: 13, pitches: [{ id: 0, lv: 5 }, { id: 5, lv: 6 }, { id: 2, lv: 6 }] }
                 ],
                 batters: [
-                    { name: '이정후', bats: 'L', avg: '.340', hr: 12, rbi: 55, con: 96, pow: 68, spd: 85 },
-                    { name: '강백호', bats: 'R', avg: '.295', hr: 28, rbi: 88, con: 85, pow: 90, spd: 60 },
-                    { name: '박해민', bats: 'L', avg: '.295', hr: 5, rbi: 42, con: 88, pow: 58, spd: 94 },
-                    { name: '김현수', bats: 'L', avg: '.305', hr: 10, rbi: 60, con: 92, pow: 70, spd: 60 },
-                    { name: '오지환', bats: 'R', avg: '.270', hr: 15, rbi: 65, con: 80, pow: 75, spd: 72 },
-                    { name: '양의지', bats: 'R', avg: '.280', hr: 15, rbi: 62, con: 82, pow: 78, spd: 45 },
-                    { name: '채은성', bats: 'L', avg: '.280', hr: 22, rbi: 75, con: 78, pow: 85, spd: 55 },
-                    { name: '노시환', bats: 'R', avg: '.265', hr: 35, rbi: 92, con: 75, pow: 95, spd: 55 },
-                    { name: '김혜성', bats: 'L', avg: '.310', hr: 4, rbi: 38, con: 90, pow: 52, spd: 90 },
-                    { name: '박동원', bats: 'R', avg: '.255', hr: 18, rbi: 58, con: 74, pow: 78, spd: 48 },
-                    { name: '이의리', bats: 'L', avg: '.260', hr: 8, rbi: 40, con: 76, pow: 68, spd: 65 },
-                    { name: '류지혁', bats: 'R', avg: '.270', hr: 5, rbi: 32, con: 80, pow: 55, spd: 80 }
+                    { name: '李政厚', bats: 'L', avg: '.320', hr: 10, rbi: 55, con: 96, pow: 70, spd: 85 },
+                    { name: '金倒永', bats: 'R', avg: '.315', hr: 30, rbi: 90, con: 90, pow: 92, spd: 92 },
+                    { name: '姜白虎', bats: 'L', avg: '.295', hr: 25, rbi: 85, con: 86, pow: 90, spd: 60 },
+                    { name: '盧施煥', bats: 'R', avg: '.275', hr: 32, rbi: 95, con: 78, pow: 95, spd: 55 },
+                    { name: '金慧成', bats: 'L', avg: '.310', hr: 6, rbi: 45, con: 90, pow: 58, spd: 90 },
+                    { name: '金河成', bats: 'R', avg: '.270', hr: 18, rbi: 65, con: 82, pow: 78, spd: 85 },
+                    { name: '具滋昱', bats: 'L', avg: '.305', hr: 22, rbi: 80, con: 88, pow: 85, spd: 75 },
+                    { name: '朴東原', bats: 'R', avg: '.265', hr: 20, rbi: 68, con: 76, pow: 82, spd: 48 },
+                    { name: '朴海旻', bats: 'L', avg: '.285', hr: 4, rbi: 38, con: 85, pow: 55, spd: 94 },
+                    { name: '崔元準', bats: 'L', avg: '.290', hr: 8, rbi: 45, con: 85, pow: 65, spd: 88 },
+                    { name: '文保景', bats: 'L', avg: '.285', hr: 15, rbi: 65, con: 82, pow: 78, spd: 65 },
+                    { name: '尹東熙', bats: 'R', avg: '.280', hr: 12, rbi: 55, con: 80, pow: 72, spd: 78 }
                 ]
             },
-            'AUS': { // 澳洲
+            'AUS': { 
                 pitchers: [
-                    { name: 'D.Bednar', vel: 97, ctrl: 80, stm: 65, era: '2.90', k: 16, pitches: [{ id: 0, lv: 6 }, { id: 2, lv: 6 }, { id: 7, lv: 5 }] },
-                    { name: 'R.Naughton', vel: 90, ctrl: 82, stm: 82, era: '3.80', k: 10, pitches: [{ id: 0, lv: 5 }, { id: 5, lv: 6 }, { id: 4, lv: 5 }] },
-                    { name: 'A.Banda', vel: 93, ctrl: 78, stm: 78, era: '3.50', k: 12, pitches: [{ id: 0, lv: 5 }, { id: 2, lv: 6 }, { id: 5, lv: 5 }] }
+                    { name: 'L.Hendriks', vel: 97, ctrl: 85, stm: 60, era: '2.50', k: 18, pitches: [{ id: 0, lv: 7 }, { id: 2, lv: 6 }, { id: 4, lv: 5 }] },
+                    { name: 'T.Atherton', vel: 92, ctrl: 82, stm: 80, era: '3.60', k: 12, pitches: [{ id: 0, lv: 5 }, { id: 2, lv: 6 }, { id: 5, lv: 5 }] },
+                    { name: 'J.Crawford', vel: 93, ctrl: 80, stm: 75, era: '3.80', k: 14, pitches: [{ id: 0, lv: 6 }, { id: 4, lv: 6 }, { id: 5, lv: 4 }] },
+                    { name: 'W.Saupold', vel: 90, ctrl: 88, stm: 82, era: '3.50', k: 10, pitches: [{ id: 0, lv: 5 }, { id: 5, lv: 6 }, { id: 7, lv: 5 }] }
                 ],
                 batters: [
-                    { name: 'L.Raley', bats: 'L', avg: '.260', hr: 18, rbi: 62, con: 75, pow: 82, spd: 72 },
-                    { name: 'R.Reger', bats: 'R', avg: '.270', hr: 8, rbi: 42, con: 78, pow: 65, spd: 70 },
-                    { name: 'D.Nilsson', bats: 'L', avg: '.280', hr: 15, rbi: 58, con: 80, pow: 78, spd: 55 },
-                    { name: 'M.Cooper', bats: 'R', avg: '.255', hr: 10, rbi: 45, con: 74, pow: 70, spd: 68 },
-                    { name: 'J.Lamb', bats: 'L', avg: '.250', hr: 20, rbi: 65, con: 70, pow: 82, spd: 45 },
-                    { name: 'T.Duncan', bats: 'R', avg: '.248', hr: 12, rbi: 48, con: 72, pow: 75, spd: 62 },
-                    { name: 'A.Ross', bats: 'R', avg: '.258', hr: 6, rbi: 35, con: 74, pow: 60, spd: 75 },
-                    { name: 'S.Holton', bats: 'L', avg: '.240', hr: 5, rbi: 30, con: 70, pow: 58, spd: 78 },
-                    { name: 'D.Johnson', bats: 'R', avg: '.252', hr: 8, rbi: 38, con: 72, pow: 65, spd: 65 },
-                    { name: 'B.Schmidt', bats: 'R', avg: '.245', hr: 6, rbi: 28, con: 70, pow: 62, spd: 60 },
-                    { name: 'C.Murray', bats: 'L', avg: '.235', hr: 10, rbi: 40, con: 68, pow: 72, spd: 55 },
-                    { name: 'N.Taylor', bats: 'R', avg: '.242', hr: 4, rbi: 25, con: 68, pow: 55, spd: 72 }
+                    { name: 'T.Bazzana', bats: 'L', avg: '.285', hr: 18, rbi: 65, con: 85, pow: 80, spd: 85 },
+                    { name: 'A.Whitefield', bats: 'R', avg: '.270', hr: 8, rbi: 40, con: 78, pow: 65, spd: 88 },
+                    { name: 'R.Glendinning', bats: 'R', avg: '.260', hr: 22, rbi: 75, con: 75, pow: 88, spd: 55 },
+                    { name: 'D.George', bats: 'R', avg: '.255', hr: 15, rbi: 55, con: 72, pow: 80, spd: 65 },
+                    { name: 'U.Bojarski', bats: 'R', avg: '.265', hr: 12, rbi: 50, con: 76, pow: 75, spd: 70 },
+                    { name: 'L.Spence', bats: 'R', avg: '.275', hr: 5, rbi: 35, con: 80, pow: 60, spd: 75 },
+                    { name: 'R.Perkins', bats: 'R', avg: '.250', hr: 10, rbi: 45, con: 72, pow: 70, spd: 60 },
+                    { name: 'A.Hall', bats: 'L', avg: '.260', hr: 14, rbi: 48, con: 75, pow: 78, spd: 72 },
+                    { name: 'J.Kennelly', bats: 'R', avg: '.245', hr: 8, rbi: 35, con: 70, pow: 65, spd: 65 },
+                    { name: 'C.Wingrove', bats: 'L', avg: '.240', hr: 16, rbi: 52, con: 68, pow: 82, spd: 50 },
+                    { name: 'D.Nilsson', bats: 'L', avg: '.235', hr: 6, rbi: 25, con: 65, pow: 60, spd: 55 },
+                    { name: 'J.McArdle', bats: 'R', avg: '.250', hr: 4, rbi: 20, con: 72, pow: 55, spd: 68 }
                 ]
             },
-            'USA': { // 美國
+            'USA': { 
                 pitchers: [
-                    { name: 'M.Kelly', vel: 96, ctrl: 90, stm: 92, era: '2.65', k: 16, pitches: [{ id: 0, lv: 6 }, { id: 2, lv: 6 }, { id: 5, lv: 5 }, { id: 7, lv: 5 }] },
-                    { name: 'L.Lynn', vel: 94, ctrl: 85, stm: 85, era: '3.10', k: 13, pitches: [{ id: 0, lv: 6 }, { id: 1, lv: 6 }, { id: 2, lv: 5 }, { id: 4, lv: 4 }] },
-                    { name: 'D.Bard', vel: 99, ctrl: 78, stm: 60, era: '2.80', k: 20, pitches: [{ id: 0, lv: 7 }, { id: 2, lv: 6 }, { id: 7, lv: 5 }] },
-                    { name: 'N.Lodolo', vel: 95, ctrl: 82, stm: 80, era: '3.00', k: 14, pitches: [{ id: 0, lv: 6 }, { id: 2, lv: 7 }, { id: 4, lv: 5 }] }
+                    { name: 'P.Skenes', vel: 101, ctrl: 88, stm: 90, era: '2.10', k: 22, pitches: [{ id: 0, lv: 7 }, { id: 6, lv: 7 }, { id: 2, lv: 6 }] },
+                    { name: 'G.Cole', vel: 97, ctrl: 92, stm: 95, era: '2.75', k: 18, pitches: [{ id: 0, lv: 7 }, { id: 2, lv: 6 }, { id: 4, lv: 6 }, { id: 5, lv: 5 }] },
+                    { name: 'Z.Wheeler', vel: 96, ctrl: 90, stm: 92, era: '2.60', k: 17, pitches: [{ id: 0, lv: 6 }, { id: 3, lv: 6 }, { id: 4, lv: 6 }, { id: 8, lv: 5 }] },
+                    { name: 'D.Williams', vel: 95, ctrl: 82, stm: 60, era: '1.80', k: 20, pitches: [{ id: 0, lv: 6 }, { id: 5, lv: 7 }, { id: 2, lv: 5 }] }
                 ],
                 batters: [
-                    { name: 'T.Turner', bats: 'R', avg: '.298', hr: 20, rbi: 82, con: 88, pow: 80, spd: 90 },
-                    { name: 'M.Betts', bats: 'R', avg: '.305', hr: 39, rbi: 85, con: 92, pow: 85, spd: 82 },
-                    { name: 'P.Goldschmidt', bats: 'R', avg: '.285', hr: 28, rbi: 92, con: 88, pow: 88, spd: 70 },
-                    { name: 'N.Arenado', bats: 'R', avg: '.280', hr: 30, rbi: 95, con: 86, pow: 90, spd: 60 },
-                    { name: 'M.Trout', bats: 'R', avg: '.270', hr: 35, rbi: 80, con: 85, pow: 95, spd: 78 },
-                    { name: 'K.Tucker', bats: 'L', avg: '.285', hr: 28, rbi: 88, con: 85, pow: 86, spd: 75 },
-                    { name: 'J.McNeil', bats: 'L', avg: '.295', hr: 8, rbi: 52, con: 94, pow: 65, spd: 72 },
-                    { name: 'W.Smith', bats: 'R', avg: '.275', hr: 20, rbi: 75, con: 82, pow: 80, spd: 60 },
-                    { name: 'C.Mullins', bats: 'L', avg: '.268', hr: 15, rbi: 55, con: 80, pow: 72, spd: 85 },
-                    { name: 'T.Frazier', bats: 'R', avg: '.250', hr: 20, rbi: 65, con: 75, pow: 82, spd: 58 },
-                    { name: 'A.Benintendi', bats: 'L', avg: '.278', hr: 12, rbi: 50, con: 84, pow: 68, spd: 75 },
-                    { name: 'D.Robertson', bats: 'R', avg: '.255', hr: 10, rbi: 42, con: 76, pow: 70, spd: 70 }
+                    { name: 'A.Judge', bats: 'R', avg: '.295', hr: 50, rbi: 115, con: 88, pow: 99, spd: 65 },
+                    { name: 'M.Betts', bats: 'R', avg: '.305', hr: 35, rbi: 85, con: 94, pow: 86, spd: 82 },
+                    { name: 'B.Witt Jr.', bats: 'R', avg: '.310', hr: 30, rbi: 95, con: 92, pow: 88, spd: 95 },
+                    { name: 'G.Henderson', bats: 'L', avg: '.285', hr: 35, rbi: 90, con: 85, pow: 92, spd: 85 },
+                    { name: 'B.Harper', bats: 'L', avg: '.280', hr: 32, rbi: 95, con: 86, pow: 90, spd: 65 },
+                    { name: 'M.Trout', bats: 'R', avg: '.270', hr: 30, rbi: 80, con: 84, pow: 94, spd: 70 },
+                    { name: 'F.Freeman', bats: 'L', avg: '.315', hr: 25, rbi: 95, con: 95, pow: 82, spd: 55 },
+                    { name: 'K.Tucker', bats: 'L', avg: '.285', hr: 30, rbi: 90, con: 86, pow: 88, spd: 75 },
+                    { name: 'C.Carroll', bats: 'L', avg: '.275', hr: 22, rbi: 75, con: 82, pow: 80, spd: 98 },
+                    { name: 'T.Turner', bats: 'R', avg: '.290', hr: 18, rbi: 70, con: 88, pow: 78, spd: 92 },
+                    { name: 'J.Realmuto', bats: 'R', avg: '.260', hr: 20, rbi: 65, con: 78, pow: 80, spd: 75 },
+                    { name: 'P.Alonso', bats: 'R', avg: '.245', hr: 40, rbi: 105, con: 72, pow: 96, spd: 40 }
                 ]
             },
-            'DOM': { // 多明尼加
+            'DOM': { 
                 pitchers: [
-                    { name: 'S.Alcantara', vel: 98, ctrl: 88, stm: 95, era: '2.28', k: 18, pitches: [{ id: 0, lv: 7 }, { id: 1, lv: 7 }, { id: 2, lv: 5 }, { id: 5, lv: 5 }] },
-                    { name: 'J.Ureña', vel: 95, ctrl: 82, stm: 82, era: '3.50', k: 12, pitches: [{ id: 0, lv: 6 }, { id: 1, lv: 6 }, { id: 5, lv: 5 }] },
-                    { name: 'L.García', vel: 99, ctrl: 75, stm: 65, era: '3.10', k: 20, pitches: [{ id: 0, lv: 7 }, { id: 7, lv: 6 }, { id: 2, lv: 5 }] },
-                    { name: 'E.Lauer', vel: 93, ctrl: 86, stm: 80, era: '3.30', k: 11, pitches: [{ id: 0, lv: 5 }, { id: 2, lv: 6 }, { id: 4, lv: 5 }] }
+                    { name: 'L.Castillo', vel: 97, ctrl: 85, stm: 90, era: '3.10', k: 18, pitches: [{ id: 0, lv: 6 }, { id: 1, lv: 7 }, { id: 2, lv: 6 }, { id: 5, lv: 5 }] },
+                    { name: 'F.Valdez', vel: 95, ctrl: 82, stm: 92, era: '3.20', k: 16, pitches: [{ id: 8, lv: 7 }, { id: 4, lv: 6 }, { id: 5, lv: 5 }] },
+                    { name: 'E.Pérez', vel: 99, ctrl: 80, stm: 85, era: '2.90', k: 20, pitches: [{ id: 0, lv: 7 }, { id: 2, lv: 6 }, { id: 5, lv: 6 }] },
+                    { name: 'E.Clase', vel: 100, ctrl: 88, stm: 60, era: '1.60', k: 17, pitches: [{ id: 7, lv: 7 }, { id: 2, lv: 6 }] }
                 ],
                 batters: [
-                    { name: 'J.Soto', bats: 'L', avg: '.295', hr: 35, rbi: 105, con: 94, pow: 90, spd: 65 },
-                    { name: 'M.Machado', bats: 'R', avg: '.280', hr: 32, rbi: 98, con: 86, pow: 92, spd: 65 },
-                    { name: 'F.Tatis Jr.', bats: 'R', avg: '.285', hr: 36, rbi: 95, con: 82, pow: 95, spd: 90 },
-                    { name: 'R.Devers', bats: 'L', avg: '.278', hr: 30, rbi: 100, con: 85, pow: 92, spd: 58 },
-                    { name: 'J.Rodríguez', bats: 'R', avg: '.285', hr: 32, rbi: 88, con: 84, pow: 90, spd: 85 },
-                    { name: 'J.Peña', bats: 'R', avg: '.272', hr: 20, rbi: 78, con: 80, pow: 80, spd: 78 },
-                    { name: 'J.Abreu', bats: 'R', avg: '.265', hr: 30, rbi: 100, con: 82, pow: 92, spd: 45 },
-                    { name: 'R.Arozarena', bats: 'R', avg: '.280', hr: 22, rbi: 74, con: 82, pow: 82, spd: 85 },
-                    { name: 'M.Ozuna', bats: 'R', avg: '.250', hr: 28, rbi: 88, con: 75, pow: 90, spd: 48 },
-                    { name: 'J.Iglesias', bats: 'R', avg: '.260', hr: 8, rbi: 42, con: 80, pow: 62, spd: 70 },
-                    { name: 'M.Rojas', bats: 'R', avg: '.245', hr: 6, rbi: 38, con: 76, pow: 58, spd: 68 },
-                    { name: 'E.Encarnación', bats: 'R', avg: '.240', hr: 22, rbi: 68, con: 70, pow: 88, spd: 40 }
+                    { name: 'J.Soto', bats: 'L', avg: '.300', hr: 38, rbi: 105, con: 95, pow: 94, spd: 65 },
+                    { name: 'M.Machado', bats: 'R', avg: '.280', hr: 32, rbi: 100, con: 85, pow: 92, spd: 60 },
+                    { name: 'V.Guerrero Jr.', bats: 'R', avg: '.295', hr: 30, rbi: 98, con: 90, pow: 90, spd: 50 },
+                    { name: 'J.Ramírez', bats: 'S', avg: '.285', hr: 35, rbi: 105, con: 88, pow: 90, spd: 82 },
+                    { name: 'F.Tatis Jr.', bats: 'R', avg: '.280', hr: 35, rbi: 90, con: 84, pow: 94, spd: 88 },
+                    { name: 'R.Devers', bats: 'L', avg: '.275', hr: 34, rbi: 102, con: 82, pow: 95, spd: 55 },
+                    { name: 'M.Ozuna', bats: 'R', avg: '.270', hr: 38, rbi: 105, con: 80, pow: 96, spd: 45 },
+                    { name: 'T.Hernández', bats: 'R', avg: '.265', hr: 30, rbi: 90, con: 78, pow: 90, spd: 65 },
+                    { name: 'K.Marte', bats: 'S', avg: '.285', hr: 25, rbi: 85, con: 88, pow: 84, spd: 75 },
+                    { name: 'J.Rodríguez', bats: 'R', avg: '.275', hr: 28, rbi: 85, con: 82, pow: 88, spd: 90 },
+                    { name: 'E.De La Cruz', bats: 'S', avg: '.255', hr: 25, rbi: 75, con: 75, pow: 85, spd: 99 },
+                    { name: 'G.Sánchez', bats: 'R', avg: '.235', hr: 22, rbi: 60, con: 70, pow: 88, spd: 40 }
                 ]
             },
-            'PUR': { // 波多黎各
+            'PUR': { 
                 pitchers: [
-                    { name: 'J.Berríos', vel: 94, ctrl: 90, stm: 90, era: '3.05', k: 15, pitches: [{ id: 0, lv: 5 }, { id: 4, lv: 6 }, { id: 2, lv: 5 }, { id: 5, lv: 5 }] },
-                    { name: 'R.Suárez', vel: 95, ctrl: 84, stm: 80, era: '3.10', k: 13, pitches: [{ id: 0, lv: 6 }, { id: 5, lv: 6 }, { id: 2, lv: 5 }] },
-                    { name: 'E.Díaz', vel: 100, ctrl: 80, stm: 60, era: '1.31', k: 25, pitches: [{ id: 0, lv: 7 }, { id: 3, lv: 7 }, { id: 2, lv: 5 }] },
-                    { name: 'Á.Feliz', vel: 97, ctrl: 78, stm: 65, era: '2.90', k: 18, pitches: [{ id: 0, lv: 7 }, { id: 2, lv: 6 }, { id: 6, lv: 5 }] }
+                    { name: 'J.Berríos', vel: 94, ctrl: 88, stm: 90, era: '3.20', k: 15, pitches: [{ id: 0, lv: 5 }, { id: 3, lv: 6 }, { id: 8, lv: 5 }, { id: 5, lv: 5 }] },
+                    { name: 'S.Lugo', vel: 93, ctrl: 85, stm: 85, era: '3.40', k: 14, pitches: [{ id: 0, lv: 6 }, { id: 4, lv: 6 }, { id: 2, lv: 5 }] },
+                    { name: 'M.Stroman', vel: 92, ctrl: 86, stm: 85, era: '3.60', k: 12, pitches: [{ id: 8, lv: 7 }, { id: 3, lv: 6 }, { id: 5, lv: 5 }] },
+                    { name: 'E.Díaz', vel: 100, ctrl: 80, stm: 60, era: '2.10', k: 22, pitches: [{ id: 0, lv: 7 }, { id: 2, lv: 7 }, { id: 5, lv: 4 }] }
                 ],
                 batters: [
-                    { name: 'F.Lindor', bats: 'S', avg: '.272', hr: 26, rbi: 95, con: 88, pow: 82, spd: 80 },
-                    { name: 'C.Correa', bats: 'R', avg: '.280', hr: 24, rbi: 88, con: 86, pow: 85, spd: 70 },
-                    { name: 'A.Santander', bats: 'S', avg: '.268', hr: 24, rbi: 82, con: 80, pow: 85, spd: 65 },
-                    { name: 'E.Hernández', bats: 'R', avg: '.260', hr: 20, rbi: 65, con: 78, pow: 80, spd: 72 },
-                    { name: 'Y.Molina', bats: 'R', avg: '.260', hr: 12, rbi: 58, con: 82, pow: 72, spd: 40 },
-                    { name: 'J.Profar', bats: 'S', avg: '.270', hr: 14, rbi: 58, con: 82, pow: 72, spd: 68 },
-                    { name: 'E.Álvarez', bats: 'S', avg: '.258', hr: 8, rbi: 42, con: 78, pow: 65, spd: 80 },
-                    { name: 'P.Alonso', bats: 'R', avg: '.235', hr: 35, rbi: 100, con: 75, pow: 96, spd: 40 },
-                    { name: 'C.Vázquez', bats: 'R', avg: '.265', hr: 12, rbi: 55, con: 78, pow: 70, spd: 50 },
-                    { name: 'A.Cintron', bats: 'R', avg: '.255', hr: 6, rbi: 35, con: 76, pow: 62, spd: 72 },
-                    { name: 'J.Báez', bats: 'R', avg: '.265', hr: 20, rbi: 72, con: 72, pow: 82, spd: 80 },
-                    { name: 'N.Cruz', bats: 'R', avg: '.240', hr: 25, rbi: 78, con: 72, pow: 90, spd: 40 }
+                    { name: 'F.Lindor', bats: 'S', avg: '.275', hr: 30, rbi: 90, con: 86, pow: 88, spd: 82 },
+                    { name: 'C.Correa', bats: 'R', avg: '.285', hr: 22, rbi: 85, con: 88, pow: 84, spd: 65 },
+                    { name: 'W.Contreras', bats: 'R', avg: '.270', hr: 25, rbi: 80, con: 82, pow: 88, spd: 55 },
+                    { name: 'J.Báez', bats: 'R', avg: '.255', hr: 18, rbi: 70, con: 75, pow: 80, spd: 75 },
+                    { name: 'H.Ramos', bats: 'R', avg: '.265', hr: 20, rbi: 75, con: 80, pow: 82, spd: 68 },
+                    { name: 'E.Rivera', bats: 'R', avg: '.250', hr: 10, rbi: 50, con: 75, pow: 70, spd: 65 },
+                    { name: 'K.Hernández', bats: 'R', avg: '.245', hr: 15, rbi: 55, con: 74, pow: 75, spd: 65 },
+                    { name: 'C.Vázquez', bats: 'R', avg: '.260', hr: 8, rbi: 45, con: 78, pow: 65, spd: 45 },
+                    { name: 'M.Meléndez', bats: 'L', avg: '.235', hr: 22, rbi: 65, con: 70, pow: 85, spd: 60 },
+                    { name: 'J.Miranda', bats: 'R', avg: '.270', hr: 15, rbi: 60, con: 82, pow: 78, spd: 55 },
+                    { name: 'V.Machín', bats: 'L', avg: '.255', hr: 5, rbi: 35, con: 76, pow: 60, spd: 60 },
+                    { name: 'N.Velázquez', bats: 'R', avg: '.240', hr: 20, rbi: 60, con: 72, pow: 86, spd: 62 }
                 ]
             },
-            'MEX': { // 墨西哥
+            'MEX': { 
                 pitchers: [
-                    { name: 'J.Urías', vel: 96, ctrl: 88, stm: 88, era: '2.16', k: 16, pitches: [{ id: 0, lv: 6 }, { id: 5, lv: 7 }, { id: 4, lv: 6 }, { id: 2, lv: 5 }] },
-                    { name: 'P.Sandoval', vel: 93, ctrl: 90, stm: 85, era: '3.19', k: 13, pitches: [{ id: 0, lv: 5 }, { id: 5, lv: 7 }, { id: 4, lv: 6 }, { id: 2, lv: 5 }] },
-                    { name: 'G.Gallegos', vel: 94, ctrl: 80, stm: 60, era: '2.63', k: 14, pitches: [{ id: 0, lv: 6 }, { id: 3, lv: 6 }, { id: 7, lv: 5 }] },
-                    { name: 'E.Campillo', vel: 92, ctrl: 82, stm: 80, era: '3.40', k: 11, pitches: [{ id: 0, lv: 5 }, { id: 5, lv: 6 }, { id: 4, lv: 5 }] }
+                    { name: 'J.Urquidy', vel: 93, ctrl: 88, stm: 85, era: '3.60', k: 13, pitches: [{ id: 0, lv: 5 }, { id: 5, lv: 6 }, { id: 2, lv: 5 }, { id: 4, lv: 5 }] },
+                    { name: 'T.Walker', vel: 94, ctrl: 82, stm: 85, era: '4.10', k: 12, pitches: [{ id: 0, lv: 6 }, { id: 6, lv: 6 }, { id: 2, lv: 5 }] },
+                    { name: 'P.Sandoval', vel: 94, ctrl: 85, stm: 85, era: '3.80', k: 14, pitches: [{ id: 0, lv: 6 }, { id: 5, lv: 6 }, { id: 2, lv: 5 }] },
+                    { name: 'A.Muñoz', vel: 101, ctrl: 85, stm: 60, era: '1.90', k: 22, pitches: [{ id: 0, lv: 7 }, { id: 2, lv: 7 }, { id: 8, lv: 5 }] }
                 ],
                 batters: [
-                    { name: 'R.Arozarena', bats: 'R', avg: '.280', hr: 22, rbi: 74, con: 82, pow: 82, spd: 85 },
-                    { name: 'I.Paredes', bats: 'R', avg: '.268', hr: 26, rbi: 76, con: 80, pow: 85, spd: 60 },
-                    { name: 'A.Verdugo', bats: 'L', avg: '.275', hr: 15, rbi: 50, con: 82, pow: 65, spd: 60 },
-                    { name: 'J.Meneses', bats: 'R', avg: '.288', hr: 20, rbi: 70, con: 84, pow: 82, spd: 55 },
-                    { name: 'J.Candelario', bats: 'S', avg: '.260', hr: 18, rbi: 65, con: 78, pow: 78, spd: 55 },
-                    { name: 'J.Cantu', bats: 'R', avg: '.272', hr: 8, rbi: 50, con: 80, pow: 68, spd: 62 },
-                    { name: 'A.García', bats: 'R', avg: '.265', hr: 14, rbi: 58, con: 78, pow: 75, spd: 68 },
-                    { name: 'O.Arcia', bats: 'R', avg: '.278', hr: 16, rbi: 65, con: 80, pow: 75, spd: 62 },
-                    { name: 'N.López', bats: 'S', avg: '.255', hr: 5, rbi: 38, con: 78, pow: 55, spd: 80 },
-                    { name: 'C.Pérez', bats: 'R', avg: '.252', hr: 10, rbi: 42, con: 74, pow: 68, spd: 58 },
-                    { name: 'J.Castro', bats: 'R', avg: '.260', hr: 12, rbi: 48, con: 76, pow: 72, spd: 55 },
-                    { name: 'G.Moreno', bats: 'R', avg: '.248', hr: 8, rbi: 35, con: 72, pow: 65, spd: 70 }
+                    { name: 'R.Arozarena', bats: 'R', avg: '.270', hr: 22, rbi: 80, con: 82, pow: 84, spd: 85 },
+                    { name: 'I.Paredes', bats: 'R', avg: '.265', hr: 28, rbi: 85, con: 80, pow: 88, spd: 55 },
+                    { name: 'A.Verdugo', bats: 'L', avg: '.275', hr: 15, rbi: 65, con: 85, pow: 70, spd: 65 },
+                    { name: 'A.Kirk', bats: 'R', avg: '.280', hr: 12, rbi: 60, con: 88, pow: 72, spd: 35 },
+                    { name: 'J.Meneses', bats: 'R', avg: '.275', hr: 18, rbi: 75, con: 84, pow: 80, spd: 50 },
+                    { name: 'L.Urías', bats: 'R', avg: '.250', hr: 15, rbi: 55, con: 75, pow: 75, spd: 60 },
+                    { name: 'R.Tellez', bats: 'L', avg: '.245', hr: 25, rbi: 70, con: 72, pow: 88, spd: 40 },
+                    { name: 'A.Thomas', bats: 'L', avg: '.260', hr: 10, rbi: 45, con: 78, pow: 68, spd: 85 },
+                    { name: 'J.Duran', bats: 'R', avg: '.270', hr: 16, rbi: 65, con: 80, pow: 78, spd: 90 },
+                    { name: 'T.Estrada', bats: 'R', avg: '.265', hr: 14, rbi: 55, con: 78, pow: 75, spd: 75 },
+                    { name: 'V.Aranda', bats: 'L', avg: '.255', hr: 12, rbi: 45, con: 75, pow: 72, spd: 60 },
+                    { name: 'A.Trejo', bats: 'R', avg: '.240', hr: 5, rbi: 30, con: 70, pow: 60, spd: 70 }
                 ]
             },
-            'ITA': { // 義大利
+            'ITA': { 
                 pitchers: [
-                    { name: 'M.King', vel: 96, ctrl: 85, stm: 82, era: '2.75', k: 16, pitches: [{ id: 0, lv: 6 }, { id: 7, lv: 6 }, { id: 2, lv: 5 }, { id: 5, lv: 4 }] },
-                    { name: 'R.Rolison', vel: 93, ctrl: 80, stm: 80, era: '3.50', k: 12, pitches: [{ id: 0, lv: 5 }, { id: 5, lv: 6 }, { id: 4, lv: 5 }, { id: 2, lv: 5 }] },
-                    { name: 'D.Palka', vel: 91, ctrl: 82, stm: 78, era: '3.80', k: 10, pitches: [{ id: 0, lv: 5 }, { id: 5, lv: 6 }, { id: 2, lv: 5 }] },
-                    { name: 'R.De Leon', vel: 94, ctrl: 78, stm: 65, era: '3.20', k: 14, pitches: [{ id: 0, lv: 6 }, { id: 2, lv: 6 }, { id: 6, lv: 5 }] }
+                    { name: 'A.Pallante', vel: 94, ctrl: 82, stm: 85, era: '3.50', k: 13, pitches: [{ id: 0, lv: 6 }, { id: 2, lv: 6 }, { id: 4, lv: 5 }] },
+                    { name: 'M.Festa', vel: 93, ctrl: 80, stm: 75, era: '3.90', k: 14, pitches: [{ id: 0, lv: 5 }, { id: 2, lv: 6 }, { id: 6, lv: 5 }] },
+                    { name: 'J.Biagini', vel: 92, ctrl: 85, stm: 80, era: '4.10', k: 10, pitches: [{ id: 0, lv: 5 }, { id: 4, lv: 5 }, { id: 5, lv: 5 }] },
+                    { name: 'M.King', vel: 95, ctrl: 88, stm: 88, era: '2.80', k: 16, pitches: [{ id: 0, lv: 6 }, { id: 7, lv: 6 }, { id: 2, lv: 5 }, { id: 5, lv: 5 }] }
                 ],
                 batters: [
-                    { name: 'A.Rizzo', bats: 'L', avg: '.250', hr: 22, rbi: 60, con: 75, pow: 78, spd: 45 },
-                    { name: 'V.Pasquantino', bats: 'L', avg: '.270', hr: 18, rbi: 68, con: 82, pow: 80, spd: 42 },
-                    { name: 'N.López', bats: 'S', avg: '.252', hr: 4, rbi: 35, con: 78, pow: 52, spd: 80 },
-                    { name: 'J.Berti', bats: 'R', avg: '.260', hr: 5, rbi: 32, con: 78, pow: 55, spd: 88 },
-                    { name: 'D.Lugbauer', bats: 'R', avg: '.258', hr: 22, rbi: 65, con: 72, pow: 82, spd: 48 },
-                    { name: 'D.Fletcher', bats: 'L', avg: '.275', hr: 5, rbi: 35, con: 82, pow: 52, spd: 75 },
-                    { name: 'F.Piliere', bats: 'R', avg: '.265', hr: 8, rbi: 40, con: 76, pow: 65, spd: 65 },
-                    { name: 'G.Lentini', bats: 'R', avg: '.245', hr: 10, rbi: 42, con: 70, pow: 70, spd: 60 },
-                    { name: 'M.Papierski', bats: 'R', avg: '.240', hr: 6, rbi: 30, con: 68, pow: 62, spd: 48 },
-                    { name: 'A.De Goti', bats: 'R', avg: '.252', hr: 4, rbi: 28, con: 74, pow: 55, spd: 72 },
-                    { name: 'E.Sogard', bats: 'L', avg: '.260', hr: 3, rbi: 25, con: 78, pow: 48, spd: 75 },
-                    { name: 'S.Castellano', bats: 'R', avg: '.248', hr: 8, rbi: 38, con: 72, pow: 68, spd: 58 }
+                    { name: 'V.Pasquantino', bats: 'L', avg: '.275', hr: 22, rbi: 85, con: 85, pow: 85, spd: 45 },
+                    { name: 'S.Frelick', bats: 'L', avg: '.265', hr: 8, rbi: 45, con: 80, pow: 65, spd: 88 },
+                    { name: 'D.Fletcher', bats: 'R', avg: '.270', hr: 5, rbi: 40, con: 85, pow: 55, spd: 70 },
+                    { name: 'N.Lopez', bats: 'S', avg: '.260', hr: 4, rbi: 35, con: 82, pow: 50, spd: 75 },
+                    { name: 'M.Mastrobuoni', bats: 'L', avg: '.255', hr: 6, rbi: 38, con: 78, pow: 60, spd: 80 },
+                    { name: 'B.Sullivan', bats: 'L', avg: '.245', hr: 12, rbi: 50, con: 72, pow: 75, spd: 55 },
+                    { name: 'J.Friscia', bats: 'R', avg: '.250', hr: 10, rbi: 45, con: 74, pow: 72, spd: 60 },
+                    { name: 'A.Garcia', bats: 'R', avg: '.260', hr: 14, rbi: 55, con: 76, pow: 78, spd: 65 },
+                    { name: 'F.Piliere', bats: 'R', avg: '.240', hr: 5, rbi: 30, con: 70, pow: 60, spd: 65 },
+                    { name: 'E.Sogard', bats: 'L', avg: '.255', hr: 3, rbi: 25, con: 76, pow: 55, spd: 70 },
+                    { name: 'D.Lugbauer', bats: 'L', avg: '.235', hr: 25, rbi: 65, con: 68, pow: 88, spd: 40 },
+                    { name: 'C.Mastromarino', bats: 'R', avg: '.245', hr: 8, rbi: 35, con: 72, pow: 65, spd: 62 }
                 ]
             }
         };
@@ -507,7 +506,6 @@
 
         // 為所有球隊加入指定的板凳球員
         TEAMS.forEach(team => {
-            // 先移除可能重複存在的同名球員
             team.roster.batters = team.roster.batters.filter(b => b.name !== '廖宣皓' && b.name !== '廖宣瑜');
             team.roster.batters.push({ name: '廖宣皓', bats: 'L', avg: '.285', hr: 10, rbi: 55, con: 80, pow: 75, spd: 82 });
             team.roster.batters.push({ name: '廖宣瑜', bats: 'R', avg: '.310', hr: 15, rbi: 60, con: 85, pow: 80, spd: 78 });
@@ -552,7 +550,6 @@
         }
         initState();
 
-        // ── Web Audio Sound Engine ─────────────────────────────────────
         const SFX = (() => {
             let ctx2 = null;
             const init = () => { if (!ctx2) ctx2 = new (window.AudioContext || window.webkitAudioContext)(); };
@@ -574,7 +571,6 @@
                     o.start(c.currentTime); o.stop(c.currentTime + 0.3);
                 }); },
                 crack() { play(c => {
-                    // noise burst for bat crack
                     const buf = c.createBuffer(1, c.sampleRate * 0.15, c.sampleRate);
                     const d = buf.getChannelData(0);
                     for (let i = 0; i < d.length; i++) d[i] = (Math.random() * 2 - 1) * (1 - i / d.length);
@@ -595,7 +591,6 @@
                     src.buffer = buf; src.connect(filt); filt.connect(g); g.connect(c.destination);
                     env(g, c.currentTime, 1.2, 0, 0.5, 0.4);
                     src.start(c.currentTime);
-                    // crowd cheer
                     const buf2 = c.createBuffer(1, c.sampleRate * 1.2, c.sampleRate);
                     const d2 = buf2.getChannelData(0);
                     for (let i = 0; i < d2.length; i++) d2[i] = (Math.random() * 2 - 1) * Math.pow(Math.sin(i / d2.length * Math.PI), 0.5);
@@ -723,12 +718,14 @@
             ctx.strokeStyle = 'rgba(255,255,255,0.4)'; ctx.lineWidth = 1;
             drawRoundRect(ctx, x + 2, y + 2, w - 4, h - 4, (h - 4) / 2); ctx.stroke();
 
-            txt(label, x + w / 2, y + h / 2 + 6, 18, textCol, 'center', 'Microsoft JhengHei', false);
+            txt(label, x + w / 2, y + h / 2 + 6, 18, textCol, 'center', '', false);
             ctx.restore();
         }
 
-        function txt(s, x, y, sz, col, align = 'center', font = 'Microsoft JhengHei', stroke = true) {
-            ctx.font = `bold ${sz}px ${font}`; ctx.textAlign = align;
+        function txt(s, x, y, sz, col, align = 'center', font = '', stroke = true) {
+            const fontStack = font || '"PingFang TC", "Microsoft JhengHei", "Noto Sans TC", Arial, sans-serif';
+            ctx.font = `bold ${sz}px ${fontStack}`;
+            ctx.textAlign = align;
             if (stroke) {
                 ctx.strokeStyle = '#000'; ctx.lineWidth = 3; ctx.lineJoin = "round";
                 ctx.strokeText(s, x, y);
@@ -742,6 +739,23 @@
 
         function getBatter() { return batTeamInfo().roster.batters[G.lineups[G.half][G.batOrder[G.half]]]; }
         function getPitcher() { return pitTeamInfo().roster.pitchers[G.pitchers[G.half === 0 ? 1 : 0]]; }
+
+        function getSubMenuLayout() {
+            let isPitcher = G.subType === 'P';
+            let sideIdx = isPitcher ? (G.half === 0 ? 1 : 0) : G.half;
+            let teamDataIdx = sideIdx === 0 ? G.awayIdx : G.homeIdx;
+            let roster = isPitcher ? TEAMS[teamDataIdx].roster.pitchers : TEAMS[teamDataIdx].roster.batters;
+            let availIndices = [];
+            for (let i = 0; i < roster.length; i++) {
+                let isAvail = isPitcher ? (!G.usedPitchers[sideIdx][i] && G.pitchers[sideIdx] !== i) : (!G.usedBatters[sideIdx][i] && !G.lineups[sideIdx].includes(i));
+                if (isAvail) availIndices.push(i);
+            }
+            const panelW = 440;
+            const panelH = Math.max(250, 150 + availIndices.length * 60);
+            const px = W / 2 - panelW / 2;
+            const py = H / 2 - panelH / 2;
+            return { isPitcher, sideIdx, teamDataIdx, roster, availIndices, panelW, panelH, px, py };
+        }
 
         function startAtBat(isContinue = false) {
             if (!isContinue) { G.balls = 0; G.strikes = 0; }
@@ -766,7 +780,6 @@
             const good = controlPower >= 0.60 && controlPower <= 0.90;
             const over = controlPower > 0.90;
 
-            // Fatigue: extra deviation when pitch count exceeds stamina threshold
             const fatigueMod = Math.max(0, (G.pitchCounts[pitcherSide] - pitcher.stm * 0.6) / (pitcher.stm * 0.4));
             const cMod = (100 - pitcher.ctrl) / 20 * (1 + fatigueMod * 0.8);
             let devX = 0, devY = 0;
@@ -842,16 +855,12 @@
 
         function attemptSteal() {
             if (!playerBatting() || G.phase !== PH.WAIT_PITCH) return;
-            // Pick lead runner: prefer 2nd→3rd, else 1st→2nd
             let from = -1;
             if (G.runners[1]) from = 1;
             else if (G.runners[0]) from = 0;
             if (from === -1) return;
 
             const bat = G.half;
-            const runnerIdx = G.lineups[bat][G.batOrder[bat]];
-            const spd = TEAMS[G.awayIdx + (G.half === 0 ? 0 : 0)];
-            // Use current batter speed as proxy (no dedicated runner stat)
             const batterSpd = getBatter().spd;
             const successChance = clamp(0.25 + (batterSpd - 50) / 100, 0.20, 0.72);
             const success = Math.random() < successChance;
@@ -868,7 +877,7 @@
                 if (from === 1) G.runners[1] = false;
                 else G.runners[0] = false;
                 SFX.steal_fail();
-                showRes('盜壘失敗！', 'CAUGHT STEALING', '#FF4444', endHalf);
+                showRes('盜壘失敗', 'CAUGHT STEALING', '#FF4444', endHalf);
             }
         }
 
@@ -1030,7 +1039,7 @@
                     } else if (G.selStep === 2) {
                         const diffs = ['簡單', '普通', '困難'];
                         diffs.forEach((_, di) => {
-                            const bx = W / 2 - 195 + di * 135, by = 400; // 移動按鈕位置避免重疊
+                            const bx = W / 2 - 195 + di * 135, by = 400;
                             if (mouseX >= bx && mouseX <= bx + 120 && mouseY >= by && mouseY <= by + 70) {
                                 G.difficulty = di;
                                 G.inning = 1; G.half = 0; G.outs = 0; G.balls = 0; G.strikes = 0; G.score = [0, 0]; G.batOrder = [0, 0];
@@ -1067,11 +1076,25 @@
                 clearInput(); return;
             }
 
+            // 新增：隨時點擊右上角退出比賽
+            if (isMouseJustPressed) {
+                const qx = W - 115, qy = 15, qw = 100, qh = 40;
+                if (mouseX >= qx && mouseX <= qx + qw && mouseY >= qy && mouseY <= qy + qh) {
+                    if (confirm('確定要結束比賽，返回主畫面嗎？')) {
+                        initState();
+                        clearInput();
+                        return;
+                    } else {
+                        isMouseJustPressed = false;
+                    }
+                }
+            }
+
             switch (G.phase) {
                 case PH.SUB_MENU:
                     if (isMouseJustPressed) {
-                        const panelW = 440, panelH = 380;
-                        const px = W / 2 - panelW / 2, py = H / 2 - panelH / 2;
+                        const layout = getSubMenuLayout();
+                        const { isPitcher, sideIdx, availIndices, panelW, panelH, px, py } = layout;
 
                         const cHover = mouseX >= px + 120 && mouseX <= px + 320 && mouseY >= py + panelH - 60 && mouseY <= py + panelH - 20;
                         if (cHover) {
@@ -1079,28 +1102,22 @@
                             break;
                         }
 
-                        let sideIdx = G.subType === 'P' ? (G.half === 0 ? 1 : 0) : G.half;
-                        let teamDataIdx = sideIdx === 0 ? G.awayIdx : G.homeIdx;
-                        const roster = G.subType === 'P' ? TEAMS[teamDataIdx].roster.pitchers : TEAMS[teamDataIdx].roster.batters;
                         let drawY = py + 70;
-
-                        for (let i = 0; i < roster.length; i++) {
-                            let isAvail = G.subType === 'P' ? (!G.usedPitchers[sideIdx][i] && G.pitchers[sideIdx] !== i) : (!G.usedBatters[sideIdx][i] && !G.lineups[sideIdx].includes(i));
-                            if (isAvail) {
-                                if (mouseX >= px + 20 && mouseX <= px + panelW - 20 && mouseY >= drawY && mouseY <= drawY + 50) {
-                                    if (G.subType === 'P') {
-                                        G.pitchers[sideIdx] = i;
-                                        G.usedPitchers[sideIdx][i] = true;
-                                    } else {
-                                        let curOrder = G.batOrder[sideIdx];
-                                        G.lineups[sideIdx][curOrder] = i;
-                                        G.usedBatters[sideIdx][i] = true;
-                                    }
-                                    G.phase = G.prevPhase;
-                                    break;
+                        for (let i = 0; i < availIndices.length; i++) {
+                            const rIdx = availIndices[i];
+                            if (mouseX >= px + 20 && mouseX <= px + panelW - 20 && mouseY >= drawY && mouseY <= drawY + 50) {
+                                if (isPitcher) {
+                                    G.pitchers[sideIdx] = rIdx;
+                                    G.usedPitchers[sideIdx][rIdx] = true;
+                                } else {
+                                    let curOrder = G.batOrder[sideIdx];
+                                    G.lineups[sideIdx][curOrder] = rIdx;
+                                    G.usedBatters[sideIdx][rIdx] = true;
                                 }
-                                drawY += 60;
+                                G.phase = G.prevPhase;
+                                break;
                             }
+                            drawY += 60;
                         }
                     }
                     break;
@@ -1255,13 +1272,12 @@
             else if (G.scr === SCR.GAME) renderGame();
             else if (G.scr === SCR.OVER) renderOver();
             else if (G.scr === SCR.HALF_END) renderHalfEnd();
-            // Portrait mode overlay
             if (isMobile && window.innerHeight > window.innerWidth * 1.2) {
                 ctx.fillStyle = 'rgba(0,0,0,0.82)';
                 ctx.fillRect(0, 0, W, H);
                 ctx.save();
                 ctx.translate(W/2, H/2);
-                txt('📱→📺', W/2, 0, 52, '#FFD700', 'center', 'Arial', false);
+                txt('📱→📺', W/2, 0, 52, '#FFD700', 'center', '', false);
                 ctx.restore();
                 txt('請橫向使用手機', W/2, H/2+60, 26, '#FFFFFF');
                 txt('ROTATE DEVICE FOR BEST EXPERIENCE', W/2, H/2+95, 14, 'rgba(180,200,255,0.7)');
@@ -1269,17 +1285,14 @@
         }
 
         function renderTitle() {
-            // Dark atmospheric stadium background
             const bg = ctx.createRadialGradient(W/2, H*0.42, 20, W/2, H*0.42, W);
             bg.addColorStop(0, '#0c2240'); bg.addColorStop(0.55, '#061528'); bg.addColorStop(1, '#020810');
             ctx.fillStyle = bg; ctx.fillRect(0, 0, W, H);
 
-            // Subtle stadium grass glow at bottom
             const grassGlow = ctx.createRadialGradient(W/2, H+30, 20, W/2, H+30, 350);
             grassGlow.addColorStop(0, 'rgba(0,140,50,0.18)'); grassGlow.addColorStop(1, 'rgba(0,0,0,0)');
             ctx.fillStyle = grassGlow; ctx.fillRect(0, H/2, W, H/2);
 
-            // Animated star sparkles
             for (let i = 0; i < 90; i++) {
                 const px = (i * 197.3 + G.frame * 0.12) % W;
                 const py = (i * 83.7 + Math.sin(i) * 40) % (H * 0.78);
@@ -1289,15 +1302,13 @@
                 ctx.beginPath(); ctx.arc(px, py, sz, 0, Math.PI*2); ctx.fill();
             }
 
-            // Stadium arc lights suggestion
             const lgGrad = ctx.createRadialGradient(W/2, H*0.28, 0, W/2, H*0.28, 280);
             lgGrad.addColorStop(0, 'rgba(160,220,255,0.05)'); lgGrad.addColorStop(1, 'rgba(0,0,0,0)');
             ctx.fillStyle = lgGrad; ctx.fillRect(0, 0, W, H);
 
-            // Title with green glow
             ctx.save();
             ctx.shadowColor = '#22ff88'; ctx.shadowBlur = 45;
-            ctx.font = 'bold 88px "Microsoft JhengHei"'; ctx.textAlign = 'center';
+            ctx.font = 'bold 88px "PingFang TC", "Microsoft JhengHei", Arial'; ctx.textAlign = 'center';
             ctx.strokeStyle = 'rgba(0,40,15,0.95)'; ctx.lineWidth = 9; ctx.lineJoin = 'round';
             ctx.strokeText('實況野球', W/2, H*0.35);
             const titleGrad = ctx.createLinearGradient(W/2-170, H*0.27, W/2+170, H*0.35);
@@ -1305,7 +1316,6 @@
             ctx.fillStyle = titleGrad; ctx.fillText('實況野球', W/2, H*0.35);
             ctx.restore();
 
-            // Subtitle with colour gradient
             ctx.save();
             const subGrad = ctx.createLinearGradient(W/2-190, 0, W/2+190, 0);
             subGrad.addColorStop(0, '#ff8866'); subGrad.addColorStop(0.35, '#ffdd88');
@@ -1318,9 +1328,8 @@
 
             ctx.font = '13px Arial'; ctx.textAlign = 'center';
             ctx.fillStyle = 'rgba(150,190,255,0.5)';
-            ctx.fillText('2024-25 SEASON  •  MLB & CPBL ROSTERS', W/2, H*0.575);
+            ctx.fillText('2026 SEASON  •  WBC & CPBL & MLB ROSTERS', W/2, H*0.575);
 
-            // Animated START button with pulse
             const pulse = 0.94 + 0.06 * Math.sin(G.frame * 0.09);
             const bW = 310, bH = 60;
             ctx.save(); ctx.translate(W/2, H*0.72); ctx.scale(pulse, pulse);
@@ -1337,16 +1346,13 @@
             txt('▶  點擊畫面開始遊戲  ◀', 0, 9, 22, '#fff');
             ctx.restore();
 
-            // Team row at bottom
             ctx.save(); ctx.globalAlpha = 0.72;
             const teamY = H*0.9;
             TEAMS.forEach((t, i) => {
-                const tx = W/2 + (i - 3.5) * 92;
+                const tx = W/2 + (i - 8) * 45;
                 ctx.fillStyle = t.c1;
                 ctx.beginPath(); ctx.arc(tx, teamY-10, 6, 0, Math.PI*2); ctx.fill();
                 ctx.strokeStyle = 'rgba(255,255,255,0.5)'; ctx.lineWidth = 1; ctx.stroke();
-                ctx.font = 'bold 13px "Microsoft JhengHei"'; ctx.textAlign = 'center';
-                ctx.fillStyle = '#ddeeff'; ctx.fillText(t.abbr, tx, teamY+8);
             });
             ctx.restore();
         }
@@ -1355,14 +1361,12 @@
             const bg = ctx.createLinearGradient(0, 0, 0, H);
             bg.addColorStop(0, '#07141f'); bg.addColorStop(1, '#030c12');
             ctx.fillStyle = bg; ctx.fillRect(0, 0, W, H);
-            // Decorative separator line
             const hLine = ctx.createLinearGradient(0,0,W,0);
             hLine.addColorStop(0,'transparent'); hLine.addColorStop(0.3,'rgba(0,210,100,0.45)');
             hLine.addColorStop(0.7,'rgba(0,210,100,0.45)'); hLine.addColorStop(1,'transparent');
             ctx.fillStyle = hLine; ctx.fillRect(0, 120, W, 1);
 
             if (G.selStep === 2) {
-                // Difficulty screen
                 ctx.fillStyle = 'rgba(0,0,0,0.45)';
                 drawRoundRect(ctx, W/2-265, 22, 530, 68, 12); ctx.fill();
                 ctx.strokeStyle = 'rgba(255,255,255,0.15)'; ctx.lineWidth = 1;
@@ -1371,7 +1375,6 @@
 
                 const aw = TEAMS[G.awayIdx], hw = TEAMS[G.homeIdx];
                 const mY = 195;
-                // Away panel
                 const awGrad = ctx.createLinearGradient(W/2-285, mY-32, W/2-285, mY+32);
                 awGrad.addColorStop(0, aw.c1+'bb'); awGrad.addColorStop(1, 'rgba(0,0,0,0.7)');
                 ctx.fillStyle = awGrad;
@@ -1381,7 +1384,6 @@
                 txt(aw.abbr, W/2-162, mY+10, 30, '#fff');
                 ctx.font='11px Arial'; ctx.textAlign='left'; ctx.fillStyle='rgba(255,255,255,0.65)';
                 ctx.fillText('客隊 (AWAY)', W/2-278, mY-18);
-                // Home panel
                 const hwGrad = ctx.createLinearGradient(W/2+40, mY-32, W/2+40, mY+32);
                 hwGrad.addColorStop(0, hw.c1+'bb'); hwGrad.addColorStop(1, 'rgba(0,0,0,0.7)');
                 ctx.fillStyle = hwGrad;
@@ -1391,7 +1393,6 @@
                 txt(hw.abbr, W/2+162, mY+10, 30, '#fff');
                 ctx.font='11px Arial'; ctx.textAlign='right'; ctx.fillStyle='rgba(255,255,255,0.65)';
                 ctx.fillText('主隊 (HOME) ← 你', W/2+278, mY-18);
-                // VS
                 ctx.save(); ctx.shadowColor='#ffcc00'; ctx.shadowBlur=18;
                 txt('VS', W/2, mY+10, 34, '#ffcc00'); ctx.restore();
 
@@ -1414,19 +1415,17 @@
                     ctx.font='10px Arial'; ctx.textAlign='center';
                     ctx.fillStyle='rgba(255,255,255,0.5)'; ctx.fillText(d.sub, bx+bw/2, by+58);
                 });
-                txt('你將扮演主隊（後攻）進行打擊', W/2, H-28, 13, 'rgba(160,190,255,0.55)', 'center','Arial',false);
+                txt('你將扮演主隊（後攻）進行打擊', W/2, H-28, 13, 'rgba(160,190,255,0.55)', 'center','',false);
                 return;
             }
 
-            // Team grid title
-            const titleText = G.selStep===0 ? '選擇客隊 (先攻)' : '選擇主隊 (後攻 · 你的隊伍)';
+            const titleText = G.selStep===0 ? '選擇客隊 (先攻)' : '選擇您要操控的主隊 (後攻)';
             const titleCol = G.selStep===0 ? '#88ffee' : '#ffcc88';
             ctx.fillStyle='rgba(0,0,0,0.55)';
             drawRoundRect(ctx, W/2-245, 16, 490, 62, 10); ctx.fill();
             txt(titleText, W/2, 56, 24, titleCol);
 
             const layout = teamBtnLayout();
-            // Section labels
             function sectionLabel(label, y, col) {
                 ctx.font = 'bold 11px Arial'; ctx.textAlign = 'left';
                 ctx.fillStyle = col;
@@ -1437,7 +1436,7 @@
             }
             sectionLabel('⚾ MLB', 93, '#88AAFF');
             sectionLabel('🇹🇼 CPBL 中華職棒', 162, '#FF9944');
-            sectionLabel('🌏 WBC 世界棒球經典賽', 312, '#44FFCC');
+            sectionLabel('🌏 WBC 2026 經典賽最新陣容', 312, '#44FFCC');
 
             TEAMS.forEach((t, i) => {
                 const { x, y, w: btnW, h: btnH } = layout[i];
@@ -1463,7 +1462,6 @@
                 ctx.fillStyle=barGrad;
                 drawRoundRect(ctx,x+5,y+6,7,btnH-12,3); ctx.fill();
 
-                // Abbr — shrink font for longer names
                 const abbrLen = t.abbr.length;
                 const abbrSz = abbrLen <= 2 ? 22 : abbrLen === 3 ? 18 : 14;
                 txt(t.abbr, x+btnW/2+6, y+btnH/2+7, abbrSz, (hover||isSelected)?'#fff':'#cce8ff');
@@ -1475,7 +1473,7 @@
                     ctx.fillStyle='#ffff88'; ctx.fillText('✓ 已選', x+btnW/2+6, y+13);
                 }
             });
-            txt(G.selStep===0?'選擇客隊':'選擇您要操控的主隊', W/2, H-14, 13, 'rgba(160,190,255,0.55)','center','Arial',false);
+            txt(G.selStep===0?'選擇客隊':'選擇您要操控的主隊', W/2, H-14, 13, 'rgba(160,190,255,0.55)','center','',false);
         }
 
         function teamBtnLayout() {
@@ -1483,15 +1481,14 @@
             const col3W = 3*btnW+2*sx;
             const x3 = W/2 - col3W/2;
             const x2 = W/2 - (2*btnW+sx)/2;
-            // Section Y starts: MLB=98, CPBL=170, WBC=320
             const mlbY=98, cpblY=170, wbcY=320;
             return TEAMS.map((t, i) => {
                 let x, y;
-                if (i < 2) {          // MLB
+                if (i < 2) {
                     x = x2 + i*(btnW+sx); y = mlbY;
-                } else if (i < 8) {   // CPBL (6 teams, 3 per row)
+                } else if (i < 8) {
                     const ci=i-2; x=x3+(ci%3)*(btnW+sx); y=cpblY+Math.floor(ci/3)*(btnH+sy);
-                } else {              // WBC (9 teams, 3 per row)
+                } else {
                     const ci=i-8; x=x3+(ci%3)*(btnW+sx); y=wbcY+Math.floor(ci/3)*(btnH+sy);
                 }
                 return { x, y, w: btnW, h: btnH };
@@ -1516,6 +1513,11 @@
             if (G.phase === PH.SUB_MENU) renderSubMenu();
 
             renderResult();
+
+            // 新增：右上角離開按鈕
+            const qx = W - 115, qy = 15, qw = 100, qh = 40;
+            const qHover = mouseX >= qx && mouseX <= qx + qw && mouseY >= qy && mouseY <= qy + qh;
+            drawGlossyPill(qx, qy, qw, qh, qHover, '🚪 離開', '#660000', '#AA2222', qHover ? '#FFD700' : '#FFF');
         }
 
         function renderLineup() {
@@ -1523,7 +1525,7 @@
             bg.addColorStop(0, '#021020'); bg.addColorStop(1, '#052a38');
             ctx.fillStyle = bg; ctx.fillRect(0, 0, W, H);
             
-            ctx.font = 'bold 36px "Microsoft JhengHei"'; ctx.textAlign = 'center';
+            ctx.font = 'bold 36px "PingFang TC", "Microsoft JhengHei", Arial'; ctx.textAlign = 'center';
             ctx.fillStyle = '#FFD700'; ctx.shadowColor = '#FF8800'; ctx.shadowBlur = 10;
             ctx.fillText('STARTING LINEUPS', W / 2, 50);
             ctx.shadowBlur = 0;
@@ -1543,7 +1545,7 @@
                     ctx.font = 'bold 16px Arial'; ctx.textAlign = 'left';
                     ctx.fillStyle = '#88AAFF';
                     ctx.fillText(`${i+1}.`, x + 30, y);
-                    ctx.font = 'bold 18px "Microsoft JhengHei"';
+                    ctx.font = 'bold 18px "PingFang TC", "Microsoft JhengHei", Arial';
                     ctx.fillStyle = '#FFF';
                     ctx.fillText(b.name, x + 60, y);
                     ctx.font = '14px Arial'; ctx.textAlign = 'right';
@@ -1555,7 +1557,7 @@
                 ctx.strokeStyle = 'rgba(255,255,255,0.2)'; ctx.beginPath(); ctx.moveTo(x + 20, pLineY - 30); ctx.lineTo(x + 300, pLineY - 30); ctx.stroke();
                 const p = team.roster.pitchers[pitcherIdx];
                 ctx.font = 'bold 16px Arial'; ctx.textAlign = 'left'; ctx.fillStyle = '#FF88AA'; ctx.fillText('P.', x + 30, pLineY);
-                ctx.font = 'bold 18px "Microsoft JhengHei"'; ctx.fillStyle = '#FFF'; ctx.fillText(p.name, x + 60, pLineY);
+                ctx.font = 'bold 18px "PingFang TC", "Microsoft JhengHei", Arial'; ctx.fillStyle = '#FFF'; ctx.fillText(p.name, x + 60, pLineY);
                 ctx.font = '14px Arial'; ctx.textAlign = 'right'; ctx.fillStyle = '#AAAAAA'; ctx.fillText(`ERA ${p.era}`, x + 290, pLineY);
             }
             
@@ -1563,51 +1565,31 @@
             drawTeamBoard(W / 2 + 20, hw, G.lineups[1], G.pitchers[1], 'HOME');
             
             if (Math.floor(G.frame / 20) % 2 === 0) {
-                txt('點擊畫面開始比賽 (CLICK TO START)', W / 2, H - 20, 16, '#00FFFF', 'center', 'Arial', false);
+                txt('點擊畫面開始比賽 (CLICK TO START)', W / 2, H - 20, 16, '#00FFFF', 'center', '', false);
             }
         }
 
         function renderSubMenu() {
             ctx.fillStyle = 'rgba(0,0,0,0.7)'; ctx.fillRect(0, 0, W, H);
 
-            const panelW = 440, panelH = 380;
-            const px = W / 2 - panelW / 2, py = H / 2 - panelH / 2;
+            const layout = getSubMenuLayout();
+            const { isPitcher, roster, availIndices, panelW, panelH, px, py } = layout;
+
             drawRetroPanel(px, py, panelW, panelH, '#002244', '#FFF');
 
-            let sideIdx, teamDataIdx, isPitcher = G.subType === 'P';
-            let availableCount = 0;
+            let title = isPitcher ? '更換後援投手 (Bullpen)' : '啟用代打 (Pinch Hitter)';
+            txt(title, W / 2, py + 40, 24, '#FFD700');
 
-            if (isPitcher) {
-                sideIdx = G.half === 0 ? 1 : 0;
-                teamDataIdx = sideIdx === 0 ? G.awayIdx : G.homeIdx;
-                txt('更換後援投手 (Bullpen)', W / 2, py + 40, 24, '#FFD700');
-                const roster = TEAMS[teamDataIdx].roster.pitchers;
-                let drawY = py + 70;
-                roster.forEach((p, i) => {
-                    if (!G.usedPitchers[sideIdx][i] && G.pitchers[sideIdx] !== i) {
-                        availableCount++;
-                        const btnHover = mouseX >= px + 20 && mouseX <= px + panelW - 20 && mouseY >= drawY && mouseY <= drawY + 50;
-                        drawGlossyPill(px + 20, drawY, panelW - 40, 50, btnHover, `${p.name} (防 ${p.era} / 體力 ${p.stm})`, '#113355', '#225588');
-                        drawY += 60;
-                    }
-                });
-            } else {
-                sideIdx = G.half;
-                teamDataIdx = sideIdx === 0 ? G.awayIdx : G.homeIdx;
-                txt('啟用代打 (Pinch Hitter)', W / 2, py + 40, 24, '#FFD700');
-                const roster = TEAMS[teamDataIdx].roster.batters;
-                let drawY = py + 70;
-                roster.forEach((b, i) => {
-                    if (!G.usedBatters[sideIdx][i] && !G.lineups[sideIdx].includes(i)) {
-                        availableCount++;
-                        const btnHover = mouseX >= px + 20 && mouseX <= px + panelW - 20 && mouseY >= drawY && mouseY <= drawY + 50;
-                        drawGlossyPill(px + 20, drawY, panelW - 40, 50, btnHover, `${b.name} (率 ${b.avg} / 力量 ${b.pow})`, '#113355', '#225588');
-                        drawY += 60;
-                    }
-                });
-            }
+            let drawY = py + 70;
+            availIndices.forEach(idx => {
+                const p = roster[idx];
+                const btnHover = mouseX >= px + 20 && mouseX <= px + panelW - 20 && mouseY >= drawY && mouseY <= drawY + 50;
+                const label = isPitcher ? `${p.name} (防 ${p.era} / 體力 ${p.stm})` : `${p.name} (率 ${p.avg} / 力量 ${p.pow})`;
+                drawGlossyPill(px + 20, drawY, panelW - 40, 50, btnHover, label, '#113355', '#225588');
+                drawY += 60;
+            });
 
-            if (availableCount === 0) {
+            if (availIndices.length === 0) {
                 txt('已無可用球員', W / 2, py + 150, 20, '#AAA');
             }
 
@@ -1616,36 +1598,26 @@
         }
 
         function renderPowerProsField() {
-            // Base outfield grass
             ctx.fillStyle = '#1a7f35'; ctx.fillRect(0, 0, W, H);
-
-            // Alternating horizontal grass stripes (TV broadcast style)
             for (let sy = 0; sy < H; sy += 28) {
                 ctx.fillStyle = sy % 56 === 0 ? 'rgba(0,0,0,0.07)' : 'rgba(255,255,255,0.03)';
                 ctx.fillRect(0, sy, W, 28);
             }
-
-            // Warning track at very top (sandy strip)
             const wt = ctx.createLinearGradient(0,0,0,32);
             wt.addColorStop(0,'rgba(130,85,45,0.5)'); wt.addColorStop(1,'rgba(130,85,45,0)');
             ctx.fillStyle=wt; ctx.fillRect(0,0,W,32);
 
-            // Outfield wall hint (distant)
             ctx.fillStyle='rgba(60,40,20,0.12)'; ctx.fillRect(0,0,W,6);
-
-            // Main infield dirt (wide trapezoid)
             ctx.fillStyle = '#b87e52';
             ctx.beginPath();
             ctx.moveTo(W/2, 545); ctx.lineTo(W/2+420, 148); ctx.lineTo(W/2-420, 148);
             ctx.fill();
 
-            // Infield grass diamond (covers centre of dirt)
             ctx.fillStyle = '#1e8838';
             ctx.beginPath();
             ctx.moveTo(W/2, 462); ctx.lineTo(W/2+258, 148); ctx.lineTo(W/2-258, 148);
             ctx.fill();
 
-            // Grass stripe inside infield
             for (let i=0;i<6;i++) {
                 const f=i/6, f2=(i+1)/6;
                 const y1=148+(462-148)*f, y2=148+(462-148)*f2;
@@ -1657,36 +1629,29 @@
                 ctx.fill();
             }
 
-            // Foul lines
             ctx.strokeStyle='rgba(255,255,255,0.75)'; ctx.lineWidth=2;
             ctx.beginPath(); ctx.moveTo(W/2,545); ctx.lineTo(W/2+420,148); ctx.stroke();
             ctx.beginPath(); ctx.moveTo(W/2,545); ctx.lineTo(W/2-420,148); ctx.stroke();
 
-            // Base path arc
             ctx.strokeStyle='rgba(255,255,255,0.12)'; ctx.lineWidth=1;
             ctx.beginPath(); ctx.arc(W/2,540,235,-Math.PI*0.72,-Math.PI*0.28); ctx.stroke();
 
-            // Pitcher's mound (slightly raised look)
             const moundGrad = ctx.createRadialGradient(W/2,228,0,W/2,235,85);
             moundGrad.addColorStop(0,'#cc8f5e'); moundGrad.addColorStop(1,'#b07040');
             ctx.fillStyle=moundGrad;
             ctx.beginPath(); ctx.ellipse(W/2,232,82,27,0,0,Math.PI*2); ctx.fill();
             ctx.strokeStyle='rgba(0,0,0,0.2)'; ctx.lineWidth=1;
             ctx.beginPath(); ctx.ellipse(W/2,232,82,27,0,0,Math.PI*2); ctx.stroke();
-            // Rubber
             ctx.fillStyle='#fff'; ctx.fillRect(W/2-16,229,32,5);
 
-            // Home plate dirt area
             const hpGrad = ctx.createRadialGradient(W/2,540,20,W/2,540,190);
             hpGrad.addColorStop(0,'#c48855'); hpGrad.addColorStop(1,'rgba(180,120,70,0)');
             ctx.fillStyle=hpGrad;
             ctx.beginPath(); ctx.ellipse(W/2,540,185,52,0,0,Math.PI*2); ctx.fill();
 
-            // Batter's boxes
             ctx.strokeStyle='rgba(255,255,255,0.82)'; ctx.lineWidth=2;
             ctx.strokeRect(W/2-142,492,80,66); ctx.strokeRect(W/2+62,492,80,66);
 
-            // Home plate (pentagon)
             ctx.fillStyle='#fff';
             ctx.beginPath();
             ctx.moveTo(W/2-18,513); ctx.lineTo(W/2+18,513);
@@ -1882,7 +1847,6 @@
             const batTeam = G.half===0?aw:hw, pitTeam = G.half===0?hw:aw;
             const batter = getBatter(), pitcher = getPitcher();
 
-            // ── Score / SBO Panel (top-left) ──────────────────
             const spX=8, spY=8, spW=205, spH=148;
             const spBg = ctx.createLinearGradient(spX,spY,spX,spY+spH);
             spBg.addColorStop(0,'rgba(8,18,32,0.93)'); spBg.addColorStop(1,'rgba(3,8,16,0.96)');
@@ -1890,24 +1854,21 @@
             ctx.strokeStyle='rgba(80,130,190,0.3)'; ctx.lineWidth=1;
             drawRoundRect(ctx,spX,spY,spW,spH,9); ctx.stroke();
 
-            // Inning
             txt(`第 ${G.inning} 回  ${G.half===0?'表':'裏'}`, spX+spW/2, spY+26, 17, '#88ccff');
 
-            // Team abbr + score
             const scY=spY+58;
-            ctx.font='bold 22px "Microsoft JhengHei"'; ctx.textAlign='left';
+            ctx.font='bold 22px "PingFang TC", "Microsoft JhengHei", Arial'; ctx.textAlign='left';
             ctx.fillStyle=aw.c1; ctx.fillText(aw.abbr.charAt(0), spX+14, scY);
             txt(`${G.score[0]}`, spX+62, scY, 28, '#fff');
             ctx.font='bold 16px Arial'; ctx.textAlign='center';
             ctx.fillStyle='rgba(180,200,220,0.7)'; ctx.fillText('−', spX+spW/2, scY-2);
             txt(`${G.score[1]}`, spX+spW-62, scY, 28, '#fff');
-            ctx.font='bold 22px "Microsoft JhengHei"'; ctx.textAlign='right';
+            ctx.font='bold 22px "PingFang TC", "Microsoft JhengHei", Arial'; ctx.textAlign='right';
             ctx.fillStyle=hw.c1; ctx.fillText(hw.abbr.charAt(0), spX+spW-14, scY);
 
             ctx.strokeStyle='rgba(80,130,190,0.3)'; ctx.lineWidth=1;
             ctx.beginPath(); ctx.moveTo(spX+8,scY+8); ctx.lineTo(spX+spW-8,scY+8); ctx.stroke();
 
-            // SBO dots
             const sboY=spY+88;
             function drawDots(label,lx,y,count,max,onCol) {
                 ctx.font='bold 12px Arial'; ctx.textAlign='left';
@@ -1924,7 +1885,6 @@
             drawDots('B',spX+14,sboY+20,G.balls,3,'#33ffaa');
             drawDots('O',spX+14,sboY+40,G.outs,2,'#ff5533');
 
-            // ── Runner Diamonds ──────────────────
             const rdX=spX+spW+8, rdY=spY, rdW=62, rdH=62;
             const rdBg = ctx.createLinearGradient(rdX,rdY,rdX,rdY+rdH);
             rdBg.addColorStop(0,'rgba(8,18,32,0.93)'); rdBg.addColorStop(1,'rgba(3,8,16,0.96)');
@@ -1943,7 +1903,6 @@
             rDia(rdX+rdW-14, rdY+rdH/2, G.runners[0]);
             rDia(rdX+14, rdY+rdH/2, G.runners[2]);
 
-            // ── Batter Panel (bottom-left) ──────────────────
             const bpX=8, bpY=H-122, bpW=236, bpH=114;
             const bpBg = ctx.createLinearGradient(bpX,bpY,bpX,bpY+bpH);
             bpBg.addColorStop(0,batTeam.c1+'3a'); bpBg.addColorStop(1,'rgba(4,10,18,0.93)');
@@ -1951,15 +1910,12 @@
             ctx.strokeStyle=batTeam.c1+'88'; ctx.lineWidth=1.5;
             drawRoundRect(ctx,bpX,bpY,bpW,bpH,9); ctx.stroke();
 
-            // Order badge
             ctx.fillStyle=batTeam.c1;
             ctx.beginPath(); ctx.arc(bpX+22,bpY+23,14,0,Math.PI*2); ctx.fill();
             ctx.font='bold 13px Arial'; ctx.textAlign='center';
             ctx.fillStyle='#fff'; ctx.fillText(G.batOrder[G.half]+1, bpX+22, bpY+27);
-            // Name
-            ctx.font='bold 20px "Microsoft JhengHei"'; ctx.textAlign='left';
+            ctx.font='bold 20px "PingFang TC", "Microsoft JhengHei", Arial'; ctx.textAlign='left';
             ctx.fillStyle='#fff'; ctx.fillText(batter.name, bpX+44, bpY+28);
-            // Chibi face
             const cfX=bpX+bpW-26, cfY=bpY+22;
             ctx.fillStyle='#4488ee'; ctx.beginPath(); ctx.arc(cfX,cfY,13,0,Math.PI*2); ctx.fill();
             ctx.fillStyle='#000';
@@ -1967,13 +1923,11 @@
             ctx.beginPath(); ctx.arc(cfX+4,cfY-3,2,0,Math.PI*2); ctx.fill();
             ctx.strokeStyle='#000'; ctx.lineWidth=1.5;
             ctx.beginPath(); ctx.arc(cfX,cfY+2,5,0,Math.PI); ctx.stroke();
-            // Stats
             ctx.font='13px Arial'; ctx.textAlign='left';
             ctx.fillStyle='rgba(200,220,255,0.9)';
             ctx.fillText(`率 ${batter.avg}`, bpX+12, bpY+52);
             ctx.fillText(`${batter.hr}本`, bpX+115, bpY+52);
             ctx.fillText(`${batter.rbi}打點`, bpX+165, bpY+52);
-            // Power bar
             const pBx=bpX+10, pBy=bpY+66, pBw=bpW-20, pBh=14;
             ctx.fillStyle='rgba(0,0,0,0.55)'; drawRoundRect(ctx,pBx,pBy,pBw,pBh,pBh/2); ctx.fill();
             const pwG=ctx.createLinearGradient(pBx,0,pBx+pBw,0);
@@ -1989,16 +1943,14 @@
             ctx.font='10px Arial'; ctx.textAlign='right';
             ctx.fillStyle='rgba(255,255,255,0.5)'; ctx.fillText('力量', pBx+pBw, pBy+pBh+14);
 
-            // ── Pitcher Panel (right) ──────────────────
             const ppX=W-218, ppY=198, ppW=208, ppH=78;
             const ppBg=ctx.createLinearGradient(ppX,ppY,ppX,ppY+ppH);
             ppBg.addColorStop(0,pitTeam.c1+'55'); ppBg.addColorStop(1,'rgba(4,10,18,0.92)');
             ctx.fillStyle=ppBg; drawRoundRect(ctx,ppX,ppY,ppW,ppH,9); ctx.fill();
             ctx.strokeStyle=pitTeam.c1+'99'; ctx.lineWidth=1.5;
             drawRoundRect(ctx,ppX,ppY,ppW,ppH,9); ctx.stroke();
-            ctx.font='bold 21px "Microsoft JhengHei"'; ctx.textAlign='left';
+            ctx.font='bold 21px "PingFang TC", "Microsoft JhengHei", Arial'; ctx.textAlign='left';
             ctx.fillStyle='#fff'; ctx.fillText(pitcher.name, ppX+14, ppY+29);
-            // Pitcher face
             const pfX=ppX+ppW-24, pfY=ppY+22;
             ctx.fillStyle=pitTeam.c1||'#ff88aa'; ctx.beginPath(); ctx.arc(pfX,pfY,13,0,Math.PI*2); ctx.fill();
             ctx.fillStyle='#000';
@@ -2051,37 +2003,30 @@
         }
 
         function renderBattingZone() {
-            // 經典紫紅色好球帶外框
             ctx.strokeStyle = 'rgba(200, 0, 150, 0.8)'; ctx.lineWidth = 2;
             ctx.strokeRect(SZcx - SZw / 2, SZcy - SZh / 2, SZw, SZh);
-            // Mobile drag hint (first 5 seconds of WAIT_PITCH)
             if (isMobile && G.phase === PH.WAIT_PITCH && G.phaseTimer > 55) {
                 const hint = '← 拖曳移動打擊位置 →';
-                ctx.font = 'bold 13px "Microsoft JhengHei"';
+                ctx.font = 'bold 13px "PingFang TC", "Microsoft JhengHei", Arial';
                 ctx.textAlign = 'center';
                 ctx.fillStyle = `rgba(255,255,150,${(G.phaseTimer - 55) / 25 * 0.85})`;
                 ctx.fillText(hint, SZcx, SZcy + SZh / 2 + 22);
             }
         }
 
-        // ── 【重大更新】經典實況野球 打擊橢圓框 (Meat Cursor) ──
         function renderBatCursor() {
             const batter = getBatter();
             const cx = SZcx + G.curX * (SZw / 2), cy = SZcy + G.curY * (SZh / 2);
 
-            // 根據遊戲難易度調整游標大小：簡單=1.3倍, 普通=1.0倍, 困難=0.7倍
             const diffMult = [1.3, 1.0, 0.7][G.difficulty];
 
-            // 基礎橢圓形半徑，取決於打者本身的框(Contact)能力
             const rx = (30 + (batter.con / 100) * 20) * diffMult;
             const ry = (18 + (batter.con / 100) * 12) * diffMult;
 
-            // 繪製黃色橢圓框 (Meat Cursor)
             ctx.fillStyle = 'rgba(255, 255, 0, 0.3)';
             ctx.beginPath(); ctx.ellipse(cx, cy, rx, ry, 0, 0, Math.PI * 2); ctx.fill();
             ctx.strokeStyle = '#FFFF00'; ctx.lineWidth = 2; ctx.stroke();
 
-            // 繪製中心十字與甜蜜點
             ctx.fillStyle = '#FFFFFF';
             ctx.beginPath(); ctx.arc(cx, cy, 3, 0, Math.PI * 2); ctx.fill();
             ctx.strokeStyle = '#000000'; ctx.lineWidth = 1; ctx.stroke();
@@ -2113,7 +2058,6 @@
                 txt(`第 ${G.inning} 回  ${G.half === 0 ? '表' : '裏'}`, W / 2, H / 2 + 15, 40, '#FFF'); return;
             }
 
-            // ── 【全方位放射狀投球選單 (Radial Menu)】 ──
             if (G.phase === PH.PITCH_SELECT && !playerBatting()) {
                 const pitcher = getPitcher();
                 const cx = W / 2, cy = 160;
@@ -2174,8 +2118,8 @@
                 drawGlossyPill(sbx, sby, 120, 38, sHover, '⚡ 自動', '#443300', '#886600', sHover ? '#FFD700' : '#FFF');
 
                 const pbx = W - 130, pby = H - 50;
-                const pHover = mouseX >= pbx && mouseX <= pbx + 120 && mouseY >= pby && mouseY <= pby + 38;
-                drawGlossyPill(pbx, pby, 120, 38, pHover, '🔄 換投手', '#004422', '#007733', pHover ? '#FFD700' : '#FFF');
+                const pHHover = mouseX >= pbx && mouseX <= pbx + 120 && mouseY >= pby && mouseY <= pby + 38;
+                drawGlossyPill(pbx, pby, 120, 38, pHHover, '🔄 換投手', '#004422', '#007733', pHHover ? '#FFD700' : '#FFF');
             }
 
             if (G.phase === PH.WAIT_PITCH && playerBatting()) {
@@ -2190,7 +2134,7 @@
                 }
 
                 if (mouseY >= H - 80) {
-                    txt('－ 投球暫停中 (思考戰術) －', W / 2, H - 20, 16, '#00FFFF', 'center', 'Microsoft JhengHei', false);
+                    txt('－ 投球暫停中 (思考戰術) －', W / 2, H - 20, 16, '#00FFFF', 'center', '', false);
                 }
             }
 
@@ -2224,32 +2168,24 @@
 
             if (G.phase === PH.BATTING && playerBatting()) {
                 const tbW=380, tbH=28, tbX=W/2-tbW/2, tbY=552;
-                // Background track
                 ctx.fillStyle='rgba(0,0,0,0.65)'; drawRoundRect(ctx,tbX-4,tbY-4,tbW+8,tbH+8,tbH/2+4); ctx.fill();
                 ctx.strokeStyle='rgba(100,130,180,0.4)'; ctx.lineWidth=1;
                 drawRoundRect(ctx,tbX-4,tbY-4,tbW+8,tbH+8,tbH/2+4); ctx.stroke();
-                // Colour zones (clipped)
                 ctx.save(); ctx.beginPath(); drawRoundRect(ctx,tbX,tbY,tbW,tbH,tbH/2); ctx.clip();
-                // Miss zones (dark red)
                 ctx.fillStyle='#441111'; ctx.fillRect(tbX,tbY,tbW*0.22,tbH);
                 ctx.fillStyle='#441111'; ctx.fillRect(tbX+tbW*0.78,tbY,tbW*0.22,tbH);
-                // Good zones (orange)
                 ctx.fillStyle='#aa4400'; ctx.fillRect(tbX+tbW*0.22,tbY,tbW*0.16,tbH);
                 ctx.fillStyle='#aa4400'; ctx.fillRect(tbX+tbW*0.62,tbY,tbW*0.16,tbH);
-                // Sweet zone (gold)
                 const swG=ctx.createLinearGradient(tbX+tbW*0.38,0,tbX+tbW*0.62,0);
                 swG.addColorStop(0,'#cc8800'); swG.addColorStop(0.5,'#ffdd00'); swG.addColorStop(1,'#cc8800');
                 ctx.fillStyle=swG; ctx.fillRect(tbX+tbW*0.38,tbY,tbW*0.24,tbH);
-                // Divider ticks
                 ctx.strokeStyle='rgba(255,255,255,0.15)'; ctx.lineWidth=1;
                 [0.22,0.38,0.62,0.78].forEach(f=>{ctx.beginPath();ctx.moveTo(tbX+tbW*f,tbY);ctx.lineTo(tbX+tbW*f,tbY+tbH);ctx.stroke();});
                 ctx.restore();
-                // Zone labels
                 ctx.font='bold 9px Arial'; ctx.textAlign='center';
                 ctx.fillStyle='rgba(255,220,80,0.9)'; ctx.fillText('SWEET', tbX+tbW*0.5, tbY+tbH+12);
                 ctx.fillStyle='rgba(255,150,60,0.7)'; ctx.fillText('GOOD', tbX+tbW*0.3, tbY+tbH+12);
                 ctx.fillText('GOOD', tbX+tbW*0.7, tbY+tbH+12);
-                // Cursor bar
                 if (!G.phDone) {
                     const cursorX = tbX+G.phPos*tbW;
                     ctx.save();
@@ -2257,7 +2193,6 @@
                     ctx.fillStyle='#fff';
                     ctx.fillRect(cursorX-3,tbY-6,6,tbH+12);
                     ctx.shadowBlur=0; ctx.restore();
-                    // Timing label
                     ctx.font='bold 11px Arial'; ctx.textAlign='center';
                     ctx.fillStyle='rgba(255,255,255,0.7)';
                     ctx.fillText('タイミング  TIMING', W/2, tbY-10);
@@ -2286,7 +2221,7 @@
                     const shadowY = lerp(startY, groundY, t);
                     const by = shadowY - Math.sin(t * Math.PI) * arc;
                     
-                    const bSize = lerp(8, isHR ? 15 : 12, Math.sin(t * Math.PI)); // scale up as it flies close, then normal
+                    const bSize = lerp(8, isHR ? 15 : 12, Math.sin(t * Math.PI)); 
 
                     ctx.fillStyle = 'rgba(0, 0, 0, 0.4)';
                     ctx.beginPath(); ctx.ellipse(bx, shadowY, bSize * 1.6, bSize * 0.6, 0, 0, Math.PI * 2); ctx.fill();
@@ -2323,16 +2258,13 @@
             rBg.addColorStop(1,'rgba(0,0,0,0)');
             ctx.fillStyle=rBg; ctx.fillRect(0,H/2-70,W,140);
 
-            // Coloured accent line
             ctx.fillStyle=G.resCol+'88'; ctx.fillRect(0,H/2-70,W,3);
             ctx.fillStyle=G.resCol+'88'; ctx.fillRect(0,H/2+67,W,3);
 
-            // Shadow glow + main text
-            ctx.shadowColor=G.resCol; ctx.shadowBlur=30;
-            txt(G.resText, W/2, H/2+12, 66, G.resCol);
+            ctx.shadowColor=G.resCol; ctx.shadowBlur=15;
+            txt(G.resText, W/2, H/2+12, 64, G.resCol);
             ctx.shadowBlur=0;
 
-            // Sub text
             if (G.resSub) {
                 ctx.font='bold 20px Arial'; ctx.textAlign='center';
                 ctx.fillStyle='rgba(255,255,255,0.65)';
@@ -2347,18 +2279,15 @@
             ctx.fillStyle = bg; ctx.fillRect(0, 0, W, H);
 
             const aw = TEAMS[G.awayIdx], hw = TEAMS[G.homeIdx];
-            // Which half just ended
-            const endedHalf = G.half; // still the half that just ended
+            const endedHalf = G.half; 
             const nextHalf = (endedHalf + 1) % 2;
             const nextInning = nextHalf === 0 ? G.inning + 1 : G.inning;
 
-            // Header
             ctx.save(); ctx.shadowColor = '#44aaff'; ctx.shadowBlur = 14;
             txt(`${G.inning}局${endedHalf === 0 ? '上' : '下'} 結束`, W / 2, 34, 22, '#88ccff');
             ctx.restore();
             txt(`比分  ${aw.abbr} ${G.score[0]} - ${G.score[1]} ${hw.abbr}`, W / 2, 60, 17, '#FFD700');
 
-            // helper: format stat line like "1-3 BB K"
             function statLine(st) {
                 let s = `${st.h}-${st.ab}`;
                 if (st.bb > 0) s += ` BB${st.bb > 1 ? st.bb : ''}`;
@@ -2372,20 +2301,17 @@
             const leftX = W / 2 - colW - 6, rightX = W / 2 + 6;
 
             function drawTeamPanel(panelX, team, sideIdx) {
-                // Panel bg
                 const pbg = ctx.createLinearGradient(panelX, 75, panelX, 75 + colH);
                 pbg.addColorStop(0, team.c1 + '22'); pbg.addColorStop(1, 'rgba(2,10,20,0.92)');
                 ctx.fillStyle = pbg; drawRoundRect(ctx, panelX, 75, colW, colH, 10); ctx.fill();
                 ctx.strokeStyle = team.c1 + '66'; ctx.lineWidth = 1.5;
                 drawRoundRect(ctx, panelX, 75, colW, colH, 10); ctx.stroke();
 
-                // Team name bar
                 ctx.fillStyle = team.c1 + 'cc'; ctx.fillRect(panelX + 2, 77, colW - 4, 32);
-                ctx.font = 'bold 15px "Microsoft JhengHei"'; ctx.textAlign = 'center';
+                ctx.font = 'bold 15px "PingFang TC", "Microsoft JhengHei", Arial'; ctx.textAlign = 'center';
                 ctx.fillStyle = '#fff';
                 ctx.fillText(`${team.abbr}  ${sideIdx === 0 ? '客場 AWAY' : '主場 HOME'}`, panelX + colW / 2, 98);
 
-                // Column headers
                 ctx.font = 'bold 10px Arial'; ctx.textAlign = 'right';
                 ctx.fillStyle = 'rgba(160,200,255,0.5)';
                 ctx.fillText('打席', panelX + colW - padX, 122);
@@ -2398,23 +2324,19 @@
                     const rowY = 135 + i * 40;
                     const isCurrentBatter = (G.batOrder[sideIdx] === slotIdx);
 
-                    // Row highlight for current batter
                     if (isCurrentBatter) {
                         ctx.fillStyle = 'rgba(255,220,50,0.08)';
                         ctx.fillRect(panelX + 4, rowY - 13, colW - 8, 36);
                     }
 
-                    // Order number
                     ctx.font = 'bold 13px Arial'; ctx.textAlign = 'center';
                     ctx.fillStyle = isCurrentBatter ? '#FFD700' : 'rgba(120,160,210,0.7)';
                     ctx.fillText(i + 1, panelX + 18, rowY + 2);
 
-                    // Name
-                    ctx.font = 'bold 15px "Microsoft JhengHei"'; ctx.textAlign = 'left';
+                    ctx.font = 'bold 15px "PingFang TC", "Microsoft JhengHei", Arial'; ctx.textAlign = 'left';
                     ctx.fillStyle = isCurrentBatter ? '#fff' : 'rgba(220,235,255,0.85)';
                     ctx.fillText(batter.name, panelX + 32, rowY + 2);
 
-                    // Stat line
                     const line = statLine(st);
                     ctx.font = '11px Arial'; ctx.textAlign = 'right';
                     const hasHit = st.h > 0;
@@ -2422,7 +2344,6 @@
                     ctx.fillStyle = hasHit ? '#44FF99' : hasBB ? '#88AAFF' : 'rgba(160,180,210,0.55)';
                     ctx.fillText(line, panelX + colW - padX, rowY + 2);
 
-                    // Thin separator
                     if (i < 8) {
                         ctx.strokeStyle = 'rgba(80,120,160,0.2)'; ctx.lineWidth = 0.5;
                         ctx.beginPath(); ctx.moveTo(panelX + 8, rowY + 14); ctx.lineTo(panelX + colW - 8, rowY + 14); ctx.stroke();
@@ -2433,21 +2354,18 @@
             drawTeamPanel(leftX, aw, 0);
             drawTeamPanel(rightX, hw, 1);
 
-            // Next half label + prompt
             const blink = Math.floor(G.halfEndTimer / 20) % 2 === 0;
             txt(`下半場：第${nextInning}局${nextHalf === 0 ? '上' : '下'}`, W / 2, H - 38, 14, 'rgba(140,180,255,0.6)');
             if (blink && G.halfEndTimer > 30) {
-                txt('點擊畫面繼續 (CLICK TO CONTINUE)', W / 2, H - 18, 13, 'rgba(0,220,255,0.75)', 'center', 'Arial', false);
+                txt('點擊畫面繼續 (CLICK TO CONTINUE)', W / 2, H - 18, 13, 'rgba(0,220,255,0.75)', 'center', '', false);
             }
         }
 
         function renderOver() {
-            // Background
             const bg = ctx.createRadialGradient(W/2,H/2,0,W/2,H/2,W*0.8);
             bg.addColorStop(0,'#0c1a2e'); bg.addColorStop(1,'#030810');
             ctx.fillStyle=bg; ctx.fillRect(0,0,W,H);
 
-            // Firework particles
             for (let i=0;i<40;i++) {
                 const t=(G.frame*0.02+i*0.7)%(Math.PI*2);
                 const r=80+Math.sin(t*3+i)*60;
@@ -2458,11 +2376,9 @@
                 ctx.beginPath(); ctx.arc(fx,fy,2.5,0,Math.PI*2); ctx.fill();
             }
 
-            // GAME SET title
             ctx.save(); ctx.shadowColor='#fff'; ctx.shadowBlur=25;
             txt('GAME SET', W/2, 120, 62, '#fff'); ctx.restore();
 
-            // Winner banner
             const winner = G.score[0]>G.score[1]?G.awayIdx:G.score[1]>G.score[0]?G.homeIdx:-1;
             if (winner>=0) {
                 const wt=TEAMS[winner];
@@ -2472,7 +2388,6 @@
                 txt('平局', W/2, 175, 28, '#aaa');
             }
 
-            // Score panel
             const aw=TEAMS[G.awayIdx], hw=TEAMS[G.homeIdx];
             const pX=W/2-220, pY=210, pW=440, pH=130;
             const pBg=ctx.createLinearGradient(pX,pY,pX,pY+pH);
@@ -2481,17 +2396,14 @@
             ctx.strokeStyle='rgba(100,150,220,0.35)'; ctx.lineWidth=1.5;
             drawRoundRect(ctx,pX,pY,pW,pH,12); ctx.stroke();
 
-            // Away team
-            ctx.font='bold 28px "Microsoft JhengHei"'; ctx.textAlign='center';
+            ctx.font='bold 28px "PingFang TC", "Microsoft JhengHei", Arial'; ctx.textAlign='center';
             ctx.fillStyle=aw.c1; ctx.fillText(aw.abbr, pX+90, pY+55);
             ctx.font='13px Arial'; ctx.fillStyle='rgba(180,200,255,0.6)';
             ctx.fillText('客隊 AWAY', pX+90, pY+78);
-            // Home team
-            ctx.font='bold 28px "Microsoft JhengHei"'; ctx.textAlign='center';
+            ctx.font='bold 28px "PingFang TC", "Microsoft JhengHei", Arial'; ctx.textAlign='center';
             ctx.fillStyle=hw.c1; ctx.fillText(hw.abbr, pX+pW-90, pY+55);
             ctx.font='13px Arial'; ctx.fillStyle='rgba(180,200,255,0.6)';
             ctx.fillText('主隊 HOME', pX+pW-90, pY+78);
-            // Score
             ctx.save(); ctx.shadowColor='#00ffcc'; ctx.shadowBlur=15;
             txt(`${G.score[0]}`, pX+165, pY+68, 52, G.score[0]>G.score[1]?'#ffdd44':'#fff');
             ctx.restore();
@@ -2501,7 +2413,6 @@
             txt(`${G.score[1]}`, pX+pW-165, pY+68, 52, G.score[1]>G.score[0]?'#ffdd44':'#fff');
             ctx.restore();
 
-            // Inning scores summary
             const innY=pY+pH-18;
             ctx.font='11px Arial'; ctx.textAlign='center'; ctx.fillStyle='rgba(160,190,255,0.55)';
             G.innScores[0].forEach((s,i)=>{
@@ -2511,13 +2422,11 @@
                 ctx.fillStyle=hw.c1+'cc'; ctx.fillText(G.innScores[1][i]??'-', x, innY+18);
             });
 
-            // Return prompt
             if (Math.floor(G.frame/30)%2===0) {
                 txt('點擊畫面返回標題', W/2, H-45, 18, 'rgba(180,210,255,0.75)');
             }
         }
 
-        // ── Mobile overlay buttons ─────────────────────────
         function updateMobileOverlay() {
             const simBtn    = document.getElementById('sim-btn');
             const swingBtn  = document.getElementById('swing-btn');
