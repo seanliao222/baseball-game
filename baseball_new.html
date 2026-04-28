@@ -552,13 +552,14 @@
             { abbr: '義大利', name: 'Italy', c1: '#009246', c2: '#CE2B37', c3: '#FFF', jersey: '#FFFFFF', hatLogo: 'I', roster: ROSTERS['ITA'] }
         ];
 
-        // 廖宣皓/廖宣瑜 only belong in CPBL teams (indices 2-7)
-        const CPBL_INDICES = [2, 3, 4, 5, 6, 7];
-        CPBL_INDICES.forEach(idx => {
-            const team = TEAMS[idx];
+        // 廖宣皓/廖宣瑜 available in all teams as both batter and pitcher substitutes
+        TEAMS.forEach(team => {
             team.roster.batters = team.roster.batters.filter(b => b.name !== '廖宣皓' && b.name !== '廖宣瑜');
             team.roster.batters.push({ name: '廖宣皓', bats: 'L', avg: '.285', hr: 10, rbi: 55, con: 80, pow: 75, spd: 82 });
             team.roster.batters.push({ name: '廖宣瑜', bats: 'R', avg: '.310', hr: 15, rbi: 60, con: 85, pow: 80, spd: 78 });
+            team.roster.pitchers = team.roster.pitchers.filter(p => p.name !== '廖宣皓' && p.name !== '廖宣瑜');
+            team.roster.pitchers.push({ name: '廖宣皓', vel: 84, ctrl: 78, stm: 72, era: '4.20', k: 7, pitches: [{ id: 0, lv: 4 }, { id: 1, lv: 4 }, { id: 2, lv: 3 }] });
+            team.roster.pitchers.push({ name: '廖宣瑜', vel: 82, ctrl: 80, stm: 75, era: '4.00', k: 6, pitches: [{ id: 0, lv: 4 }, { id: 2, lv: 4 }, { id: 5, lv: 3 }] });
         });
 
         const SCR = { TITLE: 0, SELECT: 1, LINEUP: 4, GAME: 2, OVER: 3, HALF_END: 5 };
