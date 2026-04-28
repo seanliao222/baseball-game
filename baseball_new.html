@@ -589,7 +589,7 @@
                 dragStartX: 0, dragStartY: 0, baseCurX: 0, baseCurY: 0, isDraggingBat: false, aimState: 0,
                 resText: '', resSub: '', resCol: '#fff', resTimer: 0, resEndHalf: false, _continueAtBat: false,
                 frame: 0, readyPulse: 0, batSwingFrame: -999, hitEffectFrame: -999, hitType: '', hitFlyDir: 0,
-                pitchCounts: [0, 0],
+                pitchCounts: [0, 0], lastPitchKmh: 0, lastPitchName: '', speedGunTimer: 0,
                 batStats: [
                     Array.from({ length: 9 }, () => ({ ab: 0, h: 0, bb: 0, hr: 0, rbi: 0, k: 0 })),
                     Array.from({ length: 9 }, () => ({ ab: 0, h: 0, bb: 0, hr: 0, rbi: 0, k: 0 }))
@@ -852,6 +852,9 @@
 
             G.ballActive = true; G.ballFrame = G.frame;
             const baseMph = pDef.mph + (pitcher.vel - 90) / 2;
+            G.lastPitchKmh = Math.round(baseMph * 1.60934);
+            G.lastPitchName = pDef.name;
+            G.speedGunTimer = 90;
             G.ballDur = Math.round((50 - (baseMph - 80) * 0.3) / speedMult);
 
             G.ballSX = W / 2; G.ballSY = 230;
@@ -1508,6 +1511,7 @@
             if (playerBatting() && (G.phase === PH.WAIT_PITCH || G.phase === PH.BATTING)) renderBatCursor();
 
             renderHitEffect();
+            renderSpeedGun();
             renderClassicUI();
             renderPhaseUI();
 
@@ -1630,8 +1634,8 @@
         function drawPawapuroPitcher() {
             const team = pitTeamInfo();
             const pitcher = getPitcher();
-            const px = W / 2, py = 210;
-            ctx.save(); ctx.translate(px, py); ctx.scale(0.5, 0.5);
+            const px = W / 2, py = 205;
+            ctx.save(); ctx.translate(px, py); ctx.scale(0.7, 0.7);
 
             ctx.fillStyle = 'rgba(0,0,0,0.3)'; ctx.beginPath(); ctx.ellipse(0, 35, 25, 8, 0, 0, Math.PI * 2); ctx.fill();
 
@@ -1987,6 +1991,26 @@
             ctx.strokeStyle = 'rgba(0, 0, 0, 0.8)'; ctx.lineWidth = 1;
             ctx.beginPath(); ctx.moveTo(cx - rx, cy); ctx.lineTo(cx + rx, cy); ctx.stroke();
             ctx.beginPath(); ctx.moveTo(cx, cy - ry); ctx.lineTo(cx, cy + ry); ctx.stroke();
+        }
+
+        function renderSpeedGun() {
+            if (!G.lastPitchKmh || !G.speedGunTimer || G.speedGunTimer <= 0) return;
+            G.speedGunTimer--;
+            const alpha = Math.min(1, G.speedGunTimer / 12);
+            const sx = 18, sy = H - 90, sw = 118, sh = 60;
+            ctx.save(); ctx.globalAlpha = alpha;
+            ctx.fillStyle = 'rgba(0,0,0,0.75)';
+            drawRoundRect(ctx, sx, sy, sw, sh, 8); ctx.fill();
+            ctx.strokeStyle = 'rgba(255,200,0,0.6)'; ctx.lineWidth = 1.5;
+            drawRoundRect(ctx, sx, sy, sw, sh, 8); ctx.stroke();
+            ctx.font = 'bold 11px "PingFang TC", Arial'; ctx.textAlign = 'left';
+            ctx.fillStyle = 'rgba(200,220,255,0.8)'; ctx.fillText(G.lastPitchName, sx + 10, sy + 18);
+            ctx.font = 'bold 26px Arial'; ctx.textAlign = 'right';
+            ctx.fillStyle = '#FFD700'; ctx.shadowColor = '#FFD700'; ctx.shadowBlur = 8;
+            ctx.fillText(G.lastPitchKmh, sx + sw - 32, sy + 46);
+            ctx.shadowBlur = 0; ctx.font = 'bold 12px Arial';
+            ctx.fillStyle = 'rgba(255,255,255,0.6)'; ctx.fillText('km/h', sx + sw - 8, sy + 46);
+            ctx.restore();
         }
 
         function renderBall() {
