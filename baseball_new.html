@@ -370,7 +370,7 @@
                     { name: '牧秀悟', bats: 'R', avg: '.285', hr: 22, rbi: 75, con: 85, pow: 85, spd: 60 },
                     { name: '源田壯亮', bats: 'L', avg: '.270', hr: 5, rbi: 40, con: 84, pow: 55, spd: 90 },
                     { name: '森下翔太', bats: 'R', avg: '.275', hr: 18, rbi: 65, con: 80, pow: 82, spd: 70 },
-                    { name: '佐藤輝明', bats: 'L', avg: '.260', hr: 24, rbi: 80, con: 75, pow: 88, spd: 65 },
+                    { name: '佐藤輝明', bats: 'R', avg: '.260', hr: 24, rbi: 80, con: 75, pow: 88, spd: 65 },
                     { name: '周東佑京', bats: 'L', avg: '.260', hr: 2, rbi: 28, con: 80, pow: 45, spd: 99 },
                     { name: '中村悠平', bats: 'R', avg: '.255', hr: 5, rbi: 35, con: 78, pow: 60, spd: 50 }
                 ]
@@ -1645,9 +1645,9 @@
 
             function head() {
                 ctx.fillStyle = '#FFE0BD'; ctx.beginPath(); ctx.arc(0, -30, 24, 0, Math.PI * 2); ctx.fill();
-                drawFace(ctx, pitcher.name, false, -30);
                 ctx.fillStyle = team.c1; ctx.beginPath(); ctx.arc(0, -32, 25, Math.PI, 0); ctx.fill();
                 ctx.fillRect(-25, -32, 50, 6);
+                drawFace(ctx, pitcher.name, false, -16);
 
                 ctx.fillStyle = hatLogoColor(team);
                 let hl = team.hatLogo || '';
@@ -1793,12 +1793,12 @@
             }
 
             ctx.fillStyle = '#FFDAB9'; ctx.beginPath(); ctx.arc(0, -20, 22, 0, Math.PI * 2); ctx.fill();
-            drawFace(ctx, batter.name, true, -20);
 
             ctx.fillStyle = team.c1;
             ctx.beginPath(); ctx.arc(0, -24, 23, -Math.PI * 0.1, Math.PI * 1.1, true); ctx.fill();
             ctx.beginPath(); ctx.ellipse(12, -24, 18, 5, Math.PI / 8, 0, Math.PI * 2); ctx.fill();
             ctx.beginPath(); ctx.arc(-5, -20, 10, 0, Math.PI * 2); ctx.fill();
+            drawFace(ctx, batter.name, true, -8);
 
             ctx.fillStyle = hatLogoColor(team);
             let hl = team.hatLogo || '';
