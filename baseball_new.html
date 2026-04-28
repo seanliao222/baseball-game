@@ -1634,8 +1634,8 @@
         function drawPawapuroPitcher() {
             const team = pitTeamInfo();
             const pitcher = getPitcher();
-            const px = W / 2, py = 205;
-            ctx.save(); ctx.translate(px, py); ctx.scale(0.7, 0.7);
+            const px = W / 2, py = 200;
+            ctx.save(); ctx.translate(px, py); ctx.scale(0.91, 0.91);
 
             ctx.fillStyle = 'rgba(0,0,0,0.3)'; ctx.beginPath(); ctx.ellipse(0, 35, 25, 8, 0, 0, Math.PI * 2); ctx.fill();
 
@@ -1997,7 +1997,7 @@
             if (!G.lastPitchKmh || !G.speedGunTimer || G.speedGunTimer <= 0) return;
             G.speedGunTimer--;
             const alpha = Math.min(1, G.speedGunTimer / 12);
-            const sx = 18, sy = H - 90, sw = 118, sh = 60;
+            const sx = W - 142, sy = 62, sw = 130, sh = 60;
             ctx.save(); ctx.globalAlpha = alpha;
             ctx.fillStyle = 'rgba(0,0,0,0.75)';
             drawRoundRect(ctx, sx, sy, sw, sh, 8); ctx.fill();
