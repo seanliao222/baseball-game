@@ -1511,12 +1511,12 @@
             if (playerBatting() && (G.phase === PH.WAIT_PITCH || G.phase === PH.BATTING)) renderBatCursor();
 
             renderHitEffect();
-            renderSpeedGun();
             renderClassicUI();
             renderPhaseUI();
 
             if (G.phase === PH.SUB_MENU) renderSubMenu();
             renderResult();
+            renderSpeedGun();
 
             const qx = W - 115, qy = 15, qw = 100, qh = 40;
             const qHover = mouseX >= qx && mouseX <= qx + qw && mouseY >= qy && mouseY <= qy + qh;
@@ -1997,7 +1997,7 @@
             if (!G.lastPitchKmh || !G.speedGunTimer || G.speedGunTimer <= 0) return;
             G.speedGunTimer--;
             const alpha = Math.min(1, G.speedGunTimer / 12);
-            const sx = W - 142, sy = 62, sw = 130, sh = 60;
+            const sx = W - 218, sy = 134, sw = 208, sh = 58;
             ctx.save(); ctx.globalAlpha = alpha;
             ctx.fillStyle = 'rgba(0,0,0,0.75)';
             drawRoundRect(ctx, sx, sy, sw, sh, 8); ctx.fill();
