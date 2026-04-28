@@ -1,0 +1,2292 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>實況野球風格 MLB & CPBL 遊戲 - 終極完全版</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            touch-action: none;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            background: radial-gradient(ellipse at center, #0d1f35 0%, #040c16 100%);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            min-height: -webkit-fill-available;
+            font-family: "PingFang TC", "Microsoft JhengHei", "Noto Sans TC", Arial, sans-serif;
+            overflow: hidden;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        canvas {
+            display: block;
+            cursor: crosshair;
+            box-shadow: 0 0 0 2px rgba(0, 200, 100, 0.15), 0 0 50px rgba(0, 140, 60, 0.2), 0 0 100px rgba(0, 0, 0, 0.95);
+        }
+
+        #mobile-overlay {
+            position: fixed;
+            bottom: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: min(800px, 100vw);
+            padding: 8px 20px max(16px, env(safe-area-inset-bottom));
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+            pointer-events: none;
+            z-index: 100;
+        }
+
+        .mbtn {
+            pointer-events: auto;
+            border: none;
+            border-radius: 50%;
+            cursor: pointer;
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            font-family: "PingFang TC", "Microsoft JhengHei", Arial, sans-serif;
+            font-weight: bold;
+            color: white;
+            text-shadow: 0 1px 4px rgba(0, 0, 0, 0.9);
+            line-height: 1.3;
+            transition: transform 0.1s;
+            -webkit-tap-highlight-color: transparent;
+            -webkit-user-select: none;
+            user-select: none;
+        }
+
+        .mbtn:active {
+            transform: scale(0.86);
+        }
+
+        #sim-btn {
+            width: 72px;
+            height: 72px;
+            font-size: 12px;
+            background: radial-gradient(circle at 40% 35%, #4466aa, #1a2a44);
+            box-shadow: 0 4px 18px rgba(0, 0, 0, 0.7), 0 0 14px rgba(68, 100, 200, 0.4);
+            border: 2px solid rgba(100, 150, 255, 0.7);
+        }
+
+        #swing-btn {
+            width: 96px;
+            height: 96px;
+            font-size: 16px;
+            background: radial-gradient(circle at 40% 35%, #ff9922, #cc4400);
+            box-shadow: 0 4px 24px rgba(0, 0, 0, 0.7), 0 0 22px rgba(255, 120, 0, 0.55);
+            border: 3px solid rgba(255, 210, 80, 0.9);
+        }
+
+        #change-btn {
+            width: 72px;
+            height: 72px;
+            font-size: 12px;
+            background: radial-gradient(circle at 40% 35%, #338844, #115522);
+            box-shadow: 0 4px 18px rgba(0, 0, 0, 0.7), 0 0 14px rgba(50, 200, 80, 0.4);
+            border: 2px solid rgba(80, 220, 100, 0.7);
+        }
+
+        #steal-btn {
+            width: 72px;
+            height: 72px;
+            font-size: 12px;
+            background: radial-gradient(circle at 40% 35%, #aa6600, #552200);
+            box-shadow: 0 4px 18px rgba(0, 0, 0, 0.7), 0 0 14px rgba(200, 120, 0, 0.4);
+            border: 2px solid rgba(255, 180, 60, 0.7);
+        }
+
+        .mbtn.show {
+            display: flex;
+        }
+    </style>
+</head>
+
+<body>
+    <canvas id="c"></canvas>
+    <div id="mobile-overlay">
+        <button class="mbtn" id="sim-btn">⚡<br>自動</button>
+        <button class="mbtn" id="steal-btn">🏃<br>盜壘</button>
+        <button class="mbtn" id="swing-btn">⚾<br>打擊!</button>
+        <button class="mbtn" id="change-btn">🔄<br>換人</button>
+    </div>
+    <script>
+        const canvas = document.getElementById('c');
+        const ctx = canvas.getContext('2d');
+        const W = 800, H = 600;
+
+        function resize() {
+            const s = Math.min(window.innerWidth / W, window.innerHeight / H);
+            canvas.style.width = W * s + 'px'; canvas.style.height = H * s + 'px';
+            canvas.width = W; canvas.height = H;
+        }
+        resize();
+        window.addEventListener('resize', resize);
+
+        function drawRoundRect(ctx, x, y, w, h, r) {
+            if (w < 2 * r) r = w / 2;
+            if (h < 2 * r) r = h / 2;
+            ctx.beginPath();
+            ctx.moveTo(x + r, y);
+            ctx.arcTo(x + w, y, x + w, y + h, r);
+            ctx.arcTo(x + w, y + h, x, y + h, r);
+            ctx.arcTo(x, y + h, x, y, r);
+            ctx.arcTo(x, y, x + w, y, r);
+            ctx.closePath();
+        }
+
+        const PITCH_DICT = {
+            0: { name: '直球', mph: 98, bx: 0, by: 0, col: '#FF6666', dir: 'center' },
+            1: { name: '二縫線', mph: 94, bx: -3, by: 5, col: '#FFAA44', dir: 0.15 },
+            2: { name: '滑球', mph: 86, bx: -10, by: 3, col: '#44FF88', dir: Math.PI },
+            3: { name: '橫掃滑', mph: 84, bx: -18, by: 2, col: '#00FFCC', dir: Math.PI * 0.8 },
+            4: { name: '曲球', mph: 79, bx: -6, by: 16, col: '#4488FF', dir: Math.PI * 0.6 },
+            5: { name: '變速球', mph: 84, bx: -6, by: 12, col: '#FF44FF', dir: Math.PI * 0.35 },
+            6: { name: '指叉球', mph: 89, bx: 0, by: 22, col: '#FFFF44', dir: Math.PI * 0.5 },
+            7: { name: '卡特球', mph: 92, bx: -4, by: 2, col: '#AAFF00', dir: -Math.PI * 0.85 },
+            8: { name: '伸卡球', mph: 93, bx: 8, by: 8, col: '#FF88AA', dir: Math.PI * 0.2 },
+        };
+
+        const isMobile = ('ontouchstart' in window || navigator.maxTouchPoints > 0);
+        const ROSTERS = {
+            'LAD': {
+                pitchers: [
+                    { name: '大谷 翔平', vel: 100, ctrl: 85, stm: 90, era: '2.85', k: 18, pitches: [{ id: 0, lv: 7 }, { id: 3, lv: 7 }, { id: 6, lv: 6 }, { id: 4, lv: 4 }, { id: 7, lv: 5 }, { id: 8, lv: 4 }] },
+                    { name: '山本 由伸', vel: 96, ctrl: 92, stm: 85, era: '3.12', k: 14, pitches: [{ id: 0, lv: 6 }, { id: 6, lv: 7 }, { id: 4, lv: 6 }, { id: 7, lv: 5 }, { id: 2, lv: 4 }] },
+                    { name: 'Glasnow', vel: 98, ctrl: 82, stm: 88, era: '3.10', k: 16, pitches: [{ id: 0, lv: 7 }, { id: 2, lv: 6 }, { id: 4, lv: 5 }] },
+                    { name: 'Phillips', vel: 95, ctrl: 88, stm: 60, era: '2.15', k: 20, pitches: [{ id: 0, lv: 6 }, { id: 3, lv: 7 }, { id: 5, lv: 5 }] }
+                ],
+                batters: [
+                    { name: '大谷 翔平', bats: 'L', avg: '.310', hr: 44, rbi: 98, con: 85, pow: 98, spd: 85 },
+                    { name: 'Betts', bats: 'R', avg: '.305', hr: 39, rbi: 85, con: 92, pow: 85, spd: 82 },
+                    { name: 'Freeman', bats: 'L', avg: '.325', hr: 25, rbi: 102, con: 95, pow: 82, spd: 65 },
+                    { name: 'T.Hernandez', bats: 'R', avg: '.265', hr: 28, rbi: 80, con: 75, pow: 88, spd: 70 },
+                    { name: 'Muncy', bats: 'L', avg: '.230', hr: 35, rbi: 88, con: 70, pow: 86, spd: 50 },
+                    { name: 'Smith', bats: 'R', avg: '.275', hr: 20, rbi: 75, con: 82, pow: 80, spd: 60 },
+                    { name: 'Lux', bats: 'L', avg: '.260', hr: 12, rbi: 50, con: 78, pow: 65, spd: 80 },
+                    { name: 'Heyward', bats: 'L', avg: '.255', hr: 15, rbi: 45, con: 72, pow: 70, spd: 70 },
+                    { name: 'K.Hernandez', bats: 'R', avg: '.240', hr: 18, rbi: 55, con: 74, pow: 75, spd: 65 },
+                    { name: 'Rojas', bats: 'R', avg: '.280', hr: 8, rbi: 40, con: 80, pow: 50, spd: 65 },
+                    { name: 'Taylor', bats: 'R', avg: '.220', hr: 15, rbi: 45, con: 65, pow: 75, spd: 75 },
+                    { name: 'Pages', bats: 'R', avg: '.250', hr: 18, rbi: 50, con: 70, pow: 78, spd: 68 }
+                ]
+            },
+            'NYY': {
+                pitchers: [
+                    { name: 'G. Cole', vel: 98, ctrl: 90, stm: 95, era: '2.63', k: 21, pitches: [{ id: 0, lv: 7 }, { id: 2, lv: 6 }, { id: 4, lv: 6 }, { id: 5, lv: 4 }, { id: 7, lv: 5 }] },
+                    { name: 'C. Rodon', vel: 97, ctrl: 75, stm: 85, era: '3.85', k: 12, pitches: [{ id: 0, lv: 6 }, { id: 2, lv: 7 }, { id: 5, lv: 3 }] },
+                    { name: 'Stroman', vel: 93, ctrl: 85, stm: 85, era: '3.50', k: 10, pitches: [{ id: 1, lv: 7 }, { id: 2, lv: 6 }, { id: 5, lv: 5 }] },
+                    { name: 'Holmes', vel: 97, ctrl: 80, stm: 65, era: '2.50', k: 15, pitches: [{ id: 1, lv: 7 }, { id: 2, lv: 6 }, { id: 6, lv: 4 }] }
+                ],
+                batters: [
+                    { name: 'Torres', bats: 'R', avg: '.270', hr: 25, rbi: 68, con: 78, pow: 75, spd: 65 },
+                    { name: 'J. Soto', bats: 'L', avg: '.295', hr: 35, rbi: 105, con: 94, pow: 90, spd: 65 },
+                    { name: 'A. Judge', bats: 'R', avg: '.288', hr: 55, rbi: 120, con: 88, pow: 99, spd: 70 },
+                    { name: 'Stanton', bats: 'R', avg: '.235', hr: 38, rbi: 85, con: 65, pow: 95, spd: 40 },
+                    { name: 'Rizzo', bats: 'L', avg: '.250', hr: 22, rbi: 60, con: 75, pow: 78, spd: 45 },
+                    { name: 'Volpe', bats: 'R', avg: '.245', hr: 18, rbi: 55, con: 76, pow: 68, spd: 85 },
+                    { name: 'Verdugo', bats: 'L', avg: '.275', hr: 15, rbi: 50, con: 82, pow: 65, spd: 60 },
+                    { name: 'Trevino', bats: 'R', avg: '.240', hr: 10, rbi: 40, con: 74, pow: 60, spd: 40 },
+                    { name: 'LeMahieu', bats: 'R', avg: '.265', hr: 12, rbi: 45, con: 80, pow: 55, spd: 50 },
+                    { name: 'Cabrera', bats: 'S', avg: '.240', hr: 12, rbi: 40, con: 72, pow: 65, spd: 70 },
+                    { name: 'Grisham', bats: 'L', avg: '.210', hr: 20, rbi: 45, con: 60, pow: 80, spd: 75 },
+                    { name: 'Wells', bats: 'L', avg: '.250', hr: 15, rbi: 48, con: 75, pow: 75, spd: 45 }
+                ]
+            },
+            'BRO': {
+                pitchers: [
+                    { name: '德保拉', vel: 94, ctrl: 88, stm: 90, era: '2.50', k: 18, pitches: [{ id: 0, lv: 6 }, { id: 4, lv: 6 }, { id: 5, lv: 5 }] },
+                    { name: '猛登', vel: 95, ctrl: 82, stm: 85, era: '2.80', k: 15, pitches: [{ id: 0, lv: 6 }, { id: 2, lv: 5 }, { id: 4, lv: 5 }] },
+                    { name: '呂彥青', vel: 92, ctrl: 85, stm: 60, era: '2.10', k: 12, pitches: [{ id: 0, lv: 5 }, { id: 2, lv: 6 }, { id: 5, lv: 6 }] }
+                ],
+                batters: [
+                    { name: '王威晨', bats: 'L', avg: '.310', hr: 2, rbi: 40, con: 88, pow: 55, spd: 85 },
+                    { name: '岳政華', bats: 'L', avg: '.280', hr: 10, rbi: 55, con: 75, pow: 75, spd: 82 },
+                    { name: '陳俊秀', bats: 'R', avg: '.290', hr: 12, rbi: 65, con: 82, pow: 80, spd: 55 },
+                    { name: '許基宏', bats: 'L', avg: '.275', hr: 15, rbi: 70, con: 78, pow: 85, spd: 50 },
+                    { name: '曾頌恩', bats: 'R', avg: '.285', hr: 18, rbi: 75, con: 80, pow: 88, spd: 75 },
+                    { name: '江坤宇', bats: 'R', avg: '.320', hr: 5, rbi: 50, con: 90, pow: 60, spd: 80 },
+                    { name: '岳東華', bats: 'L', avg: '.250', hr: 8, rbi: 45, con: 70, pow: 70, spd: 70 },
+                    { name: '高宇杰', bats: 'R', avg: '.240', hr: 4, rbi: 35, con: 68, pow: 65, spd: 65 },
+                    { name: '宋晟睿', bats: 'R', avg: '.295', hr: 10, rbi: 45, con: 80, pow: 80, spd: 85 },
+                    { name: '詹子賢', bats: 'R', avg: '.280', hr: 12, rbi: 60, con: 78, pow: 82, spd: 60 },
+                    { name: '張志豪', bats: 'L', avg: '.260', hr: 15, rbi: 50, con: 72, pow: 85, spd: 70 },
+                    { name: '蘇緯達', bats: 'L', avg: '.270', hr: 6, rbi: 30, con: 75, pow: 75, spd: 50 }
+                ]
+            },
+            'UNI': {
+                pitchers: [
+                    { name: '古林睿煬', vel: 98, ctrl: 85, stm: 85, era: '2.60', k: 18, pitches: [{ id: 0, lv: 7 }, { id: 4, lv: 5 }, { id: 6, lv: 5 }] },
+                    { name: '布雷克', vel: 92, ctrl: 90, stm: 88, era: '2.80', k: 14, pitches: [{ id: 0, lv: 5 }, { id: 6, lv: 6 }, { id: 2, lv: 5 }] },
+                    { name: '裴瑞茲', vel: 97, ctrl: 80, stm: 60, era: '2.40', k: 16, pitches: [{ id: 0, lv: 7 }, { id: 2, lv: 6 }, { id: 8, lv: 5 }] }
+                ],
+                batters: [
+                    { name: '邱智呈', bats: 'L', avg: '.325', hr: 5, rbi: 45, con: 88, pow: 65, spd: 82 },
+                    { name: '陳傑憲', bats: 'L', avg: '.340', hr: 8, rbi: 60, con: 95, pow: 68, spd: 85 },
+                    { name: '蘇智傑', bats: 'L', avg: '.285', hr: 15, rbi: 75, con: 80, pow: 85, spd: 70 },
+                    { name: '林安可', bats: 'L', avg: '.270', hr: 22, rbi: 85, con: 75, pow: 90, spd: 65 },
+                    { name: '潘傑楷', bats: 'L', avg: '.290', hr: 10, rbi: 65, con: 80, pow: 75, spd: 68 },
+                    { name: '陳鏞基', bats: 'R', avg: '.300', hr: 10, rbi: 60, con: 85, pow: 75, spd: 55 },
+                    { name: '林靖凱', bats: 'R', avg: '.260', hr: 5, rbi: 40, con: 75, pow: 60, spd: 85 },
+                    { name: '林岱安', bats: 'R', avg: '.250', hr: 4, rbi: 35, con: 70, pow: 65, spd: 50 },
+                    { name: '林佳緯', bats: 'L', avg: '.270', hr: 6, rbi: 30, con: 75, pow: 70, spd: 80 },
+                    { name: '胡金龍', bats: 'R', avg: '.280', hr: 8, rbi: 40, con: 80, pow: 72, spd: 50 },
+                    { name: '林益全', bats: 'R', avg: '.290', hr: 8, rbi: 45, con: 82, pow: 75, spd: 45 },
+                    { name: '許哲晏', bats: 'R', avg: '.240', hr: 2, rbi: 20, con: 65, pow: 55, spd: 60 },
+                    { name: '廖宣皓', bats: 'L', avg: '.285', hr: 10, rbi: 55, con: 80, pow: 75, spd: 82 }
+                ]
+            },
+            'RAK': {
+                pitchers: [
+                    { name: '威能帝', vel: 95, ctrl: 88, stm: 88, era: '2.70', k: 15, pitches: [{ id: 0, lv: 6 }, { id: 2, lv: 6 }, { id: 5, lv: 5 }] },
+                    { name: '黃子鵬', vel: 88, ctrl: 92, stm: 90, era: '2.90', k: 10, pitches: [{ id: 1, lv: 6 }, { id: 2, lv: 6 }, { id: 8, lv: 7 }] },
+                    { name: '陳柏豪', vel: 94, ctrl: 82, stm: 60, era: '2.20', k: 14, pitches: [{ id: 0, lv: 6 }, { id: 2, lv: 6 }, { id: 6, lv: 5 }] }
+                ],
+                batters: [
+                    { name: '陳晨威', bats: 'L', avg: '.300', hr: 5, rbi: 45, con: 85, pow: 65, spd: 95 },
+                    { name: '林立', bats: 'R', avg: '.330', hr: 15, rbi: 75, con: 90, pow: 80, spd: 88 },
+                    { name: '梁家榮', bats: 'L', avg: '.310', hr: 10, rbi: 65, con: 85, pow: 75, spd: 65 },
+                    { name: '廖健富', bats: 'L', avg: '.315', hr: 18, rbi: 80, con: 88, pow: 85, spd: 50 },
+                    { name: '朱育賢', bats: 'L', avg: '.280', hr: 22, rbi: 85, con: 78, pow: 92, spd: 55 },
+                    { name: '林承飛', bats: 'R', avg: '.265', hr: 12, rbi: 55, con: 75, pow: 78, spd: 65 },
+                    { name: '林智平', bats: 'R', avg: '.290', hr: 5, rbi: 40, con: 82, pow: 65, spd: 60 },
+                    { name: '嚴宏鈞', bats: 'L', avg: '.230', hr: 4, rbi: 30, con: 65, pow: 65, spd: 55 },
+                    { name: '馬傑森', bats: 'R', avg: '.260', hr: 3, rbi: 35, con: 75, pow: 60, spd: 75 },
+                    { name: '林政華', bats: 'L', avg: '.270', hr: 2, rbi: 25, con: 76, pow: 55, spd: 82 },
+                    { name: '成晉', bats: 'L', avg: '.280', hr: 3, rbi: 30, con: 78, pow: 60, spd: 85 },
+                    { name: '宋嘉翔', bats: 'L', avg: '.250', hr: 5, rbi: 25, con: 70, pow: 70, spd: 60 }
+                ]
+            },
+            'FUB': {
+                pitchers: [
+                    { name: '羅戈', vel: 95, ctrl: 85, stm: 85, era: '2.50', k: 16, pitches: [{ id: 0, lv: 6 }, { id: 4, lv: 6 }, { id: 5, lv: 5 }] },
+                    { name: '江少慶', vel: 96, ctrl: 82, stm: 80, era: '3.20', k: 14, pitches: [{ id: 0, lv: 6 }, { id: 2, lv: 6 }, { id: 6, lv: 5 }] },
+                    { name: '富藍戈', vel: 99, ctrl: 80, stm: 60, era: '2.10', k: 18, pitches: [{ id: 0, lv: 7 }, { id: 2, lv: 6 }, { id: 5, lv: 5 }] }
+                ],
+                batters: [
+                    { name: '李宗賢', bats: 'R', avg: '.290', hr: 5, rbi: 45, con: 82, pow: 65, spd: 85 },
+                    { name: '王正棠', bats: 'L', avg: '.300', hr: 8, rbi: 55, con: 85, pow: 72, spd: 75 },
+                    { name: '張育成', bats: 'R', avg: '.285', hr: 20, rbi: 75, con: 88, pow: 90, spd: 80 },
+                    { name: '范國宸', bats: 'R', avg: '.270', hr: 12, rbi: 65, con: 78, pow: 80, spd: 60 },
+                    { name: '申皓瑋', bats: 'R', avg: '.260', hr: 15, rbi: 60, con: 75, pow: 78, spd: 75 },
+                    { name: '董子恩', bats: 'R', avg: '.295', hr: 6, rbi: 45, con: 82, pow: 68, spd: 65 },
+                    { name: '戴培峰', bats: 'L', avg: '.265', hr: 8, rbi: 40, con: 75, pow: 70, spd: 60 },
+                    { name: '池恩齊', bats: 'L', avg: '.250', hr: 2, rbi: 30, con: 72, pow: 55, spd: 85 },
+                    { name: '高國麟', bats: 'R', avg: '.260', hr: 10, rbi: 45, con: 74, pow: 75, spd: 60 },
+                    { name: '張進德', bats: 'L', avg: '.270', hr: 10, rbi: 50, con: 78, pow: 78, spd: 45 },
+                    { name: '蔣智賢', bats: 'L', avg: '.280', hr: 8, rbi: 45, con: 80, pow: 80, spd: 40 },
+                    { name: '辛元旭', bats: 'R', avg: '.265', hr: 5, rbi: 35, con: 75, pow: 65, spd: 65 }
+                ]
+            },
+            'WEI': {
+                pitchers: [
+                    { name: '鋼龍', vel: 93, ctrl: 90, stm: 88, era: '2.70', k: 14, pitches: [{ id: 0, lv: 5 }, { id: 4, lv: 7 }, { id: 5, lv: 6 }] },
+                    { name: '徐若熙', vel: 98, ctrl: 85, stm: 75, era: '2.30', k: 19, pitches: [{ id: 0, lv: 7 }, { id: 2, lv: 6 }, { id: 5, lv: 6 }] },
+                    { name: '陳冠偉', vel: 94, ctrl: 82, stm: 60, era: '2.15', k: 16, pitches: [{ id: 0, lv: 6 }, { id: 6, lv: 7 }, { id: 2, lv: 5 }] }
+                ],
+                batters: [
+                    { name: '李凱威', bats: 'L', avg: '.310', hr: 6, rbi: 50, con: 88, pow: 68, spd: 80 },
+                    { name: '郭天信', bats: 'L', avg: '.290', hr: 5, rbi: 45, con: 85, pow: 65, spd: 88 },
+                    { name: '吉力吉撈', bats: 'R', avg: '.280', hr: 25, rbi: 85, con: 78, pow: 92, spd: 55 },
+                    { name: '劉基鴻', bats: 'R', avg: '.275', hr: 18, rbi: 75, con: 78, pow: 85, spd: 65 },
+                    { name: '張政禹', bats: 'L', avg: '.265', hr: 3, rbi: 35, con: 76, pow: 60, spd: 85 },
+                    { name: '林孝程', bats: 'L', avg: '.260', hr: 4, rbi: 40, con: 74, pow: 62, spd: 90 },
+                    { name: '蔣少宏', bats: 'R', avg: '.250', hr: 6, rbi: 35, con: 70, pow: 68, spd: 60 },
+                    { name: '瑪仕革斯', bats: 'R', avg: '.270', hr: 12, rbi: 50, con: 75, pow: 82, spd: 50 },
+                    { name: '拿莫伊漾', bats: 'R', avg: '.255', hr: 10, rbi: 45, con: 72, pow: 75, spd: 70 },
+                    { name: '陳思仲', bats: 'R', avg: '.240', hr: 2, rbi: 20, con: 68, pow: 55, spd: 75 },
+                    { name: '林智勝', bats: 'R', avg: '.280', hr: 8, rbi: 40, con: 80, pow: 80, spd: 40 },
+                    { name: '陳品捷', bats: 'L', avg: '.260', hr: 5, rbi: 30, con: 75, pow: 65, spd: 75 }
+                ]
+            },
+            'TSG': {
+                pitchers: [
+                    { name: '哈瑪星', vel: 94, ctrl: 88, stm: 85, era: '2.80', k: 13, pitches: [{ id: 0, lv: 6 }, { id: 2, lv: 5 }, { id: 5, lv: 6 }] },
+                    { name: '陳柏清', vel: 92, ctrl: 82, stm: 80, era: '3.50', k: 11, pitches: [{ id: 0, lv: 5 }, { id: 2, lv: 6 }, { id: 5, lv: 5 }] },
+                    { name: '雷公', vel: 98, ctrl: 75, stm: 60, era: '2.90', k: 16, pitches: [{ id: 0, lv: 7 }, { id: 2, lv: 6 }, { id: 6, lv: 5 }] }
+                ],
+                batters: [
+                    { name: '曾子祐', bats: 'R', avg: '.290', hr: 5, rbi: 45, con: 85, pow: 65, spd: 80 },
+                    { name: '陳文杰', bats: 'L', avg: '.275', hr: 8, rbi: 55, con: 78, pow: 70, spd: 82 },
+                    { name: '魔鷹', bats: 'L', avg: '.300', hr: 30, rbi: 95, con: 85, pow: 95, spd: 55 },
+                    { name: '吳念庭', bats: 'L', avg: '.285', hr: 10, rbi: 60, con: 82, pow: 75, spd: 65 },
+                    { name: '王博玄', bats: 'L', avg: '.280', hr: 4, rbi: 40, con: 80, pow: 62, spd: 75 },
+                    { name: '杜家明', bats: 'R', avg: '.270', hr: 6, rbi: 45, con: 76, pow: 68, spd: 60 },
+                    { name: '張肇元', bats: 'R', avg: '.260', hr: 5, rbi: 35, con: 74, pow: 65, spd: 55 },
+                    { name: '藍寅倫', bats: 'L', avg: '.265', hr: 8, rbi: 40, con: 75, pow: 72, spd: 65 },
+                    { name: '林家鋐', bats: 'L', avg: '.250', hr: 2, rbi: 25, con: 70, pow: 55, spd: 80 },
+                    { name: '郭阜林', bats: 'L', avg: '.260', hr: 10, rbi: 45, con: 72, pow: 78, spd: 50 },
+                    { name: '吳明鴻', bats: 'R', avg: '.240', hr: 2, rbi: 20, con: 68, pow: 55, spd: 60 },
+                    { name: '王柏融', bats: 'L', avg: '.275', hr: 12, rbi: 55, con: 78, pow: 82, spd: 60 }
+                ]
+            },
+            'CTW': { // 中華隊 Chinese Taipei
+                pitchers: [
+                    { name: '林昱珉', vel: 94, ctrl: 85, stm: 85, era: '3.15', k: 16, pitches: [{ id: 0, lv: 6 }, { id: 5, lv: 7 }, { id: 2, lv: 6 }, { id: 4, lv: 5 }] },
+                    { name: '徐若熙', vel: 98, ctrl: 82, stm: 82, era: '2.60', k: 18, pitches: [{ id: 0, lv: 7 }, { id: 4, lv: 5 }, { id: 6, lv: 6 }] },
+                    { name: '古林睿煬', vel: 99, ctrl: 85, stm: 75, era: '2.30', k: 19, pitches: [{ id: 0, lv: 7 }, { id: 2, lv: 6 }, { id: 5, lv: 6 }] },
+                    { name: '孫易磊', vel: 96, ctrl: 82, stm: 70, era: '2.90', k: 15, pitches: [{ id: 0, lv: 6 }, { id: 2, lv: 5 }, { id: 6, lv: 6 }] }
+                ],
+                batters: [
+                    { name: '陳傑憲', bats: 'L', avg: '.335', hr: 6, rbi: 50, con: 95, pow: 65, spd: 85 },
+                    { name: '費爾柴德', bats: 'R', avg: '.270', hr: 15, rbi: 45, con: 80, pow: 80, spd: 88 },
+                    { name: '張育成', bats: 'R', avg: '.285', hr: 22, rbi: 75, con: 85, pow: 92, spd: 78 },
+                    { name: '吉力吉撈', bats: 'R', avg: '.275', hr: 25, rbi: 82, con: 78, pow: 92, spd: 55 },
+                    { name: '林安可', bats: 'L', avg: '.270', hr: 20, rbi: 78, con: 75, pow: 88, spd: 65 },
+                    { name: '鄭宗哲', bats: 'L', avg: '.280', hr: 10, rbi: 50, con: 82, pow: 75, spd: 90 },
+                    { name: '江坤宇', bats: 'R', avg: '.310', hr: 5, rbi: 48, con: 92, pow: 60, spd: 80 },
+                    { name: '陳晨威', bats: 'L', avg: '.300', hr: 5, rbi: 45, con: 85, pow: 65, spd: 95 },
+                    { name: '李灝宇', bats: 'R', avg: '.290', hr: 12, rbi: 55, con: 84, pow: 80, spd: 75 },
+                    { name: '吳念庭', bats: 'L', avg: '.280', hr: 8, rbi: 60, con: 85, pow: 70, spd: 65 },
+                    { name: '林子偉', bats: 'L', avg: '.265', hr: 10, rbi: 45, con: 80, pow: 75, spd: 75 },
+                    { name: '林家正', bats: 'R', avg: '.250', hr: 5, rbi: 35, con: 75, pow: 65, spd: 50 }
+                ]
+            },
+            'JPN': { // 日本
+                pitchers: [
+                    { name: '山本由伸', vel: 97, ctrl: 95, stm: 88, era: '2.95', k: 20, pitches: [{ id: 0, lv: 6 }, { id: 6, lv: 7 }, { id: 4, lv: 7 }, { id: 7, lv: 5 }] },
+                    { name: '菊池雄星', vel: 97, ctrl: 85, stm: 85, era: '3.20', k: 20, pitches: [{ id: 0, lv: 7 }, { id: 2, lv: 6 }, { id: 5, lv: 5 }] },
+                    { name: '高橋宏斗', vel: 99, ctrl: 88, stm: 88, era: '2.10', k: 24, pitches: [{ id: 0, lv: 7 }, { id: 6, lv: 7 }, { id: 2, lv: 6 }] },
+                    { name: '翁田大勢', vel: 100, ctrl: 82, stm: 60, era: '1.80', k: 18, pitches: [{ id: 0, lv: 7 }, { id: 6, lv: 7 }] }
+                ],
+                batters: [
+                    { name: '大谷翔平', bats: 'L', avg: '.310', hr: 50, rbi: 120, con: 90, pow: 99, spd: 85 },
+                    { name: '鈴木誠也', bats: 'R', avg: '.285', hr: 22, rbi: 80, con: 86, pow: 88, spd: 75 },
+                    { name: '村上宗隆', bats: 'L', avg: '.275', hr: 35, rbi: 95, con: 82, pow: 96, spd: 60 },
+                    { name: '岡本和真', bats: 'R', avg: '.280', hr: 30, rbi: 90, con: 84, pow: 92, spd: 55 },
+                    { name: '吉田正尚', bats: 'L', avg: '.295', hr: 15, rbi: 68, con: 92, pow: 80, spd: 60 },
+                    { name: '近藤健介', bats: 'L', avg: '.310', hr: 12, rbi: 58, con: 95, pow: 75, spd: 62 },
+                    { name: '牧秀悟', bats: 'R', avg: '.285', hr: 22, rbi: 75, con: 85, pow: 85, spd: 60 },
+                    { name: '源田壯亮', bats: 'L', avg: '.270', hr: 5, rbi: 40, con: 84, pow: 55, spd: 90 },
+                    { name: '森下翔太', bats: 'R', avg: '.275', hr: 18, rbi: 65, con: 80, pow: 82, spd: 70 },
+                    { name: '佐藤輝明', bats: 'L', avg: '.260', hr: 24, rbi: 80, con: 75, pow: 88, spd: 65 },
+                    { name: '周東佑京', bats: 'L', avg: '.260', hr: 2, rbi: 28, con: 80, pow: 45, spd: 99 },
+                    { name: '中村悠平', bats: 'R', avg: '.255', hr: 5, rbi: 35, con: 78, pow: 60, spd: 50 }
+                ]
+            },
+            'KOR': {
+                pitchers: [
+                    { name: '郭彬', vel: 95, ctrl: 85, stm: 85, era: '2.90', k: 15, pitches: [{ id: 0, lv: 6 }, { id: 4, lv: 6 }, { id: 2, lv: 5 }, { id: 6, lv: 5 }] },
+                    { name: '文東珠', vel: 98, ctrl: 80, stm: 82, era: '3.10', k: 17, pitches: [{ id: 0, lv: 7 }, { id: 2, lv: 6 }, { id: 4, lv: 5 }] },
+                    { name: '朴英賢', vel: 96, ctrl: 88, stm: 60, era: '2.20', k: 18, pitches: [{ id: 0, lv: 7 }, { id: 5, lv: 6 }, { id: 2, lv: 5 }] },
+                    { name: '元兌仁', vel: 93, ctrl: 86, stm: 80, era: '3.00', k: 13, pitches: [{ id: 0, lv: 5 }, { id: 5, lv: 6 }, { id: 2, lv: 6 }] }
+                ],
+                batters: [
+                    { name: '李政厚', bats: 'L', avg: '.320', hr: 10, rbi: 55, con: 96, pow: 70, spd: 85 },
+                    { name: '金倒永', bats: 'R', avg: '.315', hr: 30, rbi: 90, con: 90, pow: 92, spd: 92 },
+                    { name: '姜白虎', bats: 'L', avg: '.295', hr: 25, rbi: 85, con: 86, pow: 90, spd: 60 },
+                    { name: '盧施煥', bats: 'R', avg: '.275', hr: 32, rbi: 95, con: 78, pow: 95, spd: 55 },
+                    { name: '金慧成', bats: 'L', avg: '.310', hr: 6, rbi: 45, con: 90, pow: 58, spd: 90 },
+                    { name: '金河成', bats: 'R', avg: '.270', hr: 18, rbi: 65, con: 82, pow: 78, spd: 85 },
+                    { name: '具滋昱', bats: 'L', avg: '.305', hr: 22, rbi: 80, con: 88, pow: 85, spd: 75 },
+                    { name: '朴東原', bats: 'R', avg: '.265', hr: 20, rbi: 68, con: 76, pow: 82, spd: 48 },
+                    { name: '朴海旻', bats: 'L', avg: '.285', hr: 4, rbi: 38, con: 85, pow: 55, spd: 94 },
+                    { name: '崔元準', bats: 'L', avg: '.290', hr: 8, rbi: 45, con: 85, pow: 65, spd: 88 },
+                    { name: '文保景', bats: 'L', avg: '.285', hr: 15, rbi: 65, con: 82, pow: 78, spd: 65 },
+                    { name: '尹東熙', bats: 'R', avg: '.280', hr: 12, rbi: 55, con: 80, pow: 72, spd: 78 }
+                ]
+            },
+            'AUS': {
+                pitchers: [
+                    { name: 'L.Hendriks', vel: 97, ctrl: 85, stm: 60, era: '2.50', k: 18, pitches: [{ id: 0, lv: 7 }, { id: 2, lv: 6 }, { id: 4, lv: 5 }] },
+                    { name: 'T.Atherton', vel: 92, ctrl: 82, stm: 80, era: '3.60', k: 12, pitches: [{ id: 0, lv: 5 }, { id: 2, lv: 6 }, { id: 5, lv: 5 }] },
+                    { name: 'J.Crawford', vel: 93, ctrl: 80, stm: 75, era: '3.80', k: 14, pitches: [{ id: 0, lv: 6 }, { id: 4, lv: 6 }, { id: 5, lv: 4 }] },
+                    { name: 'W.Saupold', vel: 90, ctrl: 88, stm: 82, era: '3.50', k: 10, pitches: [{ id: 0, lv: 5 }, { id: 5, lv: 6 }, { id: 7, lv: 5 }] }
+                ],
+                batters: [
+                    { name: 'T.Bazzana', bats: 'L', avg: '.285', hr: 18, rbi: 65, con: 85, pow: 80, spd: 85 },
+                    { name: 'A.Whitefield', bats: 'R', avg: '.270', hr: 8, rbi: 40, con: 78, pow: 65, spd: 88 },
+                    { name: 'R.Glendinning', bats: 'R', avg: '.260', hr: 22, rbi: 75, con: 75, pow: 88, spd: 55 },
+                    { name: 'D.George', bats: 'R', avg: '.255', hr: 15, rbi: 55, con: 72, pow: 80, spd: 65 },
+                    { name: 'U.Bojarski', bats: 'R', avg: '.265', hr: 12, rbi: 50, con: 76, pow: 75, spd: 70 },
+                    { name: 'L.Spence', bats: 'R', avg: '.275', hr: 5, rbi: 35, con: 80, pow: 60, spd: 75 },
+                    { name: 'R.Perkins', bats: 'R', avg: '.250', hr: 10, rbi: 45, con: 72, pow: 70, spd: 60 },
+                    { name: 'A.Hall', bats: 'L', avg: '.260', hr: 14, rbi: 48, con: 75, pow: 78, spd: 72 },
+                    { name: 'J.Kennelly', bats: 'R', avg: '.245', hr: 8, rbi: 35, con: 70, pow: 65, spd: 65 },
+                    { name: 'C.Wingrove', bats: 'L', avg: '.240', hr: 16, rbi: 52, con: 68, pow: 82, spd: 50 },
+                    { name: 'D.Nilsson', bats: 'L', avg: '.235', hr: 6, rbi: 25, con: 65, pow: 60, spd: 55 },
+                    { name: 'J.McArdle', bats: 'R', avg: '.250', hr: 4, rbi: 20, con: 72, pow: 55, spd: 68 }
+                ]
+            },
+            'USA': {
+                pitchers: [
+                    { name: 'P.Skenes', vel: 101, ctrl: 88, stm: 90, era: '2.10', k: 22, pitches: [{ id: 0, lv: 7 }, { id: 6, lv: 7 }, { id: 2, lv: 6 }] },
+                    { name: 'G.Cole', vel: 97, ctrl: 92, stm: 95, era: '2.75', k: 18, pitches: [{ id: 0, lv: 7 }, { id: 2, lv: 6 }, { id: 4, lv: 6 }, { id: 5, lv: 5 }] },
+                    { name: 'Z.Wheeler', vel: 96, ctrl: 90, stm: 92, era: '2.60', k: 17, pitches: [{ id: 0, lv: 6 }, { id: 3, lv: 6 }, { id: 4, lv: 6 }, { id: 8, lv: 5 }] },
+                    { name: 'D.Williams', vel: 95, ctrl: 82, stm: 60, era: '1.80', k: 20, pitches: [{ id: 0, lv: 6 }, { id: 5, lv: 7 }, { id: 2, lv: 5 }] }
+                ],
+                batters: [
+                    { name: 'A.Judge', bats: 'R', avg: '.295', hr: 50, rbi: 115, con: 88, pow: 99, spd: 65 },
+                    { name: 'M.Betts', bats: 'R', avg: '.305', hr: 35, rbi: 85, con: 94, pow: 86, spd: 82 },
+                    { name: 'B.Witt Jr.', bats: 'R', avg: '.310', hr: 30, rbi: 95, con: 92, pow: 88, spd: 95 },
+                    { name: 'G.Henderson', bats: 'L', avg: '.285', hr: 35, rbi: 90, con: 85, pow: 92, spd: 85 },
+                    { name: 'B.Harper', bats: 'L', avg: '.280', hr: 32, rbi: 95, con: 86, pow: 90, spd: 65 },
+                    { name: 'M.Trout', bats: 'R', avg: '.270', hr: 30, rbi: 80, con: 84, pow: 94, spd: 70 },
+                    { name: 'F.Freeman', bats: 'L', avg: '.315', hr: 25, rbi: 95, con: 95, pow: 82, spd: 55 },
+                    { name: 'K.Tucker', bats: 'L', avg: '.285', hr: 30, rbi: 90, con: 86, pow: 88, spd: 75 },
+                    { name: 'C.Carroll', bats: 'L', avg: '.275', hr: 22, rbi: 75, con: 82, pow: 80, spd: 98 },
+                    { name: 'T.Turner', bats: 'R', avg: '.290', hr: 18, rbi: 70, con: 88, pow: 78, spd: 92 },
+                    { name: 'J.Realmuto', bats: 'R', avg: '.260', hr: 20, rbi: 65, con: 78, pow: 80, spd: 75 },
+                    { name: 'P.Alonso', bats: 'R', avg: '.245', hr: 40, rbi: 105, con: 72, pow: 96, spd: 40 }
+                ]
+            },
+            'DOM': {
+                pitchers: [
+                    { name: 'L.Castillo', vel: 97, ctrl: 85, stm: 90, era: '3.10', k: 18, pitches: [{ id: 0, lv: 6 }, { id: 1, lv: 7 }, { id: 2, lv: 6 }, { id: 5, lv: 5 }] },
+                    { name: 'F.Valdez', vel: 95, ctrl: 82, stm: 92, era: '3.20', k: 16, pitches: [{ id: 8, lv: 7 }, { id: 4, lv: 6 }, { id: 5, lv: 5 }] },
+                    { name: 'E.Pérez', vel: 99, ctrl: 80, stm: 85, era: '2.90', k: 20, pitches: [{ id: 0, lv: 7 }, { id: 2, lv: 6 }, { id: 5, lv: 6 }] },
+                    { name: 'E.Clase', vel: 100, ctrl: 88, stm: 60, era: '1.60', k: 17, pitches: [{ id: 7, lv: 7 }, { id: 2, lv: 6 }] }
+                ],
+                batters: [
+                    { name: 'J.Soto', bats: 'L', avg: '.300', hr: 38, rbi: 105, con: 95, pow: 94, spd: 65 },
+                    { name: 'M.Machado', bats: 'R', avg: '.280', hr: 32, rbi: 100, con: 85, pow: 92, spd: 60 },
+                    { name: 'V.Guerrero Jr.', bats: 'R', avg: '.295', hr: 30, rbi: 98, con: 90, pow: 90, spd: 50 },
+                    { name: 'J.Ramírez', bats: 'S', avg: '.285', hr: 35, rbi: 105, con: 88, pow: 90, spd: 82 },
+                    { name: 'F.Tatis Jr.', bats: 'R', avg: '.280', hr: 35, rbi: 90, con: 84, pow: 94, spd: 88 },
+                    { name: 'R.Devers', bats: 'L', avg: '.275', hr: 34, rbi: 102, con: 82, pow: 95, spd: 55 },
+                    { name: 'M.Ozuna', bats: 'R', avg: '.270', hr: 38, rbi: 105, con: 80, pow: 96, spd: 45 },
+                    { name: 'T.Hernández', bats: 'R', avg: '.265', hr: 30, rbi: 90, con: 78, pow: 90, spd: 65 },
+                    { name: 'K.Marte', bats: 'S', avg: '.285', hr: 25, rbi: 85, con: 88, pow: 84, spd: 75 },
+                    { name: 'J.Rodríguez', bats: 'R', avg: '.275', hr: 28, rbi: 85, con: 82, pow: 88, spd: 90 },
+                    { name: 'E.De La Cruz', bats: 'S', avg: '.255', hr: 25, rbi: 75, con: 75, pow: 85, spd: 99 },
+                    { name: 'G.Sánchez', bats: 'R', avg: '.235', hr: 22, rbi: 60, con: 70, pow: 88, spd: 40 }
+                ]
+            },
+            'PUR': {
+                pitchers: [
+                    { name: 'J.Berríos', vel: 94, ctrl: 88, stm: 90, era: '3.20', k: 15, pitches: [{ id: 0, lv: 5 }, { id: 3, lv: 6 }, { id: 8, lv: 5 }, { id: 5, lv: 5 }] },
+                    { name: 'S.Lugo', vel: 93, ctrl: 85, stm: 85, era: '3.40', k: 14, pitches: [{ id: 0, lv: 6 }, { id: 4, lv: 6 }, { id: 2, lv: 5 }] },
+                    { name: 'M.Stroman', vel: 92, ctrl: 86, stm: 85, era: '3.60', k: 12, pitches: [{ id: 8, lv: 7 }, { id: 3, lv: 6 }, { id: 5, lv: 5 }] },
+                    { name: 'E.Díaz', vel: 100, ctrl: 80, stm: 60, era: '2.10', k: 22, pitches: [{ id: 0, lv: 7 }, { id: 2, lv: 7 }, { id: 5, lv: 4 }] }
+                ],
+                batters: [
+                    { name: 'F.Lindor', bats: 'S', avg: '.275', hr: 30, rbi: 90, con: 86, pow: 88, spd: 82 },
+                    { name: 'C.Correa', bats: 'R', avg: '.285', hr: 22, rbi: 85, con: 88, pow: 84, spd: 65 },
+                    { name: 'W.Contreras', bats: 'R', avg: '.270', hr: 25, rbi: 80, con: 82, pow: 88, spd: 55 },
+                    { name: 'J.Báez', bats: 'R', avg: '.255', hr: 18, rbi: 70, con: 75, pow: 80, spd: 75 },
+                    { name: 'H.Ramos', bats: 'R', avg: '.265', hr: 20, rbi: 75, con: 80, pow: 82, spd: 68 },
+                    { name: 'E.Rivera', bats: 'R', avg: '.250', hr: 10, rbi: 50, con: 75, pow: 70, spd: 65 },
+                    { name: 'K.Hernández', bats: 'R', avg: '.245', hr: 15, rbi: 55, con: 74, pow: 75, spd: 65 },
+                    { name: 'C.Vázquez', bats: 'R', avg: '.260', hr: 8, rbi: 45, con: 78, pow: 65, spd: 45 },
+                    { name: 'M.Meléndez', bats: 'L', avg: '.235', hr: 22, rbi: 65, con: 70, pow: 85, spd: 60 },
+                    { name: 'J.Miranda', bats: 'R', avg: '.270', hr: 15, rbi: 60, con: 82, pow: 78, spd: 55 },
+                    { name: 'V.Machín', bats: 'L', avg: '.255', hr: 5, rbi: 35, con: 76, pow: 60, spd: 60 },
+                    { name: 'N.Velázquez', bats: 'R', avg: '.240', hr: 20, rbi: 60, con: 72, pow: 86, spd: 62 }
+                ]
+            },
+            'MEX': {
+                pitchers: [
+                    { name: 'J.Urquidy', vel: 93, ctrl: 88, stm: 85, era: '3.60', k: 13, pitches: [{ id: 0, lv: 5 }, { id: 5, lv: 6 }, { id: 2, lv: 5 }, { id: 4, lv: 5 }] },
+                    { name: 'T.Walker', vel: 94, ctrl: 82, stm: 85, era: '4.10', k: 12, pitches: [{ id: 0, lv: 6 }, { id: 6, lv: 6 }, { id: 2, lv: 5 }] },
+                    { name: 'P.Sandoval', vel: 94, ctrl: 85, stm: 85, era: '3.80', k: 14, pitches: [{ id: 0, lv: 6 }, { id: 5, lv: 6 }, { id: 2, lv: 5 }] },
+                    { name: 'A.Muñoz', vel: 101, ctrl: 85, stm: 60, era: '1.90', k: 22, pitches: [{ id: 0, lv: 7 }, { id: 2, lv: 7 }, { id: 8, lv: 5 }] }
+                ],
+                batters: [
+                    { name: 'R.Arozarena', bats: 'R', avg: '.270', hr: 22, rbi: 80, con: 82, pow: 84, spd: 85 },
+                    { name: 'I.Paredes', bats: 'R', avg: '.265', hr: 28, rbi: 85, con: 80, pow: 88, spd: 55 },
+                    { name: 'A.Verdugo', bats: 'L', avg: '.275', hr: 15, rbi: 65, con: 85, pow: 70, spd: 65 },
+                    { name: 'A.Kirk', bats: 'R', avg: '.280', hr: 12, rbi: 60, con: 88, pow: 72, spd: 35 },
+                    { name: 'J.Meneses', bats: 'R', avg: '.275', hr: 18, rbi: 75, con: 84, pow: 80, spd: 50 },
+                    { name: 'L.Urías', bats: 'R', avg: '.250', hr: 15, rbi: 55, con: 75, pow: 75, spd: 60 },
+                    { name: 'R.Tellez', bats: 'L', avg: '.245', hr: 25, rbi: 70, con: 72, pow: 88, spd: 40 },
+                    { name: 'A.Thomas', bats: 'L', avg: '.260', hr: 10, rbi: 45, con: 78, pow: 68, spd: 85 },
+                    { name: 'J.Duran', bats: 'R', avg: '.270', hr: 16, rbi: 65, con: 80, pow: 78, spd: 90 },
+                    { name: 'T.Estrada', bats: 'R', avg: '.265', hr: 14, rbi: 55, con: 78, pow: 75, spd: 75 },
+                    { name: 'V.Aranda', bats: 'L', avg: '.255', hr: 12, rbi: 45, con: 75, pow: 72, spd: 60 },
+                    { name: 'A.Trejo', bats: 'R', avg: '.240', hr: 5, rbi: 30, con: 70, pow: 60, spd: 70 }
+                ]
+            },
+            'ITA': {
+                pitchers: [
+                    { name: 'A.Pallante', vel: 94, ctrl: 82, stm: 85, era: '3.50', k: 13, pitches: [{ id: 0, lv: 6 }, { id: 2, lv: 6 }, { id: 4, lv: 5 }] },
+                    { name: 'M.Festa', vel: 93, ctrl: 80, stm: 75, era: '3.90', k: 14, pitches: [{ id: 0, lv: 5 }, { id: 2, lv: 6 }, { id: 6, lv: 5 }] },
+                    { name: 'J.Biagini', vel: 92, ctrl: 85, stm: 80, era: '4.10', k: 10, pitches: [{ id: 0, lv: 5 }, { id: 4, lv: 5 }, { id: 5, lv: 5 }] },
+                    { name: 'M.King', vel: 95, ctrl: 88, stm: 88, era: '2.80', k: 16, pitches: [{ id: 0, lv: 6 }, { id: 7, lv: 6 }, { id: 2, lv: 5 }, { id: 5, lv: 5 }] }
+                ],
+                batters: [
+                    { name: 'V.Pasquantino', bats: 'L', avg: '.275', hr: 22, rbi: 85, con: 85, pow: 85, spd: 45 },
+                    { name: 'S.Frelick', bats: 'L', avg: '.265', hr: 8, rbi: 45, con: 80, pow: 65, spd: 88 },
+                    { name: 'D.Fletcher', bats: 'R', avg: '.270', hr: 5, rbi: 40, con: 85, pow: 55, spd: 70 },
+                    { name: 'N.Lopez', bats: 'S', avg: '.260', hr: 4, rbi: 35, con: 82, pow: 50, spd: 75 },
+                    { name: 'M.Mastrobuoni', bats: 'L', avg: '.255', hr: 6, rbi: 38, con: 78, pow: 60, spd: 80 },
+                    { name: 'B.Sullivan', bats: 'L', avg: '.245', hr: 12, rbi: 50, con: 72, pow: 75, spd: 55 },
+                    { name: 'J.Friscia', bats: 'R', avg: '.250', hr: 10, rbi: 45, con: 74, pow: 72, spd: 60 },
+                    { name: 'A.Garcia', bats: 'R', avg: '.260', hr: 14, rbi: 55, con: 76, pow: 78, spd: 65 },
+                    { name: 'F.Piliere', bats: 'R', avg: '.240', hr: 5, rbi: 30, con: 70, pow: 60, spd: 65 },
+                    { name: 'E.Sogard', bats: 'L', avg: '.255', hr: 3, rbi: 25, con: 76, pow: 55, spd: 70 },
+                    { name: 'D.Lugbauer', bats: 'L', avg: '.235', hr: 25, rbi: 65, con: 68, pow: 88, spd: 40 },
+                    { name: 'C.Mastromarino', bats: 'R', avg: '.245', hr: 8, rbi: 35, con: 72, pow: 65, spd: 62 }
+                ]
+            }
+        };
+
+        const TEAMS = [
+            { abbr: '道奇', name: 'Dodgers', c1: '#005A9C', c2: '#EF3E42', c3: '#FFF', jersey: '#FFFFFF', hatLogo: 'LA', roster: ROSTERS['LAD'] },
+            { abbr: '洋基', name: 'Yankees', c1: '#003087', c2: '#C4CED4', c3: '#FFF', jersey: '#FFFFFF', hatLogo: 'NY', roster: ROSTERS['NYY'] },
+            { abbr: '兄弟', name: 'Brothers', c1: '#FFD700', c2: '#000080', c3: '#FFF', jersey: '#FFD700', hatLogo: 'B', roster: ROSTERS['BRO'] },
+            { abbr: '統一', name: 'Lions', c1: '#FF6600', c2: '#006600', c3: '#FFF', jersey: '#FFFFFF', hatLogo: 'U', roster: ROSTERS['UNI'] },
+            { abbr: '樂天', name: 'Monkeys', c1: '#990000', c2: '#FFFFFF', c3: '#000', jersey: '#AA0000', hatLogo: 'R', roster: ROSTERS['RAK'] },
+            { abbr: '富邦', name: 'Guardians', c1: '#003366', c2: '#FFFFFF', c3: '#000', jersey: '#002255', hatLogo: 'G', roster: ROSTERS['FUB'] },
+            { abbr: '味全', name: 'Dragons', c1: '#DD0000', c2: '#FFFFFF', c3: '#000', jersey: '#CC0000', hatLogo: 'W', roster: ROSTERS['WEI'] },
+            { abbr: '台鋼', name: 'Hawks', c1: '#006633', c2: '#FFCC00', c3: '#FFF', jersey: '#004d26', hatLogo: 'T', roster: ROSTERS['TSG'] },
+            // ── WBC Teams ──
+            { abbr: '中華', name: 'Chinese Taipei', c1: '#CE1126', c2: '#003087', c3: '#FFF', jersey: '#FFFFFF', hatLogo: 'CT', roster: ROSTERS['CTW'] },
+            { abbr: '日本', name: 'Japan', c1: '#BC002D', c2: '#FFFFFF', c3: '#FFF', jersey: '#FFFFFF', hatLogo: 'J', roster: ROSTERS['JPN'] },
+            { abbr: '韓國', name: 'South Korea', c1: '#003478', c2: '#CE1126', c3: '#FFF', jersey: '#002255', hatLogo: 'K', roster: ROSTERS['KOR'] },
+            { abbr: '澳洲', name: 'Australia', c1: '#006400', c2: '#FFD700', c3: '#FFF', jersey: '#004d00', hatLogo: 'A', roster: ROSTERS['AUS'] },
+            { abbr: '美國', name: 'USA', c1: '#002868', c2: '#BF0A30', c3: '#FFF', jersey: '#FFFFFF', hatLogo: 'US', roster: ROSTERS['USA'] },
+            { abbr: '多明尼加', name: 'Dominican Rep.', c1: '#002D62', c2: '#CF142B', c3: '#FFF', jersey: '#001a55', hatLogo: 'DR', roster: ROSTERS['DOM'] },
+            { abbr: '波多黎各', name: 'Puerto Rico', c1: '#EF3340', c2: '#003082', c3: '#FFF', jersey: '#FFFFFF', hatLogo: 'PR', roster: ROSTERS['PUR'] },
+            { abbr: '墨西哥', name: 'Mexico', c1: '#006847', c2: '#CE1126', c3: '#FFF', jersey: '#004d26', hatLogo: 'M', roster: ROSTERS['MEX'] },
+            { abbr: '義大利', name: 'Italy', c1: '#009246', c2: '#CE2B37', c3: '#FFF', jersey: '#FFFFFF', hatLogo: 'I', roster: ROSTERS['ITA'] }
+        ];
+
+        // 廖宣皓/廖宣瑜 available in all teams as both batter and pitcher substitutes
+        TEAMS.forEach(team => {
+            team.roster.batters = team.roster.batters.filter(b => b.name !== '廖宣皓' && b.name !== '廖宣瑜');
+            team.roster.batters.push({ name: '廖宣皓', bats: 'L', avg: '.285', hr: 10, rbi: 55, con: 80, pow: 75, spd: 82 });
+            team.roster.batters.push({ name: '廖宣瑜', bats: 'R', avg: '.310', hr: 15, rbi: 60, con: 85, pow: 80, spd: 78 });
+            team.roster.pitchers = team.roster.pitchers.filter(p => p.name !== '廖宣皓' && p.name !== '廖宣瑜');
+            team.roster.pitchers.push({ name: '廖宣皓', vel: 84, ctrl: 78, stm: 72, era: '4.20', k: 7, pitches: [{ id: 0, lv: 4 }, { id: 1, lv: 4 }, { id: 2, lv: 3 }] });
+            team.roster.pitchers.push({ name: '廖宣瑜', vel: 82, ctrl: 80, stm: 75, era: '4.00', k: 6, pitches: [{ id: 0, lv: 4 }, { id: 2, lv: 4 }, { id: 5, lv: 3 }] });
+        });
+
+        const SCR = { TITLE: 0, SELECT: 1, LINEUP: 4, GAME: 2, OVER: 3, HALF_END: 5 };
+        const PH = { INNING_START: 0, PITCH_SELECT: 1, AIM: 2, POWER_GAUGE: 3, WAIT_PITCH: 4, BALL_FLIGHT: 5, BATTING: 6, RESULT: 7, SUB_MENU: 8 };
+        let G = {};
+
+        const SZcx = W / 2, SZcy = 400, SZw = 110, SZh = 110;
+
+        function initState() {
+            G = {
+                scr: SCR.TITLE, selStep: 0, cursor: 0, awayIdx: 0, homeIdx: 1,
+                inning: 1, half: 0, outs: 0, balls: 0, strikes: 0,
+                score: [0, 0], runners: [false, false, false], innScores: [[], []],
+                playerSide: 1, difficulty: 1,
+                batOrder: [0, 0],
+                lineups: [[0, 1, 2, 3, 4, 5, 6, 7, 8], [0, 1, 2, 3, 4, 5, 6, 7, 8]],
+                pitchers: [0, 0],
+                usedBatters: [[], []],
+                usedPitchers: [[], []],
+                subType: '', prevPhase: 0,
+                phase: PH.INNING_START, phaseTimer: 0,
+                pitchChoice: 0, hoveredPitchChoice: -1, aimX: 0, aimY: 0, gaugePos: 0, gaugeDir: 1, gaugePower: 0,
+                ballActive: false, ballFrame: 0, ballDur: 0,
+                ballSX: 0, ballSY: 0, ballEX: 0, ballEY: 0, ballCX: 0, ballCY: 0,
+                aiSwing: false, aiSwingFrame: 0, aiCX: 0, aiCY: 0,
+                curX: 0, curY: 0, phPos: 0, phSpeed: 0.022, phPressed: false, phValue: 0, phDone: false,
+                dragStartX: 0, dragStartY: 0, baseCurX: 0, baseCurY: 0, isDraggingBat: false, aimState: 0,
+                resText: '', resSub: '', resCol: '#fff', resTimer: 0, resEndHalf: false, _continueAtBat: false,
+                frame: 0, readyPulse: 0, batSwingFrame: -999, hitEffectFrame: -999, hitType: '', hitFlyDir: 0,
+                pitchCounts: [0, 0],
+                batStats: [
+                    Array.from({ length: 9 }, () => ({ ab: 0, h: 0, bb: 0, hr: 0, rbi: 0, k: 0 })),
+                    Array.from({ length: 9 }, () => ({ ab: 0, h: 0, bb: 0, hr: 0, rbi: 0, k: 0 }))
+                ],
+                halfEndTimer: 0
+            };
+        }
+        initState();
+
+        const SFX = (() => {
+            let ctx2 = null;
+            const init = () => { if (!ctx2) ctx2 = new (window.AudioContext || window.webkitAudioContext)(); };
+            const play = (fn) => { try { init(); fn(ctx2); } catch (e) { } };
+            const env = (g, t, a, d, s, r) => {
+                g.gain.setValueAtTime(0, t);
+                g.gain.linearRampToValueAtTime(a, t + 0.01);
+                g.gain.linearRampToValueAtTime(s, t + 0.01 + d);
+                g.gain.exponentialRampToValueAtTime(0.0001, t + 0.01 + d + r);
+                g.gain.setValueAtTime(0, t + 0.01 + d + r);
+            };
+            return {
+                pitch() {
+                    play(c => {
+                        const o = c.createOscillator(), g = c.createGain();
+                        o.connect(g); g.connect(c.destination);
+                        o.type = 'sawtooth'; o.frequency.setValueAtTime(220, c.currentTime);
+                        o.frequency.exponentialRampToValueAtTime(80, c.currentTime + 0.18);
+                        env(g, c.currentTime, 0.12, 0, 0.06, 0.18);
+                        o.start(c.currentTime); o.stop(c.currentTime + 0.3);
+                    });
+                },
+                crack() {
+                    play(c => {
+                        const buf = c.createBuffer(1, c.sampleRate * 0.15, c.sampleRate);
+                        const d = buf.getChannelData(0);
+                        for (let i = 0; i < d.length; i++) d[i] = (Math.random() * 2 - 1) * (1 - i / d.length);
+                        const src = c.createBufferSource(), g = c.createGain();
+                        const filt = c.createBiquadFilter();
+                        filt.type = 'bandpass'; filt.frequency.value = 2200; filt.Q.value = 0.8;
+                        src.buffer = buf; src.connect(filt); filt.connect(g); g.connect(c.destination);
+                        env(g, c.currentTime, 0.9, 0, 0.3, 0.12);
+                        src.start(c.currentTime);
+                    });
+                },
+                homerun() {
+                    play(c => {
+                        const buf = c.createBuffer(1, c.sampleRate * 0.25, c.sampleRate);
+                        const d = buf.getChannelData(0);
+                        for (let i = 0; i < d.length; i++) d[i] = (Math.random() * 2 - 1) * (1 - i / d.length * 0.6);
+                        const src = c.createBufferSource(), g = c.createGain();
+                        const filt = c.createBiquadFilter();
+                        filt.type = 'bandpass'; filt.frequency.value = 1800; filt.Q.value = 0.5;
+                        src.buffer = buf; src.connect(filt); filt.connect(g); g.connect(c.destination);
+                        env(g, c.currentTime, 1.2, 0, 0.5, 0.4);
+                        src.start(c.currentTime);
+                        const buf2 = c.createBuffer(1, c.sampleRate * 1.2, c.sampleRate);
+                        const d2 = buf2.getChannelData(0);
+                        for (let i = 0; i < d2.length; i++) d2[i] = (Math.random() * 2 - 1) * Math.pow(Math.sin(i / d2.length * Math.PI), 0.5);
+                        const src2 = c.createBufferSource(), g2 = c.createGain();
+                        const filt2 = c.createBiquadFilter();
+                        filt2.type = 'bandpass'; filt2.frequency.value = 900; filt2.Q.value = 0.3;
+                        src2.buffer = buf2; src2.connect(filt2); filt2.connect(g2); g2.connect(c.destination);
+                        env(g2, c.currentTime + 0.1, 0.4, 0.3, 0.3, 0.7);
+                        src2.start(c.currentTime + 0.1);
+                    });
+                },
+                strike() {
+                    play(c => {
+                        const o = c.createOscillator(), g = c.createGain();
+                        o.connect(g); g.connect(c.destination);
+                        o.type = 'sine'; o.frequency.setValueAtTime(880, c.currentTime);
+                        o.frequency.exponentialRampToValueAtTime(660, c.currentTime + 0.12);
+                        env(g, c.currentTime, 0.35, 0, 0.2, 0.18);
+                        o.start(c.currentTime); o.stop(c.currentTime + 0.4);
+                    });
+                },
+                ball() {
+                    play(c => {
+                        const o = c.createOscillator(), g = c.createGain();
+                        o.connect(g); g.connect(c.destination);
+                        o.type = 'sine'; o.frequency.setValueAtTime(330, c.currentTime);
+                        env(g, c.currentTime, 0.2, 0, 0.08, 0.2);
+                        o.start(c.currentTime); o.stop(c.currentTime + 0.3);
+                    });
+                },
+                out() {
+                    play(c => {
+                        const o = c.createOscillator(), g = c.createGain();
+                        o.connect(g); g.connect(c.destination);
+                        o.type = 'square'; o.frequency.setValueAtTime(200, c.currentTime);
+                        o.frequency.exponentialRampToValueAtTime(120, c.currentTime + 0.2);
+                        env(g, c.currentTime, 0.25, 0, 0.08, 0.25);
+                        o.start(c.currentTime); o.stop(c.currentTime + 0.4);
+                    });
+                },
+                steal_ok() {
+                    play(c => {
+                        [0, 0.12].forEach((dt, i) => {
+                            const o = c.createOscillator(), g = c.createGain();
+                            o.connect(g); g.connect(c.destination);
+                            o.type = 'sine'; o.frequency.value = i === 0 ? 660 : 880;
+                            env(g, c.currentTime + dt, 0.3, 0, 0.1, 0.15);
+                            o.start(c.currentTime + dt); o.stop(c.currentTime + dt + 0.28);
+                        });
+                    });
+                },
+                steal_fail() {
+                    play(c => {
+                        [0, 0.12].forEach((dt, i) => {
+                            const o = c.createOscillator(), g = c.createGain();
+                            o.connect(g); g.connect(c.destination);
+                            o.type = 'square'; o.frequency.value = i === 0 ? 300 : 220;
+                            env(g, c.currentTime + dt, 0.2, 0, 0.08, 0.18);
+                            o.start(c.currentTime + dt); o.stop(c.currentTime + dt + 0.25);
+                        });
+                    });
+                }
+            };
+        })();
+
+        const keys = {}, jp = {};
+        let mouseX = W / 2, mouseY = H / 2, isMouseJustPressed = false, isMouseJustReleased = false;
+
+        document.addEventListener('keydown', e => { if (!keys[e.code]) jp[e.code] = true; keys[e.code] = true; });
+        document.addEventListener('keyup', e => { keys[e.code] = false; delete jp[e.code]; });
+
+        function updatePointerPos(clientX, clientY) {
+            const rect = canvas.getBoundingClientRect();
+            mouseX = (clientX - rect.left) * (canvas.width / rect.width);
+            mouseY = (clientY - rect.top) * (canvas.height / rect.height);
+        }
+
+        canvas.addEventListener('mousemove', e => updatePointerPos(e.clientX, e.clientY));
+        canvas.addEventListener('mousedown', e => {
+            updatePointerPos(e.clientX, e.clientY); isMouseJustPressed = true;
+            if (playerBatting() && (G.phase === PH.WAIT_PITCH || G.phase === PH.BATTING)) {
+                G.isDraggingBat = true; G.dragStartX = mouseX; G.dragStartY = mouseY; G.baseCurX = G.curX; G.baseCurY = G.curY;
+            }
+        });
+        canvas.addEventListener('mouseup', e => { isMouseJustReleased = true; G.isDraggingBat = false; });
+        canvas.addEventListener('touchstart', e => {
+            e.preventDefault();
+            if (e.touches.length > 0) {
+                updatePointerPos(e.touches[0].clientX, e.touches[0].clientY);
+                isMouseJustPressed = true;
+                if (playerBatting() && (G.phase === PH.WAIT_PITCH || G.phase === PH.BATTING)) {
+                    G.isDraggingBat = true; G.dragStartX = mouseX; G.dragStartY = mouseY; G.baseCurX = G.curX; G.baseCurY = G.curY;
+                }
+            }
+        }, { passive: false });
+        canvas.addEventListener('touchmove', e => {
+            e.preventDefault();
+            if (e.touches.length > 0) updatePointerPos(e.touches[0].clientX, e.touches[0].clientY);
+        }, { passive: false });
+        canvas.addEventListener('touchend', e => { e.preventDefault(); isMouseJustReleased = true; G.isDraggingBat = false; }, { passive: false });
+
+        function J(c) { return jp[c]; }
+        function clearInput() { for (let k in jp) delete jp[k]; isMouseJustPressed = false; isMouseJustReleased = false; }
+        function actionTrigger() { return J('KeyZ') || J('Space') || isMouseJustPressed; }
+        function releaseTrigger() { return J('KeyZ') || J('Space') || isMouseJustReleased; }
+
+        const rnd = (a, b) => Math.random() * (b - a) + a;
+        const rndI = (a, b) => Math.floor(rnd(a, b + 1));
+        const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+        const lerp = (a, b, t) => a + (b - a) * t;
+
+        function drawRetroPanel(x, y, w, h, col1, col2) {
+            ctx.fillStyle = col1;
+            ctx.fillRect(x, y, w, h);
+            ctx.strokeStyle = col2;
+            ctx.lineWidth = 2;
+            ctx.strokeRect(x + 2, y + 2, w - 4, h - 4);
+        }
+
+        function drawGlossyPill(x, y, w, h, hover, label, baseCol = '#002266', topCol = '#1144AA', textCol = '#FFF') {
+            ctx.save();
+            const grad = ctx.createLinearGradient(x, y, x, y + h);
+            grad.addColorStop(0, hover ? '#4488FF' : topCol);
+            grad.addColorStop(1, hover ? '#0033AA' : baseCol);
+
+            ctx.fillStyle = grad;
+            ctx.shadowColor = 'rgba(0,0,0,0.5)';
+            ctx.shadowBlur = 4;
+            ctx.shadowOffsetY = 2;
+            drawRoundRect(ctx, x, y, w, h, h / 2); ctx.fill();
+
+            ctx.shadowBlur = 0; ctx.shadowOffsetY = 0;
+            ctx.strokeStyle = '#FFFFFF'; ctx.lineWidth = 2; ctx.stroke();
+
+            ctx.strokeStyle = 'rgba(255,255,255,0.4)'; ctx.lineWidth = 1;
+            drawRoundRect(ctx, x + 2, y + 2, w - 4, h - 4, (h - 4) / 2); ctx.stroke();
+
+            txt(label, x + w / 2, y + h / 2 + 6, 18, textCol, 'center', '', false);
+            ctx.restore();
+        }
+
+        function txt(s, x, y, sz, col, align = 'center', font = '', stroke = true) {
+            const fontStack = font || '"PingFang TC", "Microsoft JhengHei", "Noto Sans TC", Arial, sans-serif';
+            ctx.font = `bold ${sz}px ${fontStack}`;
+            ctx.textAlign = align;
+            if (stroke) {
+                ctx.strokeStyle = '#000'; ctx.lineWidth = 3; ctx.lineJoin = "round";
+                ctx.strokeText(s, x, y);
+            }
+            ctx.fillStyle = col; ctx.fillText(s, x, y);
+        }
+
+        function playerBatting() { return G.half === G.playerSide; }
+        function batTeamInfo() { return TEAMS[G.half === 0 ? G.awayIdx : G.homeIdx]; }
+        function pitTeamInfo() { return TEAMS[G.half === 0 ? G.homeIdx : G.awayIdx]; }
+        function getBatter() { return batTeamInfo().roster.batters[G.lineups[G.half][G.batOrder[G.half]]]; }
+        function getPitcher() { return pitTeamInfo().roster.pitchers[G.pitchers[G.half === 0 ? 1 : 0]]; }
+
+        function getSubMenuLayout() {
+            let isPitcher = G.subType === 'P';
+            let sideIdx = isPitcher ? (G.half === 0 ? 1 : 0) : G.half;
+            let teamDataIdx = sideIdx === 0 ? G.awayIdx : G.homeIdx;
+            let roster = isPitcher ? TEAMS[teamDataIdx].roster.pitchers : TEAMS[teamDataIdx].roster.batters;
+            let availIndices = [];
+            for (let i = 0; i < roster.length; i++) {
+                let isAvail = isPitcher ? (!G.usedPitchers[sideIdx][i] && G.pitchers[sideIdx] !== i) : (!G.usedBatters[sideIdx][i] && !G.lineups[sideIdx].includes(i));
+                if (isAvail) availIndices.push(i);
+            }
+            const panelW = 440;
+            const panelH = Math.max(250, 150 + availIndices.length * 60);
+            const px = W / 2 - panelW / 2;
+            const py = H / 2 - panelH / 2;
+            return { isPitcher, sideIdx, teamDataIdx, roster, availIndices, panelW, panelH, px, py };
+        }
+
+        function startAtBat(isContinue = false) {
+            if (!isContinue) { G.balls = 0; G.strikes = 0; }
+            G.ballActive = false; G.batSwingFrame = -999;
+            if (playerBatting()) {
+                G.phase = PH.WAIT_PITCH; G.phaseTimer = 80; G.curX = 0; G.curY = 0;
+                G.phPos = 0; G.phPressed = false; G.phDone = false; G.phValue = 0;
+            } else {
+                G.phase = PH.PITCH_SELECT; G.pitchChoice = 0; G.aimX = 0; G.aimY = 0; G.gaugePos = 0; G.gaugeDir = 1;
+            }
+        }
+
+        function throwBall(controlPower) {
+            const pitcher = getPitcher();
+            const pitcherSide = G.half === 0 ? 1 : 0;
+            G.pitchCounts[pitcherSide]++;
+            SFX.pitch();
+
+            const pitchObj = pitcher.pitches[G.pitchChoice];
+            const pDef = PITCH_DICT[pitchObj.id];
+            const speedMult = 0.7 + controlPower * 0.6;
+            const good = controlPower >= 0.60 && controlPower <= 0.90;
+            const over = controlPower > 0.90;
+
+            const fatigueMod = Math.max(0, (G.pitchCounts[pitcherSide] - pitcher.stm * 0.6) / (pitcher.stm * 0.4));
+            const cMod = (100 - pitcher.ctrl) / 20 * (1 + fatigueMod * 0.8);
+            let devX = 0, devY = 0;
+            if (over) { devX = rnd(-15, 15) * cMod; devY = rnd(5, 15) * cMod; }
+            else if (good) { devX = rnd(-3, 3) * cMod; devY = rnd(-3, 3) * cMod; }
+            else { devX = rnd(-10, 10) * cMod; devY = rnd(-6, 10) * cMod; }
+
+            G.ballActive = true; G.ballFrame = G.frame;
+            const baseMph = pDef.mph + (pitcher.vel - 90) / 2;
+            G.ballDur = Math.round((50 - (baseMph - 80) * 0.3) / speedMult);
+
+            G.ballSX = W / 2; G.ballSY = 230;
+            G.ballEX = SZcx + G.aimX * (SZw / 2) + devX; G.ballEY = SZcy + G.aimY * (SZh / 2) + devY;
+
+            const breakMult = pitchObj.lv * 0.45;
+            G.ballCX = pDef.bx * breakMult; G.ballCY = pDef.by * breakMult;
+
+            G._actualAimX = (G.ballEX - SZcx) / (SZw / 2);
+            G._actualAimY = (G.ballEY - SZcy) / (SZh / 2);
+
+            if (!playerBatting()) {
+                const batter = getBatter();
+                const inZone = Math.abs(G._actualAimX) <= 1 && Math.abs(G._actualAimY) <= 1;
+                const aiSwingMult = [0.45, 1.0, 1.45][G.difficulty];
+                const aiErrMult = [2.2, 1.0, 0.45][G.difficulty];
+                G.aiSwing = Math.random() < (inZone ? (0.50 + batter.con / 200) * aiSwingMult : 0.12 * aiSwingMult);
+                G.aiCX = G._actualAimX + rnd(-0.3, 0.3) * (100 - batter.con) / 30 * aiErrMult;
+                G.aiCY = G._actualAimY + rnd(-0.3, 0.3) * (100 - batter.con) / 30 * aiErrMult;
+                G.aiSwingFrame = G.ballFrame + G.ballDur + rndI(-8, 8);
+                G.phase = PH.BALL_FLIGHT;
+            } else {
+                G.phase = PH.BATTING; G.phPos = 0; G.phPressed = false; G.phDone = false; G.phValue = 0;
+                const phMult = [0.55, 0.80, 1.20][G.difficulty];
+                G.phSpeed = (0.008 + speedMult * 0.005) * phMult;
+            }
+        }
+
+        function ballProgress() { return clamp((G.frame - G.ballFrame) / G.ballDur, 0, 1); }
+
+        function resolveSwing(phVal, cx, cy) {
+            G.batSwingFrame = G.frame;
+            SFX.crack();
+            const timingDist = Math.abs(phVal - 0.50);
+            const timingScore = clamp(1 - timingDist * 1.4, 0, 1);
+            const batter = getBatter();
+            const contactDist = Math.sqrt(Math.pow(cx - G._actualAimX, 2) + Math.pow(cy - G._actualAimY, 2));
+            const contactScore = clamp(1 - contactDist / (1.3 + (batter.con / 100) * 0.9), 0, 1);
+            const qualAdj = playerBatting() ? [0.20, 0, -0.20][G.difficulty] : [-0.20, 0, 0.20][G.difficulty];
+            const quality = clamp(timingScore * 0.55 + contactScore * 0.45 + qualAdj, 0, 1);
+
+            let type;
+            if (quality > 0.78) {
+                const hrChance = (batter.pow - 50) / 80;
+                type = Math.random() < hrChance ? 'HR' : (Math.random() < 0.5 ? '2B' : '1B');
+            } else if (quality > 0.55) {
+                type = Math.random() < 0.72 ? '1B' : 'OUT';
+            } else if (quality > 0.32) {
+                type = Math.random() < 0.42 ? '1B' : 'OUT';
+            } else if (quality > 0.14) {
+                type = Math.random() < 0.18 ? '1B' : 'OUT';
+            } else {
+                type = 'K';
+            }
+
+            if (type === 'HR' || type === '1B' || type === '2B') {
+                G.hitEffectFrame = G.frame;
+                G.hitType = type;
+                G.hitFlyDir = (Math.random() < 0.5 ? 1 : -1) * (0.6 + Math.random() * 0.8);
+            }
+
+            applyPlay(type);
+        }
+
+        function attemptSteal() {
+            if (!playerBatting() || G.phase !== PH.WAIT_PITCH) return;
+            let from = -1;
+            if (G.runners[1]) from = 1;
+            else if (G.runners[0]) from = 0;
+            if (from === -1) return;
+
+            const bat = G.half;
+            const batterSpd = getBatter().spd;
+            const successChance = clamp(0.25 + (batterSpd - 50) / 100, 0.20, 0.72);
+            const success = Math.random() < successChance;
+
+            if (success) {
+                if (from === 1) { G.runners[2] = true; G.runners[1] = false; }
+                else { G.runners[1] = true; G.runners[0] = false; }
+                SFX.steal_ok();
+                showRes('盜壘成功！', 'STOLEN BASE', '#FFD700', false);
+                G._continueAtBat = true;
+            } else {
+                G.outs++;
+                const endHalf = G.outs >= 3;
+                if (from === 1) G.runners[1] = false;
+                else G.runners[0] = false;
+                SFX.steal_fail();
+                showRes('盜壘失敗', 'CAUGHT STEALING', '#FF4444', endHalf);
+            }
+        }
+
+        function resolveNoSwing() {
+            const inZone = Math.abs(G._actualAimX) <= 1 && Math.abs(G._actualAimY) <= 1;
+            if (inZone) {
+                G.strikes++;
+                SFX.strike();
+                if (G.strikes >= 3) { applyPlay('K'); } else { showRes('好球！', 'STRIKE', '#FF8844', false); G._continueAtBat = true; }
+            } else {
+                G.balls++;
+                SFX.ball();
+                if (G.balls >= 4) { applyPlay('BB'); } else { showRes('壞球', 'BALL', '#4488FF', false); G._continueAtBat = true; }
+            }
+        }
+
+        function applyPlay(type) {
+            G._continueAtBat = false; const bat = G.half;
+            let text = '', sub = '', col = '#fff', endHalf = false;
+            const slotIdx = G.batOrder[bat];
+            const st = G.batStats[bat][slotIdx];
+            if (type === 'HR') {
+                const runs = 1 + G.runners.filter(r => r).length;
+                G.score[bat] += runs; G.runners = [false, false, false];
+                text = '全壘打！'; sub = 'HOMERUN'; col = '#FFD700';
+                SFX.homerun();
+                st.ab++; st.h++; st.hr++; st.rbi += runs;
+            } else if (type === '2B') {
+                const rbi = (G.runners[2] ? 1 : 0) + (G.runners[1] ? 1 : 0);
+                if (G.runners[2]) G.score[bat]++; if (G.runners[1]) G.score[bat]++;
+                G.runners = [false, true, G.runners[0] && Math.random() < 0.5]; text = '二壘安打！'; sub = '2 BASE HIT'; col = '#44FF88';
+                SFX.crack();
+                st.ab++; st.h++; st.rbi += rbi;
+            } else if (type === '1B') {
+                const rbi = G.runners[2] ? 1 : 0;
+                if (G.runners[2]) G.score[bat]++;
+                const r2 = G.runners[1] && Math.random() < 0.5; const r1 = G.runners[0];
+                G.runners = [true, r1, r2]; text = '安打！'; sub = 'HIT'; col = '#44FF88';
+                SFX.crack();
+                st.ab++; st.h++; st.rbi += rbi;
+            } else if (type === 'BB') {
+                const rbi = (G.runners[0] && G.runners[1] && G.runners[2]) ? 1 : 0;
+                if (G.runners[0] && G.runners[1] && G.runners[2]) G.score[bat]++;
+                if (G.runners[0] && G.runners[1]) G.runners[2] = true;
+                if (G.runners[0]) G.runners[1] = true;
+                G.runners[0] = true; text = '四壞球保送！'; sub = 'WALK'; col = '#4488FF';
+                SFX.ball();
+                st.bb++; st.rbi += rbi;
+            } else if (type === 'OUT') {
+                G.outs++; text = '出局！'; sub = 'OUT'; col = '#FF6644'; if (G.outs >= 3) endHalf = true;
+                SFX.out();
+                st.ab++;
+            } else if (type === 'K') {
+                G.outs++; text = '三振出局！'; sub = 'STRIKEOUT'; col = '#FF4444'; if (G.outs >= 3) endHalf = true;
+                SFX.out();
+                st.ab++; st.k++;
+            }
+            if (type !== 'BB' && !G._continueAtBat) G.batOrder[G.half] = (G.batOrder[G.half] + 1) % 9;
+            showRes(text, sub, col, endHalf);
+        }
+
+        function showRes(text, sub, col, endHalf) {
+            G.phase = PH.RESULT; G.resText = text; G.resSub = sub; G.resCol = col;
+            G.resTimer = 95; G.resEndHalf = endHalf;
+        }
+
+        function endHalf() {
+            const p0 = G.innScores[0].reduce((a, b) => a + b, 0), p1 = G.innScores[1].reduce((a, b) => a + b, 0);
+            if (G.half === 0) G.innScores[0].push(G.score[0] - p0); else G.innScores[1].push(G.score[1] - p1);
+            if (G.inning >= 9 && G.half === 1 && G.score[1] > G.score[0]) { G.scr = SCR.OVER; return; }
+            G.scr = SCR.HALF_END; G.halfEndTimer = 0;
+        }
+
+        function _doNextHalf() {
+            G.half++; if (G.half > 1) { G.half = 0; G.inning++; }
+            if (G.inning > 9) { G.scr = SCR.OVER; return; }
+            G.runners = [false, false, false]; G.outs = 0; G.balls = 0; G.strikes = 0;
+            G.scr = SCR.GAME; G.phase = PH.INNING_START; G.phaseTimer = 100;
+        }
+
+        function simAtBat(batter, pitcher) {
+            const diffPitchAdj = [0.7, 1.0, 1.3][G.difficulty];
+            const ctrl = clamp(pitcher.ctrl / 100 * diffPitchAdj, 0.3, 1.0);
+            const vel = clamp(pitcher.vel / 100 * diffPitchAdj, 0.5, 1.0);
+            const con = batter.con / 100;
+            const pow = batter.pow / 100;
+            const kProb = clamp(0.28 * ctrl - 0.08 * con, 0.06, 0.45);
+            const bbProb = clamp(0.12 - 0.09 * ctrl, 0.02, 0.14);
+            const hrProb = clamp(0.06 * pow - 0.02 * vel, 0.01, 0.14);
+            const hitProb = clamp(0.22 * con - 0.06 * vel, 0.05, 0.28);
+            const r = Math.random();
+            if (r < kProb) return 'K';
+            if (r < kProb + bbProb) return 'BB';
+            if (r < kProb + bbProb + hrProb) return 'HR';
+            if (r < kProb + bbProb + hrProb + hitProb * 0.28) return '2B';
+            if (r < kProb + bbProb + hrProb + hitProb) return '1B';
+            return 'OUT';
+        }
+
+        function simulateHalf() {
+            const pitcher = getPitcher();
+            let outs = G.outs, runners = [...G.runners], score = 0, atBats = 0;
+            while (outs < 3 && atBats < 27) {
+                const batIdx = (G.batOrder[G.half] + atBats) % 9;
+                const result = simAtBat(batTeamInfo().roster.batters[G.lineups[G.half][batIdx]], pitcher);
+                const st = G.batStats[G.half][batIdx];
+                atBats++;
+                if (result === 'K') {
+                    outs++; st.ab++; st.k++;
+                } else if (result === 'OUT') {
+                    outs++; st.ab++;
+                } else if (result === 'BB') {
+                    const rbi = (runners[0] && runners[1] && runners[2]) ? 1 : 0;
+                    if (runners[0] && runners[1] && runners[2]) score++;
+                    if (runners[0] && runners[1]) runners[2] = true;
+                    if (runners[0]) runners[1] = true;
+                    runners[0] = true;
+                    st.bb++; st.rbi += rbi;
+                } else if (result === '1B') {
+                    const rbi = runners[2] ? 1 : 0;
+                    if (runners[2]) score++;
+                    const r2 = runners[1] && Math.random() < 0.5; const r1 = runners[0];
+                    runners = [true, r1, r2];
+                    st.ab++; st.h++; st.rbi += rbi;
+                } else if (result === '2B') {
+                    const rbi = (runners[2] ? 1 : 0) + (runners[1] ? 1 : 0);
+                    if (runners[2]) score++; if (runners[1]) score++;
+                    runners = [false, true, runners[0] && Math.random() < 0.5];
+                    st.ab++; st.h++; st.rbi += rbi;
+                } else if (result === 'HR') {
+                    const runs = 1 + runners.filter(r => r).length;
+                    score += runs; runners = [false, false, false];
+                    st.ab++; st.h++; st.hr++; st.rbi += runs;
+                }
+            }
+            G.score[G.half] += score;
+            G.runners = runners;
+            G.outs = 3;
+            G.batOrder[G.half] = (G.batOrder[G.half] + atBats) % 9;
+            const scoreText = score > 0 ? `得 ${score} 分！` : '零封！';
+            showRes(`自動模擬 ${G.inning}局${G.half === 0 ? '上' : '下'}`, scoreText, score > 0 ? '#44FF88' : '#AAAAAA', true);
+        }
+
+        function update() {
+            G.frame++;
+            if (G.scr === SCR.TITLE) { if (actionTrigger()) { G.scr = SCR.SELECT; G.selStep = 0; G.cursor = 0; } clearInput(); return; }
+
+            if (G.scr === SCR.SELECT) {
+                if (isMouseJustPressed) {
+                    if (G.selStep <= 1) {
+                        const layout = teamBtnLayout();
+                        layout.forEach(({ x, y, w, h }, i) => {
+                            if (mouseX >= x && mouseX <= x + w && mouseY >= y && mouseY <= y + h) {
+                                G.cursor = i;
+                                if (G.selStep === 0) { G.awayIdx = G.cursor; G.selStep = 1; G.cursor = (G.cursor + 1) % TEAMS.length; }
+                                else if (G.cursor !== G.awayIdx) { G.homeIdx = G.cursor; G.selStep = 2; }
+                            }
+                        });
+                    } else if (G.selStep === 2) {
+                        const diffs = ['簡單', '普通', '困難'];
+                        diffs.forEach((_, di) => {
+                            const bx = W / 2 - 195 + di * 135, by = 400;
+                            if (mouseX >= bx && mouseX <= bx + 120 && mouseY >= by && mouseY <= by + 70) {
+                                G.difficulty = di;
+                                G.inning = 1; G.half = 0; G.outs = 0; G.balls = 0; G.strikes = 0; G.score = [0, 0]; G.batOrder = [0, 0];
+                                G.lineups = [[0, 1, 2, 3, 4, 5, 6, 7, 8], [0, 1, 2, 3, 4, 5, 6, 7, 8]];
+                                G.pitchers = [0, 0];
+                                G.usedBatters = [Array(TEAMS[G.awayIdx].roster.batters.length).fill(false), Array(TEAMS[G.homeIdx].roster.batters.length).fill(false)];
+                                G.usedPitchers = [Array(TEAMS[G.awayIdx].roster.pitchers.length).fill(false), Array(TEAMS[G.homeIdx].roster.pitchers.length).fill(false)];
+
+                                for (let i = 0; i < 9; i++) { G.usedBatters[0][i] = true; G.usedBatters[1][i] = true; }
+                                G.usedPitchers[0][0] = true; G.usedPitchers[1][0] = true;
+
+                                G.scr = SCR.LINEUP; G.introTimer = 0; G.ballActive = false;
+                            }
+                        });
+                    }
+                }
+                clearInput(); return;
+            }
+
+            if (G.scr === SCR.LINEUP) {
+                G.introTimer++;
+                if (actionTrigger() || G.introTimer > 300) {
+                    G.scr = SCR.GAME; G.phase = PH.INNING_START; G.phaseTimer = 60;
+                }
+                clearInput(); return;
+            }
+
+            if (G.scr === SCR.OVER) { if (actionTrigger()) initState(); clearInput(); return; }
+
+            if (G.scr === SCR.HALF_END) {
+                G.halfEndTimer++;
+                if (G.halfEndTimer > 30 && actionTrigger()) { _doNextHalf(); }
+                clearInput(); return;
+            }
+
+            if (isMouseJustPressed && G.scr === SCR.GAME) {
+                const qx = W - 115, qy = 15, qw = 100, qh = 40;
+                if (mouseX >= qx && mouseX <= qx + qw && mouseY >= qy && mouseY <= qy + qh) {
+                    if (confirm('確定要結束比賽，返回主畫面嗎？')) {
+                        initState(); clearInput(); return;
+                    } else {
+                        isMouseJustPressed = false;
+                    }
+                }
+            }
+
+            switch (G.phase) {
+                case PH.SUB_MENU:
+                    if (isMouseJustPressed) {
+                        const layout = getSubMenuLayout();
+                        const { isPitcher, sideIdx, availIndices, panelW, panelH, px, py } = layout;
+                        const cHover = mouseX >= px + 120 && mouseX <= px + 320 && mouseY >= py + panelH - 60 && mouseY <= py + panelH - 20;
+                        if (cHover) { G.phase = G.prevPhase; break; }
+
+                        let drawY = py + 70;
+                        for (let i = 0; i < availIndices.length; i++) {
+                            const rIdx = availIndices[i];
+                            if (mouseX >= px + 20 && mouseX <= px + panelW - 20 && mouseY >= drawY && mouseY <= drawY + 50) {
+                                if (isPitcher) { G.pitchers[sideIdx] = rIdx; G.usedPitchers[sideIdx][rIdx] = true; }
+                                else { let curOrder = G.batOrder[sideIdx]; G.lineups[sideIdx][curOrder] = rIdx; G.usedBatters[sideIdx][rIdx] = true; }
+                                G.phase = G.prevPhase; break;
+                            }
+                            drawY += 60;
+                        }
+                    }
+                    break;
+                case PH.INNING_START:
+                    G.phaseTimer--; if (G.phaseTimer <= 0) startAtBat(); break;
+                case PH.PITCH_SELECT: {
+                    const pitcher = getPitcher(); const cx = W / 2, cy = 160;
+                    const dx = mouseX - cx, dy = mouseY - cy; const dist = Math.sqrt(dx * dx + dy * dy);
+                    let hovered = -1;
+                    if (dist < 120) {
+                        if (dist < 25) { hovered = pitcher.pitches.findIndex(p => PITCH_DICT[p.id].dir === 'center'); }
+                        else {
+                            let mouseAngle = Math.atan2(dy, dx); let minDist = 999;
+                            pitcher.pitches.forEach((p, i) => {
+                                const pd = PITCH_DICT[p.id];
+                                if (pd.dir !== 'center') {
+                                    let adist = Math.abs(mouseAngle - pd.dir);
+                                    if (adist > Math.PI) adist = Math.PI * 2 - adist;
+                                    if (adist < Math.PI / 4 && adist < minDist) { minDist = adist; hovered = i; }
+                                }
+                            });
+                        }
+                    }
+                    G.hoveredPitchChoice = hovered;
+                    if (isMouseJustPressed && !playerBatting()) {
+                        const sbx = 10, sby = H - 50;
+                        if (mouseX >= sbx && mouseX <= sbx + 120 && mouseY >= sby && mouseY <= sby + 38) { simulateHalf(); break; }
+                        const pbx = W - 130, pby = H - 50;
+                        if (mouseX >= pbx && mouseX <= pbx + 120 && mouseY >= pby && mouseY <= pby + 38) { G.subType = 'P'; G.prevPhase = G.phase; G.phase = PH.SUB_MENU; break; }
+                        if (hovered !== -1) { G.pitchChoice = hovered; G.phase = PH.AIM; G.aimState = 0; break; }
+                    }
+                    break;
+                }
+                case PH.AIM: {
+                    if (G.aimState === 0) { if (isMouseJustPressed) G.aimState = 1; }
+                    if (G.aimState === 1) {
+                        G.aimX = clamp((mouseX - SZcx) / (SZw / 2), -1.3, 1.3);
+                        G.aimY = clamp((mouseY - SZcy) / (SZh / 2), -1.3, 1.3);
+                        if (isMouseJustReleased) { G.phase = PH.POWER_GAUGE; G.gaugePos = 0; G.gaugeDir = 1; }
+                    }
+                    break;
+                }
+                case PH.POWER_GAUGE:
+                    G.gaugePos += G.gaugeDir * 0.025;
+                    if (G.gaugePos >= 1) { G.gaugePos = 1; G.gaugeDir = -1; }
+                    if (G.gaugePos <= 0) { G.gaugePos = 0; G.gaugeDir = 1; }
+                    if (actionTrigger()) { G.gaugePower = G.gaugePos; throwBall(G.gaugePower); }
+                    break;
+                case PH.WAIT_PITCH: {
+                    if (isMobile) {
+                        if (G.isDraggingBat) { const sens = 0.008; G.curX = clamp(G.baseCurX + (mouseX - G.dragStartX) * sens, -1.5, 1.5); G.curY = clamp(G.baseCurY + (mouseY - G.dragStartY) * sens, -1.5, 1.5); }
+                    } else {
+                        G.curX = clamp((mouseX - SZcx) / (SZw / 2), -1.5, 1.5); G.curY = clamp((mouseY - SZcy) / (SZh / 2), -1.5, 1.5);
+                    }
+                    G.readyPulse = (G.readyPulse + 0.08) % (Math.PI * 2);
+                    if (playerBatting() && J('KeyS') && (G.runners[0] || G.runners[1])) { attemptSteal(); break; }
+                    if (playerBatting() && isMouseJustPressed) {
+                        const bbx = W - 130, bby = H - 50;
+                        if (mouseX >= bbx && mouseX <= bbx + 120 && mouseY >= bby && mouseY <= bby + 38) { G.subType = 'B'; G.prevPhase = G.phase; G.phase = PH.SUB_MENU; break; }
+                        const stx = W - 130, sty = H - 100;
+                        if ((G.runners[0] || G.runners[1]) && mouseX >= stx && mouseX <= stx + 120 && mouseY >= sty && mouseY <= sty + 38) { attemptSteal(); break; }
+                    }
+                    if (mouseY < H - 80 || !playerBatting()) { G.phaseTimer--; }
+                    if (G.phaseTimer <= 0) {
+                        G.pitchChoice = rndI(0, getPitcher().pitches.length - 1);
+                        G.aimX = rnd(-0.82, 0.82); G.aimY = rnd(-0.82, 0.82); G._actualAimX = G.aimX; G._actualAimY = G.aimY;
+                        throwBall(0.72 + rnd(-0.08, 0.08));
+                    }
+                    break;
+                }
+                case PH.BALL_FLIGHT: {
+                    const prog = ballProgress();
+                    if (G.aiSwing && G.frame >= G.aiSwingFrame) resolveSwing(0.50 + rnd(-0.12, 0.12), G.aiCX, G.aiCY);
+                    else if (prog >= 1) resolveNoSwing();
+                    break;
+                }
+                case PH.BATTING: {
+                    if (isMobile) {
+                        if (G.isDraggingBat) { const sens = 0.008; G.curX = clamp(G.baseCurX + (mouseX - G.dragStartX) * sens, -1.5, 1.5); G.curY = clamp(G.baseCurY + (mouseY - G.dragStartY) * sens, -1.5, 1.5); }
+                    } else { G.curX = clamp((mouseX - SZcx) / (SZw / 2), -1.5, 1.5); G.curY = clamp((mouseY - SZcy) / (SZh / 2), -1.5, 1.5); }
+                    const prog = ballProgress();
+                    if (prog > 0.15 && !G.phDone) { G.phPos += G.phSpeed; if (G.phPos >= 1) { G.phPos = 1; G.phDone = true; } }
+                    if (actionTrigger() && !G.phPressed) { G.phPressed = true; G.phValue = G.phPos; resolveSwing(G.phValue, G.curX, G.curY); }
+                    else if (G.phDone && !G.phPressed) resolveNoSwing();
+                    break;
+                }
+                case PH.RESULT:
+                    G.resTimer--;
+                    if (G.resTimer <= 0) { if (G.resEndHalf) endHalf(); else if (G._continueAtBat) { G._continueAtBat = false; startAtBat(true); } else startAtBat(); }
+                    break;
+            }
+            clearInput();
+        }
+
+        // ==========================================
+        // UI AND DRAWING UTILITIES
+        // ==========================================
+
+        function render() {
+            ctx.clearRect(0, 0, W, H);
+            if (G.scr === SCR.TITLE) renderTitle();
+            else if (G.scr === SCR.SELECT) renderSelect();
+            else if (G.scr === SCR.LINEUP) renderLineup();
+            else if (G.scr === SCR.GAME) renderGame();
+            else if (G.scr === SCR.OVER) renderOver();
+            else if (G.scr === SCR.HALF_END) renderHalfEnd();
+            if (isMobile && window.innerHeight > window.innerWidth * 1.2) {
+                ctx.fillStyle = 'rgba(0,0,0,0.82)'; ctx.fillRect(0, 0, W, H);
+                ctx.save(); ctx.translate(W / 2, H / 2); txt('📱→📺', W / 2, 0, 52, '#FFD700', 'center', '', false); ctx.restore();
+                txt('請橫向使用手機', W / 2, H / 2 + 60, 26, '#FFFFFF');
+                txt('ROTATE DEVICE FOR BEST EXPERIENCE', W / 2, H / 2 + 95, 14, 'rgba(180,200,255,0.7)');
+            }
+        }
+
+        function jerseyStripe(team) {
+            const j = team.jersey || '#FFFFFF';
+            const r = parseInt(j.slice(1, 3), 16), g = parseInt(j.slice(3, 5), 16), b = parseInt(j.slice(5, 7), 16);
+            const lum = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+            return lum > 0.85 ? team.c1 : (team.c2 || '#FFFFFF');
+        }
+
+        function hatLogoColor(team) {
+            const c = team.c1 || '#000000';
+            const r = parseInt(c.slice(1, 3), 16), g = parseInt(c.slice(3, 5), 16), b = parseInt(c.slice(5, 7), 16);
+            return (0.299 * r + 0.587 * g + 0.114 * b) / 255 > 0.5 ? '#000000' : '#FFFFFF';
+        }
+
+        function drawFace(ctx, name, isSide = false, headY = 0) {
+            let hash = 0;
+            for (let i = 0; i < name.length; i++) hash = name.charCodeAt(i) + ((hash << 5) - hash);
+            const eIdx = Math.abs(hash) % 4;
+            const mIdx = Math.abs(hash >> 2) % 3;
+
+            ctx.fillStyle = '#000'; ctx.strokeStyle = '#000';
+            const ex = isSide ? 8 : 0;
+            const ey = headY - 2;
+
+            ctx.save(); ctx.translate(ex, ey);
+            if (eIdx === 0) { // normal
+                ctx.beginPath(); ctx.ellipse(-9, 0, 3.5, 6, 0, 0, Math.PI * 2); ctx.fill();
+                if (!isSide) { ctx.beginPath(); ctx.ellipse(9, 0, 3.5, 6, 0, 0, Math.PI * 2); ctx.fill(); }
+                else { ctx.beginPath(); ctx.ellipse(9, 0, 2, 5, 0, 0, Math.PI * 2); ctx.fill(); }
+            } else if (eIdx === 1) { // angry
+                ctx.beginPath(); ctx.ellipse(-9, 0, 3, 5, 0, 0, Math.PI * 2); ctx.fill();
+                ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(-14, -6); ctx.lineTo(-5, -3); ctx.stroke();
+                if (!isSide) {
+                    ctx.beginPath(); ctx.ellipse(9, 0, 3, 5, 0, 0, Math.PI * 2); ctx.fill();
+                    ctx.beginPath(); ctx.moveTo(14, -6); ctx.lineTo(5, -3); ctx.stroke();
+                } else {
+                    ctx.beginPath(); ctx.ellipse(9, 0, 1.5, 4, 0, 0, Math.PI * 2); ctx.fill();
+                    ctx.beginPath(); ctx.moveTo(13, -5); ctx.lineTo(6, -3); ctx.stroke();
+                }
+            } else if (eIdx === 2) { // closed
+                ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(-13, 0); ctx.lineTo(-5, 0); ctx.stroke();
+                if (!isSide) { ctx.beginPath(); ctx.moveTo(13, 0); ctx.lineTo(5, 0); ctx.stroke(); }
+                else { ctx.beginPath(); ctx.moveTo(11, 0); ctx.lineTo(5, 0); ctx.stroke(); }
+            } else { // dots
+                ctx.beginPath(); ctx.arc(-9, 0, 2.5, 0, Math.PI * 2); ctx.fill();
+                if (!isSide) { ctx.beginPath(); ctx.arc(9, 0, 2.5, 0, Math.PI * 2); ctx.fill(); }
+                else { ctx.beginPath(); ctx.arc(9, 0, 1.5, 0, Math.PI * 2); ctx.fill(); }
+            }
+            ctx.restore();
+
+            const mx = isSide ? 12 : 0;
+            const my = headY + 4;
+            ctx.save(); ctx.translate(mx, my);
+            if (mIdx === 0) { // smile
+                ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(0, 0, 4, 0, Math.PI); ctx.stroke();
+            } else if (mIdx === 1) { // line
+                ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(-3, 1); ctx.lineTo(3, 1); ctx.stroke();
+            } else { // open
+                ctx.beginPath(); ctx.ellipse(0, 2, 3, 2.5, 0, 0, Math.PI * 2); ctx.fill();
+            }
+            ctx.restore();
+        }
+
+        // ==========================================
+        // RENDER SCREENS
+        // ==========================================
+
+        function renderTitle() {
+            const bg = ctx.createRadialGradient(W / 2, H * 0.42, 20, W / 2, H * 0.42, W);
+            bg.addColorStop(0, '#0c2240'); bg.addColorStop(0.55, '#061528'); bg.addColorStop(1, '#020810');
+            ctx.fillStyle = bg; ctx.fillRect(0, 0, W, H);
+            const grassGlow = ctx.createRadialGradient(W / 2, H + 30, 20, W / 2, H + 30, 350);
+            grassGlow.addColorStop(0, 'rgba(0,140,50,0.18)'); grassGlow.addColorStop(1, 'rgba(0,0,0,0)');
+            ctx.fillStyle = grassGlow; ctx.fillRect(0, H / 2, W, H / 2);
+
+            for (let i = 0; i < 90; i++) {
+                const px = (i * 197.3 + G.frame * 0.12) % W;
+                const py = (i * 83.7 + Math.sin(i) * 40) % (H * 0.78);
+                const alpha = (0.15 + 0.55 * Math.abs(Math.sin(G.frame * 0.055 + i * 0.9))) * 0.7;
+                const sz = 0.7 + (i % 4) * 0.55;
+                ctx.fillStyle = `rgba(210,235,255,${alpha})`;
+                ctx.beginPath(); ctx.arc(px, py, sz, 0, Math.PI * 2); ctx.fill();
+            }
+
+            ctx.save(); ctx.shadowColor = '#22ff88'; ctx.shadowBlur = 45;
+            ctx.font = 'bold 88px "PingFang TC", "Microsoft JhengHei", Arial'; ctx.textAlign = 'center';
+            ctx.strokeStyle = 'rgba(0,40,15,0.95)'; ctx.lineWidth = 9; ctx.lineJoin = 'round';
+            ctx.strokeText('實況野球', W / 2, H * 0.35);
+            const titleGrad = ctx.createLinearGradient(W / 2 - 170, H * 0.27, W / 2 + 170, H * 0.35);
+            titleGrad.addColorStop(0, '#ffffff'); titleGrad.addColorStop(0.45, '#e0ffe8'); titleGrad.addColorStop(1, '#99ffcc');
+            ctx.fillStyle = titleGrad; ctx.fillText('實況野球', W / 2, H * 0.35);
+            ctx.restore();
+
+            ctx.save();
+            const subGrad = ctx.createLinearGradient(W / 2 - 190, 0, W / 2 + 190, 0);
+            subGrad.addColorStop(0, '#ff8866'); subGrad.addColorStop(0.35, '#ffdd88');
+            subGrad.addColorStop(0.65, '#88ddff'); subGrad.addColorStop(1, '#cc88ff');
+            ctx.font = 'bold 30px Arial'; ctx.textAlign = 'center';
+            ctx.strokeStyle = '#000'; ctx.lineWidth = 5; ctx.lineJoin = 'round';
+            ctx.strokeText('CPBL × MLB EDITION', W / 2, H * 0.495);
+            ctx.fillStyle = subGrad; ctx.fillText('CPBL × MLB EDITION', W / 2, H * 0.495);
+            ctx.restore();
+
+            ctx.font = '13px Arial'; ctx.textAlign = 'center'; ctx.fillStyle = 'rgba(150,190,255,0.5)';
+            ctx.fillText('2026 SEASON  •  WBC & CPBL & MLB ROSTERS', W / 2, H * 0.575);
+
+            const pulse = 0.94 + 0.06 * Math.sin(G.frame * 0.09);
+            ctx.save(); ctx.translate(W / 2, H * 0.72); ctx.scale(pulse, pulse);
+            ctx.shadowColor = 'rgba(0,220,80,0.65)'; ctx.shadowBlur = 28;
+            const btnGrad = ctx.createLinearGradient(-155, -30, -155, 30);
+            btnGrad.addColorStop(0, '#18c050'); btnGrad.addColorStop(0.45, '#22e060'); btnGrad.addColorStop(1, '#0a8030');
+            ctx.fillStyle = btnGrad; drawRoundRect(ctx, -155, -30, 310, 60, 30); ctx.fill(); ctx.shadowBlur = 0;
+            ctx.strokeStyle = 'rgba(255,255,255,0.88)'; ctx.lineWidth = 2.5; drawRoundRect(ctx, -155, -30, 310, 60, 30); ctx.stroke();
+            txt('▶  點擊畫面開始遊戲  ◀', 0, 9, 22, '#fff');
+            ctx.restore();
+        }
+
+        function renderSelect() {
+            const bg = ctx.createLinearGradient(0, 0, 0, H);
+            bg.addColorStop(0, '#07141f'); bg.addColorStop(1, '#030c12');
+            ctx.fillStyle = bg; ctx.fillRect(0, 0, W, H);
+
+            if (G.selStep === 2) {
+                ctx.fillStyle = 'rgba(0,0,0,0.45)'; drawRoundRect(ctx, W / 2 - 265, 22, 530, 68, 12); ctx.fill();
+                ctx.strokeStyle = 'rgba(255,255,255,0.15)'; ctx.lineWidth = 1; drawRoundRect(ctx, W / 2 - 265, 22, 530, 68, 12); ctx.stroke();
+                txt('選擇難易度', W / 2, 66, 30, '#ffeeaa');
+
+                const aw = TEAMS[G.awayIdx], hw = TEAMS[G.homeIdx];
+                const mY = 195;
+                const awGrad = ctx.createLinearGradient(W / 2 - 285, mY - 32, W / 2 - 285, mY + 32);
+                awGrad.addColorStop(0, aw.c1 + 'bb'); awGrad.addColorStop(1, 'rgba(0,0,0,0.7)');
+                ctx.fillStyle = awGrad; drawRoundRect(ctx, W / 2 - 285, mY - 34, 245, 68, 10); ctx.fill();
+                ctx.strokeStyle = aw.c1; ctx.lineWidth = 2; drawRoundRect(ctx, W / 2 - 285, mY - 34, 245, 68, 10); ctx.stroke();
+                txt(aw.abbr, W / 2 - 162, mY + 10, 30, '#fff');
+                ctx.font = '11px Arial'; ctx.textAlign = 'left'; ctx.fillStyle = 'rgba(255,255,255,0.65)'; ctx.fillText('客隊 (AWAY)', W / 2 - 278, mY - 18);
+
+                const hwGrad = ctx.createLinearGradient(W / 2 + 40, mY - 32, W / 2 + 40, mY + 32);
+                hwGrad.addColorStop(0, hw.c1 + 'bb'); hwGrad.addColorStop(1, 'rgba(0,0,0,0.7)');
+                ctx.fillStyle = hwGrad; drawRoundRect(ctx, W / 2 + 40, mY - 34, 245, 68, 10); ctx.fill();
+                ctx.strokeStyle = hw.c1; ctx.lineWidth = 2; drawRoundRect(ctx, W / 2 + 40, mY - 34, 245, 68, 10); ctx.stroke();
+                txt(hw.abbr, W / 2 + 162, mY + 10, 30, '#fff');
+                ctx.font = '11px Arial'; ctx.textAlign = 'right'; ctx.fillStyle = 'rgba(255,255,255,0.65)'; ctx.fillText('主隊 (HOME) ← 你', W / 2 + 278, mY - 18);
+
+                ctx.save(); ctx.shadowColor = '#ffcc00'; ctx.shadowBlur = 18; txt('VS', W / 2, mY + 10, 34, '#ffcc00'); ctx.restore();
+
+                const diffs = [
+                    { label: '簡單', sub: 'EASY', col: '#44cc88', dk: '#1a5535' },
+                    { label: '普通', sub: 'NORMAL', col: '#ffcc00', dk: '#554400' },
+                    { label: '困難', sub: 'HARD', col: '#ff5533', dk: '#551111' }
+                ];
+                diffs.forEach((d, di) => {
+                    const bx = W / 2 - 195 + di * 135, by = 400, bw = 120, bh = 70;
+                    const hover = mouseX >= bx && mouseX <= bx + bw && mouseY >= by && mouseY <= by + bh;
+                    const bg2 = ctx.createLinearGradient(bx, by, bx, by + bh);
+                    bg2.addColorStop(0, hover ? d.col + 'cc' : d.dk + 'cc'); bg2.addColorStop(1, d.dk + '88');
+                    ctx.fillStyle = bg2; drawRoundRect(ctx, bx, by, bw, bh, 10); ctx.fill();
+                    ctx.strokeStyle = hover ? '#fff' : d.col + 'aa'; ctx.lineWidth = hover ? 2.5 : 1.5; drawRoundRect(ctx, bx, by, bw, bh, 10); ctx.stroke();
+                    txt(d.label, bx + bw / 2, by + 38, 24, hover ? '#fff' : d.col);
+                    ctx.font = '10px Arial'; ctx.textAlign = 'center'; ctx.fillStyle = 'rgba(255,255,255,0.5)'; ctx.fillText(d.sub, bx + bw / 2, by + 58);
+                });
+                txt('你將扮演主隊（後攻）進行打擊', W / 2, H - 28, 13, 'rgba(160,190,255,0.55)', 'center', '', false);
+                return;
+            }
+
+            const titleText = G.selStep === 0 ? '選擇客隊 (先攻)' : '選擇您要操控的主隊 (後攻)';
+            const titleCol = G.selStep === 0 ? '#88ffee' : '#ffcc88';
+            ctx.fillStyle = 'rgba(0,0,0,0.55)'; drawRoundRect(ctx, W / 2 - 245, 16, 490, 62, 10); ctx.fill();
+            txt(titleText, W / 2, 56, 24, titleCol);
+
+            const layout = teamBtnLayout();
+            function sectionLabel(label, y, col) {
+                ctx.font = 'bold 11px Arial'; ctx.textAlign = 'left'; ctx.fillStyle = col; ctx.fillText(label, W / 2 - 247, y);
+                ctx.strokeStyle = col + '55'; ctx.lineWidth = 0.5;
+                ctx.beginPath(); ctx.moveTo(W / 2 - 247 + ctx.measureText(label).width + 6, y - 4); ctx.lineTo(W / 2 + 247, y - 4); ctx.stroke();
+            }
+            sectionLabel('⚾ MLB', 93, '#88AAFF');
+            sectionLabel('🇹🇼 CPBL 中華職棒', 162, '#FF9944');
+            sectionLabel('🌏 WBC 2026 經典賽最新陣容', 312, '#44FFCC');
+
+            TEAMS.forEach((t, i) => {
+                const { x, y, w: btnW, h: btnH } = layout[i];
+                const hover = mouseX >= x && mouseX <= x + btnW && mouseY >= y && mouseY <= y + btnH;
+                const isSelected = G.selStep === 1 && i === G.awayIdx;
+
+                const cGrad = ctx.createLinearGradient(x, y, x, y + btnH);
+                if (isSelected) { cGrad.addColorStop(0, t.c1 + 'dd'); cGrad.addColorStop(1, t.c1 + '44'); }
+                else if (hover) { cGrad.addColorStop(0, t.c1 + '88'); cGrad.addColorStop(1, 'rgba(0,0,0,0.75)'); }
+                else { cGrad.addColorStop(0, 'rgba(15,30,50,0.92)'); cGrad.addColorStop(1, 'rgba(4,12,22,0.96)'); }
+                ctx.fillStyle = cGrad; drawRoundRect(ctx, x, y, btnW, btnH, 8); ctx.fill();
+
+                ctx.shadowBlur = (isSelected || hover) ? 10 : 0; ctx.shadowColor = t.c1;
+                ctx.strokeStyle = isSelected ? '#fff' : hover ? t.c1 : 'rgba(80,120,160,0.35)'; ctx.lineWidth = isSelected ? 3 : hover ? 2 : 1;
+                drawRoundRect(ctx, x, y, btnW, btnH, 8); ctx.stroke(); ctx.shadowBlur = 0;
+
+                const barGrad = ctx.createLinearGradient(x + 4, y + 6, x + 4, y + btnH - 6);
+                barGrad.addColorStop(0, t.c1); barGrad.addColorStop(1, t.c2 || t.c1);
+                ctx.fillStyle = barGrad; drawRoundRect(ctx, x + 5, y + 6, 7, btnH - 12, 3); ctx.fill();
+
+                const abbrLen = t.abbr.length; const abbrSz = abbrLen <= 2 ? 22 : abbrLen === 3 ? 18 : 14;
+                txt(t.abbr, x + btnW / 2 + 6, y + btnH / 2 + 7, abbrSz, (hover || isSelected) ? '#fff' : '#cce8ff');
+                ctx.font = '9px Arial'; ctx.textAlign = 'center'; ctx.fillStyle = 'rgba(160,200,255,0.4)'; ctx.fillText(t.name, x + btnW / 2 + 6, y + btnH - 6);
+                if (isSelected) { ctx.font = 'bold 9px Arial'; ctx.textAlign = 'center'; ctx.fillStyle = '#ffff88'; ctx.fillText('✓ 已選', x + btnW / 2 + 6, y + 13); }
+            });
+            txt(G.selStep === 0 ? '選擇客隊' : '選擇您要操控的主隊', W / 2, H - 14, 13, 'rgba(160,190,255,0.55)', 'center', '', false);
+        }
+
+        function teamBtnLayout() {
+            const btnW = 154, btnH = 52, sx = 14, sy = 8;
+            const col3W = 3 * btnW + 2 * sx; const x3 = W / 2 - col3W / 2; const x2 = W / 2 - (2 * btnW + sx) / 2;
+            const mlbY = 98, cpblY = 170, wbcY = 320;
+            return TEAMS.map((t, i) => {
+                let x, y;
+                if (i < 2) { x = x2 + i * (btnW + sx); y = mlbY; }
+                else if (i < 8) { const ci = i - 2; x = x3 + (ci % 3) * (btnW + sx); y = cpblY + Math.floor(ci / 3) * (btnH + sy); }
+                else { const ci = i - 8; x = x3 + (ci % 3) * (btnW + sx); y = wbcY + Math.floor(ci / 3) * (btnH + sy); }
+                return { x, y, w: btnW, h: btnH };
+            });
+        }
+
+        function renderGame() {
+            renderPowerProsField();
+            drawPawapuroPitcher();
+            drawPawapuroBatter();
+
+            if (!playerBatting()) renderPitchingZone(); else renderBattingZone();
+            if (G.ballActive) renderBall();
+            if (playerBatting() && (G.phase === PH.WAIT_PITCH || G.phase === PH.BATTING)) renderBatCursor();
+
+            renderHitEffect();
+            renderClassicUI();
+            renderPhaseUI();
+
+            if (G.phase === PH.SUB_MENU) renderSubMenu();
+            renderResult();
+
+            const qx = W - 115, qy = 15, qw = 100, qh = 40;
+            const qHover = mouseX >= qx && mouseX <= qx + qw && mouseY >= qy && mouseY <= qy + qh;
+            drawGlossyPill(qx, qy, qw, qh, qHover, '🚪 離開', '#660000', '#AA2222', qHover ? '#FFD700' : '#FFF');
+        }
+
+        function renderLineup() {
+            const bg = ctx.createLinearGradient(0, 0, 0, H);
+            bg.addColorStop(0, '#021020'); bg.addColorStop(1, '#052a38');
+            ctx.fillStyle = bg; ctx.fillRect(0, 0, W, H);
+
+            ctx.font = 'bold 36px "PingFang TC", "Microsoft JhengHei", Arial'; ctx.textAlign = 'center';
+            ctx.fillStyle = '#FFD700'; ctx.shadowColor = '#FF8800'; ctx.shadowBlur = 10;
+            ctx.fillText('STARTING LINEUPS', W / 2, 50); ctx.shadowBlur = 0;
+
+            const aw = TEAMS[G.awayIdx], hw = TEAMS[G.homeIdx];
+
+            function drawTeamBoard(x, team, sideLineups, pitcherIdx, label) {
+                drawRetroPanel(x, 70, 320, 480, 'rgba(10, 20, 35, 0.85)', team.c1);
+                ctx.fillStyle = team.c1; ctx.fillRect(x + 2, 72, 316, 50);
+                txt(team.abbr, x + 160, 105, 26, '#FFF'); txt(label, x + 40, 100, 14, '#FFD700', 'left');
+
+                for (let i = 0; i < 9; i++) {
+                    const b = team.roster.batters[sideLineups[i]]; const y = 160 + i * 35;
+                    ctx.font = 'bold 16px Arial'; ctx.textAlign = 'left'; ctx.fillStyle = '#88AAFF'; ctx.fillText(`${i + 1}.`, x + 30, y);
+                    ctx.font = 'bold 18px "PingFang TC", "Microsoft JhengHei", Arial'; ctx.fillStyle = '#FFF'; ctx.fillText(b.name, x + 60, y);
+                    ctx.font = '14px Arial'; ctx.textAlign = 'right'; ctx.fillStyle = '#AAAAAA'; ctx.fillText(`AVG ${b.avg}`, x + 290, y);
+                }
+                const pLineY = 500;
+                ctx.strokeStyle = 'rgba(255,255,255,0.2)'; ctx.beginPath(); ctx.moveTo(x + 20, pLineY - 30); ctx.lineTo(x + 300, pLineY - 30); ctx.stroke();
+                const p = team.roster.pitchers[pitcherIdx];
+                ctx.font = 'bold 16px Arial'; ctx.textAlign = 'left'; ctx.fillStyle = '#FF88AA'; ctx.fillText('P.', x + 30, pLineY);
+                ctx.font = 'bold 18px "PingFang TC", "Microsoft JhengHei", Arial'; ctx.fillStyle = '#FFF'; ctx.fillText(p.name, x + 60, pLineY);
+                ctx.font = '14px Arial'; ctx.textAlign = 'right'; ctx.fillStyle = '#AAAAAA'; ctx.fillText(`ERA ${p.era}`, x + 290, pLineY);
+            }
+
+            drawTeamBoard(W / 2 - 340, aw, G.lineups[0], G.pitchers[0], 'AWAY');
+            drawTeamBoard(W / 2 + 20, hw, G.lineups[1], G.pitchers[1], 'HOME');
+            if (Math.floor(G.frame / 20) % 2 === 0) txt('點擊畫面開始比賽 (CLICK TO START)', W / 2, H - 20, 16, '#00FFFF', 'center', '', false);
+        }
+
+        function renderSubMenu() {
+            ctx.fillStyle = 'rgba(0,0,0,0.7)'; ctx.fillRect(0, 0, W, H);
+            const layout = getSubMenuLayout();
+            const { isPitcher, roster, availIndices, panelW, panelH, px, py } = layout;
+
+            drawRetroPanel(px, py, panelW, panelH, '#002244', '#FFF');
+            let title = isPitcher ? '更換後援投手 (Bullpen)' : '啟用代打 (Pinch Hitter)';
+            txt(title, W / 2, py + 40, 24, '#FFD700');
+
+            let drawY = py + 70;
+            availIndices.forEach(idx => {
+                const p = roster[idx];
+                const btnHover = mouseX >= px + 20 && mouseX <= px + panelW - 20 && mouseY >= drawY && mouseY <= drawY + 50;
+                const label = isPitcher ? `${p.name} (防 ${p.era} / 體力 ${p.stm})` : `${p.name} (率 ${p.avg} / 力量 ${p.pow})`;
+                drawGlossyPill(px + 20, drawY, panelW - 40, 50, btnHover, label, '#113355', '#225588');
+                drawY += 60;
+            });
+            if (availIndices.length === 0) txt('已無可用球員', W / 2, py + 150, 20, '#AAA');
+
+            const cHover = mouseX >= px + 120 && mouseX <= px + 320 && mouseY >= py + panelH - 60 && mouseY <= py + panelH - 20;
+            drawGlossyPill(px + 120, py + panelH - 60, 200, 40, cHover, '取消 (Cancel)', '#551111', '#882222');
+        }
+
+        function renderPowerProsField() {
+            ctx.fillStyle = '#1a7f35'; ctx.fillRect(0, 0, W, H);
+            for (let sy = 0; sy < H; sy += 28) {
+                ctx.fillStyle = sy % 56 === 0 ? 'rgba(0,0,0,0.07)' : 'rgba(255,255,255,0.03)';
+                ctx.fillRect(0, sy, W, 28);
+            }
+            const wt = ctx.createLinearGradient(0, 0, 0, 32);
+            wt.addColorStop(0, 'rgba(130,85,45,0.5)'); wt.addColorStop(1, 'rgba(130,85,45,0)');
+            ctx.fillStyle = wt; ctx.fillRect(0, 0, W, 32);
+
+            ctx.fillStyle = 'rgba(60,40,20,0.12)'; ctx.fillRect(0, 0, W, 6);
+            ctx.fillStyle = '#b87e52';
+            ctx.beginPath(); ctx.moveTo(W / 2, 545); ctx.lineTo(W / 2 + 420, 148); ctx.lineTo(W / 2 - 420, 148); ctx.fill();
+            ctx.fillStyle = '#1e8838';
+            ctx.beginPath(); ctx.moveTo(W / 2, 462); ctx.lineTo(W / 2 + 258, 148); ctx.lineTo(W / 2 - 258, 148); ctx.fill();
+
+            for (let i = 0; i < 6; i++) {
+                const f = i / 6, f2 = (i + 1) / 6;
+                const y1 = 148 + (462 - 148) * f, y2 = 148 + (462 - 148) * f2;
+                const x1 = 258 * f, x2 = 258 * f2;
+                ctx.fillStyle = i % 2 === 0 ? 'rgba(0,0,0,0.05)' : 'rgba(255,255,255,0.02)';
+                ctx.beginPath(); ctx.moveTo(W / 2 - x1, y1); ctx.lineTo(W / 2 + x1, y1); ctx.lineTo(W / 2 + x2, y2); ctx.lineTo(W / 2 - x2, y2); ctx.fill();
+            }
+            ctx.strokeStyle = 'rgba(255,255,255,0.75)'; ctx.lineWidth = 2;
+            ctx.beginPath(); ctx.moveTo(W / 2, 545); ctx.lineTo(W / 2 + 420, 148); ctx.stroke();
+            ctx.beginPath(); ctx.moveTo(W / 2, 545); ctx.lineTo(W / 2 - 420, 148); ctx.stroke();
+            ctx.strokeStyle = 'rgba(255,255,255,0.12)'; ctx.lineWidth = 1;
+            ctx.beginPath(); ctx.arc(W / 2, 540, 235, -Math.PI * 0.72, -Math.PI * 0.28); ctx.stroke();
+
+            const moundGrad = ctx.createRadialGradient(W / 2, 228, 0, W / 2, 235, 85);
+            moundGrad.addColorStop(0, '#cc8f5e'); moundGrad.addColorStop(1, '#b07040');
+            ctx.fillStyle = moundGrad; ctx.beginPath(); ctx.ellipse(W / 2, 232, 82, 27, 0, 0, Math.PI * 2); ctx.fill();
+            ctx.strokeStyle = 'rgba(0,0,0,0.2)'; ctx.lineWidth = 1; ctx.beginPath(); ctx.ellipse(W / 2, 232, 82, 27, 0, 0, Math.PI * 2); ctx.stroke();
+            ctx.fillStyle = '#fff'; ctx.fillRect(W / 2 - 16, 229, 32, 5);
+
+            const hpGrad = ctx.createRadialGradient(W / 2, 540, 20, W / 2, 540, 190);
+            hpGrad.addColorStop(0, '#c48855'); hpGrad.addColorStop(1, 'rgba(180,120,70,0)');
+            ctx.fillStyle = hpGrad; ctx.beginPath(); ctx.ellipse(W / 2, 540, 185, 52, 0, 0, Math.PI * 2); ctx.fill();
+
+            ctx.strokeStyle = 'rgba(255,255,255,0.82)'; ctx.lineWidth = 2;
+            ctx.strokeRect(W / 2 - 142, 492, 80, 66); ctx.strokeRect(W / 2 + 62, 492, 80, 66);
+
+            ctx.fillStyle = '#fff';
+            ctx.beginPath(); ctx.moveTo(W / 2 - 18, 513); ctx.lineTo(W / 2 + 18, 513); ctx.lineTo(W / 2 + 18, 524); ctx.lineTo(W / 2, 538); ctx.lineTo(W / 2 - 18, 524); ctx.fill();
+        }
+
+        // ==========================================
+        // PAWAPURO CHARACTER DRAWING
+        // ==========================================
+
+        function drawPawapuroPitcher() {
+            const team = pitTeamInfo();
+            const pitcher = getPitcher();
+            const px = W / 2, py = 210;
+            ctx.save(); ctx.translate(px, py); ctx.scale(0.5, 0.5);
+
+            ctx.fillStyle = 'rgba(0,0,0,0.3)'; ctx.beginPath(); ctx.ellipse(0, 35, 25, 8, 0, 0, Math.PI * 2); ctx.fill();
+
+            const f = G.ballActive ? (G.frame - G.ballFrame) : 999;
+            const inWindup = (G.phase === PH.POWER_GAUGE || G.phase === PH.AIM) && !playerBatting();
+            const wu = inWindup ? G.gaugePos : 0;
+
+            function head() {
+                ctx.fillStyle = '#FFE0BD'; ctx.beginPath(); ctx.arc(0, -30, 24, 0, Math.PI * 2); ctx.fill();
+                drawFace(ctx, pitcher.name, false, -30);
+                ctx.fillStyle = team.c1; ctx.beginPath(); ctx.arc(0, -32, 25, Math.PI, 0); ctx.fill();
+                ctx.fillRect(-25, -32, 50, 6);
+
+                ctx.fillStyle = hatLogoColor(team);
+                let hl = team.hatLogo || '';
+                ctx.font = `bold ${hl.length > 1 ? 16 : 22}px "PingFang TC", "Microsoft JhengHei", Arial`; ctx.textAlign = 'center';
+                ctx.strokeStyle = hatLogoColor(team) === '#FFFFFF' ? 'rgba(0,0,0,0.5)' : 'rgba(255,255,255,0.5)';
+                ctx.lineWidth = 2; ctx.strokeText(hl, 0, -40); ctx.fillText(hl, 0, -40);
+            }
+
+            function body() {
+                const waistY = 8;
+                ctx.fillStyle = '#F0F0F2';
+                ctx.beginPath(); ctx.ellipse(0, 10, 25, 26, 0, 0, Math.PI * 2); ctx.fill();
+                ctx.strokeStyle = 'rgba(0,0,0,0.1)'; ctx.lineWidth = 1;
+                ctx.beginPath(); ctx.moveTo(0, 20); ctx.lineTo(0, 36); ctx.stroke();
+
+                ctx.save(); ctx.beginPath(); ctx.rect(-28, -25, 56, waistY + 25); ctx.clip();
+                ctx.fillStyle = team.jersey || '#FFF';
+                ctx.beginPath(); ctx.ellipse(0, 5, 24, 28, 0, 0, Math.PI * 2); ctx.fill();
+                ctx.strokeStyle = jerseyStripe(team); ctx.lineWidth = 2;
+                ctx.beginPath(); ctx.moveTo(-6, -20); ctx.lineTo(0, -5); ctx.lineTo(6, -20); ctx.stroke();
+                ctx.beginPath(); ctx.moveTo(0, -5); ctx.lineTo(0, waistY); ctx.stroke();
+
+                const pitIdx = G.pitchers[G.half === 0 ? 1 : 0];
+                const numList = [18, 22, 34, 49]; const jerseyNum = numList[pitIdx % 4];
+                ctx.fillStyle = jerseyStripe(team); ctx.strokeStyle = '#FFF'; ctx.lineWidth = 2;
+                ctx.font = 'bold 22px Arial'; ctx.textAlign = 'center';
+                ctx.strokeText(jerseyNum, 0, 3); ctx.fillText(jerseyNum, 0, 3);
+                ctx.restore();
+
+                ctx.fillStyle = '#111'; ctx.fillRect(-20, waistY, 40, 5);
+                ctx.fillStyle = '#C0C0C0'; ctx.fillRect(-6, waistY - 1, 12, 7);
+                ctx.fillStyle = '#333'; ctx.fillRect(-4, waistY + 1, 8, 3);
+            }
+
+            function hand(tx, ty) {
+                ctx.fillStyle = team.c1; ctx.beginPath(); ctx.arc(tx, ty, 9, 0, Math.PI * 2); ctx.fill();
+                ctx.fillStyle = team.jersey || '#EEE'; ctx.beginPath(); ctx.arc(tx, ty - 3, 11, 0, Math.PI * 2); ctx.fill();
+                ctx.fillStyle = '#FFE0BD'; ctx.beginPath(); ctx.arc(tx, ty + 5, 7, 0, Math.PI * 2); ctx.fill();
+            }
+
+            function glove(tx, ty, angle = 0) {
+                ctx.save(); ctx.translate(tx, ty); ctx.rotate(angle);
+                ctx.fillStyle = '#8B4513';
+                ctx.beginPath(); ctx.arc(0, 0, 11, 0, Math.PI * 2); ctx.fill();
+                ctx.beginPath(); ctx.ellipse(8, -5, 9, 4, Math.PI / 4, 0, Math.PI * 2); ctx.fill();
+                ctx.beginPath(); ctx.ellipse(4, -10, 9, 4, Math.PI / 2.5, 0, Math.PI * 2); ctx.fill();
+                ctx.beginPath(); ctx.ellipse(-2, -11, 9, 4, Math.PI / 1.8, 0, Math.PI * 2); ctx.fill();
+                ctx.strokeStyle = '#D2B48C'; ctx.lineWidth = 1;
+                ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(8, -5); ctx.stroke();
+                ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(4, -10); ctx.stroke();
+                ctx.beginPath(); ctx.moveTo(8, -5); ctx.lineTo(-2, -11); ctx.stroke();
+                ctx.restore();
+            }
+
+            function foot(tx, ty, isFront) {
+                ctx.save(); ctx.translate(tx, ty);
+                ctx.fillStyle = team.c2; ctx.beginPath(); ctx.ellipse(0, 0, 16, 9, 0, 0, Math.PI * 2); ctx.fill();
+                ctx.fillStyle = '#FFF'; ctx.beginPath(); ctx.ellipse(isFront ? 10 : -10, 0, 6, 7, 0, 0, Math.PI * 2); ctx.fill();
+                ctx.restore();
+            }
+
+            if (f < 25) {
+                const t = clamp(f / 10, 0, 1);
+                ctx.rotate(-0.2 + t * 0.1);
+                foot(-15, 30, false); foot(25, 25, true);
+                body(); head(); hand(25 - t * 10, -10 + t * 30); glove(-20, 10, -Math.PI / 6);
+            } else if (wu > 0.02) {
+                ctx.rotate(wu * 0.1);
+                foot(15, 30, true); const liftY = 30 - wu * 20; foot(-15, liftY, false);
+                body(); head(); hand(25, -20); glove(-25, 0, -Math.PI / 4);
+            } else {
+                foot(-12, 30, false); foot(12, 30, true);
+                body(); head(); hand(18, 5); glove(-18, 5, -Math.PI / 8);
+            }
+            ctx.restore();
+        }
+
+        function drawPawapuroBatter() {
+            const batter = getBatter(); const team = batTeamInfo();
+            const isLeft = batter.bats === 'L';
+            const bx = W / 2 + (isLeft ? 90 : -90); const by = 500;
+            const swingTime = G.frame - G.batSwingFrame;
+            const isSwinging = (playerBatting() && G.phPressed && swingTime >= 0) || (!playerBatting() && G.aiSwing && G.frame >= G.aiSwingFrame - 10);
+            const swingProg = isSwinging ? Math.min(swingTime / 15, 1) : 0;
+
+            ctx.save(); ctx.translate(bx, by);
+            if (isLeft) ctx.scale(-1, 1);
+            ctx.scale(1.4, 1.4);
+
+            ctx.fillStyle = 'rgba(0,0,0,0.4)'; ctx.beginPath(); ctx.ellipse(0, 35, 25, 8, 0, 0, Math.PI * 2); ctx.fill();
+            if (isSwinging) { ctx.translate(swingProg * 8, 0); ctx.rotate(swingProg * 0.2); }
+
+            function foot(tx, ty, isFront) {
+                ctx.save(); ctx.translate(tx, ty);
+                ctx.fillStyle = team.c2; ctx.beginPath(); ctx.ellipse(0, 0, 14, 8, 0, 0, Math.PI * 2); ctx.fill();
+                ctx.fillStyle = '#FFF'; ctx.beginPath(); ctx.ellipse(isFront ? 8 : -8, 0, 5, 6, 0, 0, Math.PI * 2); ctx.fill();
+                ctx.restore();
+            }
+            foot(-15, 30, false); foot(15, 30, true);
+
+            const batWaistY = 12;
+            ctx.fillStyle = '#F0F0F2'; ctx.beginPath(); ctx.ellipse(0, 10, 22, 22, 0, 0, Math.PI * 2); ctx.fill();
+            ctx.strokeStyle = 'rgba(0,0,0,0.1)'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(0, 20); ctx.lineTo(0, 32); ctx.stroke();
+
+            ctx.save(); ctx.beginPath(); ctx.rect(-26, -14, 52, batWaistY + 14); ctx.clip();
+            ctx.fillStyle = team.jersey || '#FFF'; ctx.beginPath(); ctx.ellipse(0, 10, 22, 22, 0, 0, Math.PI * 2); ctx.fill();
+            ctx.strokeStyle = jerseyStripe(team); ctx.lineWidth = 2;
+            ctx.beginPath(); ctx.moveTo(0, -10); ctx.lineTo(0, batWaistY); ctx.stroke();
+            ctx.restore();
+
+            const batJerseyNum = G.batOrder[G.half] + 1;
+            ctx.fillStyle = jerseyStripe(team); ctx.strokeStyle = '#FFF'; ctx.lineWidth = 2;
+            ctx.font = 'bold 20px Arial'; ctx.textAlign = 'center';
+            ctx.save(); ctx.translate(-4, 6); if (isLeft) ctx.scale(-1, 1);
+            ctx.strokeText(batJerseyNum, 0, 0); ctx.fillText(batJerseyNum, 0, 0);
+            ctx.restore();
+
+            ctx.fillStyle = '#111'; ctx.fillRect(-20, batWaistY, 40, 4);
+            ctx.fillStyle = '#C0C0C0'; ctx.fillRect(-4, batWaistY - 1, 8, 6);
+            ctx.fillStyle = '#333'; ctx.fillRect(-2, batWaistY + 1, 4, 2);
+
+            function battingHand(hx, hy) {
+                ctx.fillStyle = team.c1; ctx.beginPath(); ctx.arc(hx, hy, 10, 0, Math.PI * 2); ctx.fill();
+                ctx.fillStyle = team.jersey || '#EEE'; ctx.beginPath(); ctx.arc(hx - 2, hy - 2, 11, 0, Math.PI * 2); ctx.fill();
+                ctx.fillStyle = team.c2 === '#FFFFFF' ? '#DDDDDD' : team.c2;
+                ctx.beginPath(); ctx.arc(hx + 2, hy + 2, 7, 0, Math.PI * 2); ctx.fill();
+                ctx.fillStyle = '#FFF'; ctx.fillRect(hx - 2, hy, 6, 2);
+            }
+
+            ctx.fillStyle = '#8B4513';
+            if (isSwinging) {
+                const batAngle = lerp(Math.PI / 6, -Math.PI / 0.9, swingProg);
+                ctx.save(); ctx.translate(15, 0); ctx.rotate(batAngle);
+                ctx.fillRect(-5, -60, 10, 75);
+                ctx.fillStyle = '#5c2e0b'; ctx.beginPath(); ctx.arc(0, 15, 6, 0, Math.PI * 2); ctx.fill();
+                ctx.restore();
+                const hx = 15 + Math.cos(batAngle) * 5, hy = Math.sin(batAngle) * 5;
+                battingHand(hx, hy);
+            } else {
+                ctx.save(); ctx.translate(20, 5); ctx.rotate(Math.PI / 8);
+                ctx.fillRect(-5, -70, 10, 80); ctx.restore();
+                battingHand(20, 5);
+            }
+
+            ctx.fillStyle = '#FFDAB9'; ctx.beginPath(); ctx.arc(0, -20, 22, 0, Math.PI * 2); ctx.fill();
+            drawFace(ctx, batter.name, true, -20);
+
+            ctx.fillStyle = team.c1;
+            ctx.beginPath(); ctx.arc(0, -24, 23, -Math.PI * 0.1, Math.PI * 1.1, true); ctx.fill();
+            ctx.beginPath(); ctx.ellipse(12, -24, 18, 5, Math.PI / 8, 0, Math.PI * 2); ctx.fill();
+            ctx.beginPath(); ctx.arc(-5, -20, 10, 0, Math.PI * 2); ctx.fill();
+
+            ctx.fillStyle = hatLogoColor(team);
+            let hl = team.hatLogo || '';
+            ctx.font = `bold ${hl.length > 1 ? 11 : 14}px "PingFang TC", "Microsoft JhengHei", Arial`; ctx.textAlign = 'center';
+            ctx.save(); ctx.translate(3, -34); if (isLeft) ctx.scale(-1, 1);
+            ctx.fillText(hl, 0, 0);
+            ctx.restore();
+
+            ctx.fillStyle = 'rgba(255,255,255,0.3)';
+            ctx.beginPath(); ctx.ellipse(-8, -35, 10, 5, -Math.PI / 6, 0, Math.PI * 2); ctx.fill();
+            ctx.restore();
+        }
+
+        // ==========================================
+        // EFFECTS AND UI RENDERING
+        // ==========================================
+
+        function renderHitEffect() {
+            const eTime = G.frame - G.hitEffectFrame;
+            if (eTime >= 0 && eTime < 25) {
+                const cx = SZcx + G.curX * (SZw / 2), cy = SZcy + G.curY * (SZh / 2);
+                ctx.save(); ctx.translate(cx, cy);
+                const alpha = 1 - eTime / 25; ctx.globalAlpha = alpha;
+                if (G.hitType === 'HR' && eTime < 5) { ctx.fillStyle = `rgba(255, 255, 255, ${0.5 - eTime * 0.1})`; ctx.fillRect(-W, -H, W * 2, H * 2); }
+                ctx.fillStyle = G.hitType === 'HR' ? '#FFD700' : '#FFF';
+                for (let i = 0; i < 8; i++) {
+                    const angle = (Math.PI * 2 / 8) * i + eTime * 0.1; const dist = eTime * 8;
+                    ctx.beginPath(); ctx.arc(Math.cos(angle) * dist, Math.sin(angle) * dist, 6 + (G.hitType === 'HR' ? 4 : 0), 0, Math.PI * 2); ctx.fill();
+                }
+                ctx.strokeStyle = G.hitType === 'HR' ? '#FF4444' : '#00FFFF'; ctx.lineWidth = 5;
+                ctx.beginPath(); ctx.arc(0, 0, eTime * 12, 0, Math.PI * 2); ctx.stroke();
+                ctx.restore();
+            }
+        }
+
+        function renderClassicUI() {
+            const aw = TEAMS[G.awayIdx], hw = TEAMS[G.homeIdx];
+            const batTeam = G.half === 0 ? aw : hw, pitTeam = G.half === 0 ? hw : aw;
+            const batter = getBatter(), pitcher = getPitcher();
+
+            const spX = 8, spY = 8, spW = 205, spH = 148;
+            const spBg = ctx.createLinearGradient(spX, spY, spX, spY + spH);
+            spBg.addColorStop(0, 'rgba(8,18,32,0.93)'); spBg.addColorStop(1, 'rgba(3,8,16,0.96)');
+            ctx.fillStyle = spBg; drawRoundRect(ctx, spX, spY, spW, spH, 9); ctx.fill();
+            ctx.strokeStyle = 'rgba(80,130,190,0.3)'; ctx.lineWidth = 1; drawRoundRect(ctx, spX, spY, spW, spH, 9); ctx.stroke();
+
+            txt(`第 ${G.inning} 回  ${G.half === 0 ? '表' : '裏'}`, spX + spW / 2, spY + 26, 17, '#88ccff');
+            const scY = spY + 58;
+            const awAbbrSz = aw.abbr.length <= 2 ? 18 : 13;
+            const hwAbbrSz = hw.abbr.length <= 2 ? 18 : 13;
+            ctx.font = `bold ${awAbbrSz}px "PingFang TC", "Microsoft JhengHei", Arial`; ctx.textAlign = 'left';
+            ctx.fillStyle = aw.c1; ctx.fillText(aw.abbr, spX + 8, scY);
+            txt(`${G.score[0]}`, spX + 68, scY, 28, '#fff');
+            ctx.font = 'bold 16px Arial'; ctx.textAlign = 'center'; ctx.fillStyle = 'rgba(180,200,220,0.7)'; ctx.fillText('−', spX + spW / 2, scY - 2);
+            txt(`${G.score[1]}`, spX + spW - 68, scY, 28, '#fff');
+            ctx.font = `bold ${hwAbbrSz}px "PingFang TC", "Microsoft JhengHei", Arial`; ctx.textAlign = 'right';
+            ctx.fillStyle = hw.c1; ctx.fillText(hw.abbr, spX + spW - 8, scY);
+
+            ctx.strokeStyle = 'rgba(80,130,190,0.3)'; ctx.lineWidth = 1;
+            ctx.beginPath(); ctx.moveTo(spX + 8, scY + 8); ctx.lineTo(spX + spW - 8, scY + 8); ctx.stroke();
+
+            const sboY = spY + 85;
+            function drawDots(label, lx, y, count, max, onCol) {
+                ctx.font = 'bold 14px Arial'; ctx.textAlign = 'left'; ctx.fillStyle = 'rgba(200,220,255,0.9)'; ctx.fillText(label, lx, y + 5);
+                for (let i = 0; i < max; i++) {
+                    ctx.beginPath(); ctx.arc(lx + 26 + i * 20, y, 8, 0, Math.PI * 2);
+                    if (i < count) {
+                        ctx.fillStyle = onCol; ctx.shadowColor = onCol; ctx.shadowBlur = 10; ctx.fill(); ctx.shadowBlur = 0;
+                        ctx.strokeStyle = 'rgba(255,255,255,0.5)'; ctx.lineWidth = 1.5; ctx.stroke();
+                    } else {
+                        ctx.fillStyle = 'rgba(30,50,75,0.9)'; ctx.shadowBlur = 0; ctx.fill();
+                        ctx.strokeStyle = 'rgba(255,255,255,0.15)'; ctx.lineWidth = 1; ctx.stroke();
+                    }
+                }
+            }
+            drawDots('S', spX + 10, sboY, G.strikes, 2, '#FF4444');
+            drawDots('B', spX + 10, sboY + 22, G.balls, 3, '#44FF88');
+            drawDots('O', spX + 10, sboY + 44, G.outs, 2, '#AAAAAA');
+
+            const rdX = spX + spW + 8, rdY = spY, rdW = 62, rdH = 62;
+            const rdBg = ctx.createLinearGradient(rdX, rdY, rdX, rdY + rdH);
+            rdBg.addColorStop(0, 'rgba(8,18,32,0.93)'); rdBg.addColorStop(1, 'rgba(3,8,16,0.96)');
+            ctx.fillStyle = rdBg; drawRoundRect(ctx, rdX, rdY, rdW, rdH, 9); ctx.fill();
+            ctx.strokeStyle = 'rgba(80,130,190,0.3)'; ctx.lineWidth = 1; drawRoundRect(ctx, rdX, rdY, rdW, rdH, 9); ctx.stroke();
+            function rDia(x, y, on) {
+                ctx.save(); ctx.translate(x, y); ctx.rotate(Math.PI / 4);
+                if (on) { ctx.fillStyle = '#ffdd00'; ctx.shadowColor = '#ffaa00'; ctx.shadowBlur = 10; } else ctx.fillStyle = 'rgba(45,65,90,0.8)';
+                ctx.fillRect(-7, -7, 14, 14); ctx.shadowBlur = 0;
+                ctx.strokeStyle = on ? 'rgba(255,200,0,0.5)' : 'rgba(80,110,145,0.35)'; ctx.lineWidth = 1.5; ctx.strokeRect(-7, -7, 14, 14); ctx.restore();
+            }
+            rDia(rdX + rdW / 2, rdY + 14, G.runners[1]); rDia(rdX + rdW - 14, rdY + rdH / 2, G.runners[0]); rDia(rdX + 14, rdY + rdH / 2, G.runners[2]);
+
+            const bpX = 8, bpY = H - 122, bpW = 236, bpH = 114;
+            const bpBg = ctx.createLinearGradient(bpX, bpY, bpX, bpY + bpH);
+            bpBg.addColorStop(0, batTeam.c1 + '3a'); bpBg.addColorStop(1, 'rgba(4,10,18,0.93)');
+            ctx.fillStyle = bpBg; drawRoundRect(ctx, bpX, bpY, bpW, bpH, 9); ctx.fill();
+            ctx.strokeStyle = batTeam.c1 + '88'; ctx.lineWidth = 1.5; drawRoundRect(ctx, bpX, bpY, bpW, bpH, 9); ctx.stroke();
+            ctx.fillStyle = batTeam.c1; ctx.beginPath(); ctx.arc(bpX + 22, bpY + 23, 14, 0, Math.PI * 2); ctx.fill();
+            ctx.font = 'bold 13px Arial'; ctx.textAlign = 'center'; ctx.fillStyle = '#fff'; ctx.fillText(G.batOrder[G.half] + 1, bpX + 22, bpY + 27);
+            ctx.font = 'bold 20px "PingFang TC", "Microsoft JhengHei", Arial'; ctx.textAlign = 'left'; ctx.fillStyle = '#fff'; ctx.fillText(batter.name, bpX + 44, bpY + 28);
+            const cfX = bpX + bpW - 26, cfY = bpY + 22;
+            ctx.fillStyle = '#4488ee'; ctx.beginPath(); ctx.arc(cfX, cfY, 13, 0, Math.PI * 2); ctx.fill();
+            ctx.fillStyle = '#000'; ctx.beginPath(); ctx.arc(cfX - 4, cfY - 3, 2, 0, Math.PI * 2); ctx.fill();
+            ctx.beginPath(); ctx.arc(cfX + 4, cfY - 3, 2, 0, Math.PI * 2); ctx.fill();
+            ctx.strokeStyle = '#000'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(cfX, cfY + 2, 5, 0, Math.PI); ctx.stroke();
+            ctx.font = '13px Arial'; ctx.textAlign = 'left'; ctx.fillStyle = 'rgba(200,220,255,0.9)';
+            ctx.fillText(`率 ${batter.avg}`, bpX + 12, bpY + 52); ctx.fillText(`${batter.hr}本`, bpX + 115, bpY + 52); ctx.fillText(`${batter.rbi}打點`, bpX + 165, bpY + 52);
+            const pBx = bpX + 10, pBy = bpY + 66, pBw = bpW - 20, pBh = 14;
+            ctx.fillStyle = 'rgba(0,0,0,0.55)'; drawRoundRect(ctx, pBx, pBy, pBw, pBh, pBh / 2); ctx.fill();
+            const pwG = ctx.createLinearGradient(pBx, 0, pBx + pBw, 0);
+            pwG.addColorStop(0, '#00cc44'); pwG.addColorStop(0.6, '#aaee00'); pwG.addColorStop(0.85, '#ffcc00'); pwG.addColorStop(1, '#ff4400');
+            ctx.save(); ctx.beginPath(); drawRoundRect(ctx, pBx, pBy, pBw, pBh, pBh / 2); ctx.clip();
+            ctx.fillStyle = pwG; ctx.fillRect(pBx, pBy, (batter.pow / 100) * pBw, pBh); ctx.restore();
+            ctx.strokeStyle = 'rgba(255,255,255,0.28)'; ctx.lineWidth = 1; drawRoundRect(ctx, pBx, pBy, pBw, pBh, pBh / 2); ctx.stroke();
+            const batRating = Math.round((batter.con + batter.pow + batter.spd) / 3);
+            const condLbl = batRating >= 85 ? '絕好調' : batRating >= 72 ? '好調' : '普通';
+            ctx.font = 'bold 11px Arial'; ctx.textAlign = 'left'; ctx.fillStyle = batRating >= 85 ? '#ff8822' : batRating >= 72 ? '#44ff88' : '#aaa';
+            ctx.fillText(condLbl, pBx, pBy + pBh + 14); ctx.font = '10px Arial'; ctx.textAlign = 'right'; ctx.fillStyle = 'rgba(255,255,255,0.5)'; ctx.fillText('綜合', pBx + pBw, pBy + pBh + 14);
+
+            const ppX = W - 218, ppY = 198, ppW = 208, ppH = 96;
+            const ppBg = ctx.createLinearGradient(ppX, ppY, ppX, ppY + ppH);
+            ppBg.addColorStop(0, pitTeam.c1 + '55'); ppBg.addColorStop(1, 'rgba(4,10,18,0.92)');
+            ctx.fillStyle = ppBg; drawRoundRect(ctx, ppX, ppY, ppW, ppH, 9); ctx.fill();
+            ctx.strokeStyle = pitTeam.c1 + '99'; ctx.lineWidth = 1.5; drawRoundRect(ctx, ppX, ppY, ppW, ppH, 9); ctx.stroke();
+            ctx.font = 'bold 21px "PingFang TC", "Microsoft JhengHei", Arial'; ctx.textAlign = 'left'; ctx.fillStyle = '#fff'; ctx.fillText(pitcher.name, ppX + 14, ppY + 29);
+            const pfX = ppX + ppW - 24, pfY = ppY + 22;
+            ctx.fillStyle = pitTeam.c1 || '#ff88aa'; ctx.beginPath(); ctx.arc(pfX, pfY, 13, 0, Math.PI * 2); ctx.fill();
+            ctx.fillStyle = '#000'; ctx.beginPath(); ctx.arc(pfX - 4, pfY - 3, 2, 0, Math.PI * 2); ctx.fill();
+            ctx.beginPath(); ctx.arc(pfX + 4, pfY - 3, 2, 0, Math.PI * 2); ctx.fill();
+            ctx.strokeStyle = '#000'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(pfX, pfY + 2, 5, 0, Math.PI); ctx.stroke();
+            const pitcherSideIdx = G.half === 0 ? 1 : 0; const pc = G.pitchCounts[pitcherSideIdx];
+            const stmRatio = Math.max(0, 1 - pc / pitcher.stm); const fatigued = stmRatio < 0.4;
+            ctx.font = '13px Arial'; ctx.textAlign = 'left'; ctx.fillStyle = 'rgba(200,220,255,0.9)';
+            ctx.fillText(`防 ${pitcher.era}`, ppX + 14, ppY + 52); ctx.fillText(`K ${pitcher.k}`, ppX + 108, ppY + 52);
+            ctx.fillStyle = fatigued ? '#FF6644' : 'rgba(200,220,255,0.75)'; ctx.fillText(`${pc}球`, ppX + 168, ppY + 52);
+            const sbX = ppX + 14, sbY = ppY + 60, sbW = ppW - 28, sbH = 10;
+            ctx.fillStyle = 'rgba(0,0,0,0.55)'; drawRoundRect(ctx, sbX, sbY, sbW, sbH, sbH / 2); ctx.fill();
+            const stmGrad = ctx.createLinearGradient(sbX, 0, sbX + sbW, 0);
+            if (stmRatio > 0.6) { stmGrad.addColorStop(0, '#00dd55'); stmGrad.addColorStop(1, '#44ff88'); }
+            else if (stmRatio > 0.3) { stmGrad.addColorStop(0, '#ddaa00'); stmGrad.addColorStop(1, '#ffcc22'); }
+            else { stmGrad.addColorStop(0, '#cc2200'); stmGrad.addColorStop(1, '#ff4422'); }
+            ctx.save(); ctx.beginPath(); drawRoundRect(ctx, sbX, sbY, sbW, sbH, sbH / 2); ctx.clip();
+            ctx.fillStyle = stmGrad; ctx.fillRect(sbX, sbY, stmRatio * sbW, sbH); ctx.restore();
+            ctx.strokeStyle = 'rgba(255,255,255,0.2)'; ctx.lineWidth = 1; drawRoundRect(ctx, sbX, sbY, sbW, sbH, sbH / 2); ctx.stroke();
+            ctx.font = 'bold 10px Arial'; ctx.textAlign = 'left'; ctx.fillStyle = 'rgba(180,200,255,0.6)'; ctx.fillText('體力', sbX, sbY + sbH + 11);
+            if (fatigued) { ctx.fillStyle = '#FF4444'; ctx.font = 'bold 11px Arial'; ctx.textAlign = 'right'; ctx.fillText('⚠ 疲勞', ppX + ppW - 10, ppY + sbY - ppY + sbH + 11); }
+        }
+
+        function renderPitchingZone() {
+            ctx.fillStyle = 'rgba(245, 245, 255, 0.85)'; ctx.fillRect(SZcx - SZw / 2, SZcy - SZh / 2, SZw, SZh);
+            ctx.strokeStyle = '#003388'; ctx.lineWidth = 1;
+            ctx.beginPath(); ctx.moveTo(SZcx - SZw / 6, SZcy - SZh / 2); ctx.lineTo(SZcx - SZw / 6, SZcy + SZh / 2); ctx.stroke();
+            ctx.beginPath(); ctx.moveTo(SZcx + SZw / 6, SZcy - SZh / 2); ctx.lineTo(SZcx + SZw / 6, SZcy + SZh / 2); ctx.stroke();
+            ctx.beginPath(); ctx.moveTo(SZcx - SZw / 2, SZcy - SZh / 6); ctx.lineTo(SZcx + SZw / 2, SZcy - SZh / 6); ctx.stroke();
+            ctx.beginPath(); ctx.moveTo(SZcx - SZw / 2, SZcy + SZh / 6); ctx.lineTo(SZcx + SZw / 2, SZcy + SZh / 6); ctx.stroke();
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.7)'; ctx.lineWidth = 2;
+            const bD = 15, pad = 10; const l = SZcx - SZw / 2 - pad, r = SZcx + SZw / 2 + pad, t = SZcy - SZh / 2 - pad, b = SZcy + SZh / 2 + pad;
+            ctx.beginPath(); ctx.moveTo(l + bD, t); ctx.lineTo(l, t); ctx.lineTo(l, t + bD); ctx.stroke();
+            ctx.beginPath(); ctx.moveTo(l, b - bD); ctx.lineTo(l, b); ctx.lineTo(l + bD, b); ctx.stroke();
+            ctx.beginPath(); ctx.moveTo(r - bD, t); ctx.lineTo(r, t); ctx.lineTo(r, t + bD); ctx.stroke();
+            ctx.beginPath(); ctx.moveTo(r, b - bD); ctx.lineTo(r, b); ctx.lineTo(r - bD, b); ctx.stroke();
+
+            if (G.phase === PH.AIM || G.phase === PH.POWER_GAUGE) {
+                const cx = SZcx + G.aimX * (SZw / 2), cy = SZcy + G.aimY * (SZh / 2);
+                ctx.strokeStyle = '#00FFFF'; ctx.lineWidth = 2;
+                ctx.beginPath(); ctx.moveTo(cx - 14, cy); ctx.lineTo(cx - 4, cy); ctx.stroke();
+                ctx.beginPath(); ctx.moveTo(cx + 4, cy); ctx.lineTo(cx + 14, cy); ctx.stroke();
+                ctx.beginPath(); ctx.moveTo(cx, cy - 14); ctx.lineTo(cx, cy - 4); ctx.stroke();
+                ctx.beginPath(); ctx.moveTo(cx, cy + 4); ctx.lineTo(cx, cy + 14); ctx.stroke();
+                ctx.fillStyle = '#00FFFF'; ctx.beginPath(); ctx.arc(cx, cy, 2, 0, Math.PI * 2); ctx.fill();
+            }
+        }
+
+        function renderBattingZone() {
+            ctx.strokeStyle = 'rgba(200, 0, 150, 0.8)'; ctx.lineWidth = 2; ctx.strokeRect(SZcx - SZw / 2, SZcy - SZh / 2, SZw, SZh);
+            if (isMobile && G.phase === PH.WAIT_PITCH && G.phaseTimer > 55) {
+                const hint = '← 拖曳移動打擊位置 →'; ctx.font = 'bold 13px "PingFang TC", "Microsoft JhengHei", Arial'; ctx.textAlign = 'center';
+                ctx.fillStyle = `rgba(255,255,150,${(G.phaseTimer - 55) / 25 * 0.85})`; ctx.fillText(hint, SZcx, SZcy + SZh / 2 + 22);
+            }
+        }
+
+        function renderBatCursor() {
+            const batter = getBatter(); const cx = SZcx + G.curX * (SZw / 2), cy = SZcy + G.curY * (SZh / 2);
+            const diffMult = [1.3, 1.0, 0.7][G.difficulty];
+            const rx = (30 + (batter.con / 100) * 20) * diffMult, ry = (18 + (batter.con / 100) * 12) * diffMult;
+            ctx.fillStyle = 'rgba(255, 255, 0, 0.3)'; ctx.beginPath(); ctx.ellipse(cx, cy, rx, ry, 0, 0, Math.PI * 2); ctx.fill();
+            ctx.strokeStyle = '#FFFF00'; ctx.lineWidth = 2; ctx.stroke();
+            ctx.fillStyle = '#FFFFFF'; ctx.beginPath(); ctx.arc(cx, cy, 3, 0, Math.PI * 2); ctx.fill();
+            ctx.strokeStyle = '#000000'; ctx.lineWidth = 1; ctx.stroke();
+            ctx.strokeStyle = 'rgba(0, 0, 0, 0.8)'; ctx.lineWidth = 1;
+            ctx.beginPath(); ctx.moveTo(cx - rx, cy); ctx.lineTo(cx + rx, cy); ctx.stroke();
+            ctx.beginPath(); ctx.moveTo(cx, cy - ry); ctx.lineTo(cx, cy + ry); ctx.stroke();
+        }
+
+        function renderBall() {
+            const t = ballProgress(); if (t <= 0 || t > 1.05) return;
+            const x = lerp(G.ballSX, G.ballEX + G.ballCX * t, t), y = lerp(G.ballSY, G.ballEY + G.ballCY * t, t); const sz = lerp(2, 14, t);
+            ctx.shadowColor = 'rgba(0,0,0,0.5)'; ctx.shadowBlur = 5; ctx.fillStyle = '#FFF'; ctx.beginPath(); ctx.arc(x, y, sz, 0, Math.PI * 2); ctx.fill(); ctx.shadowBlur = 0;
+            if (sz > 4) {
+                ctx.strokeStyle = '#FF3333'; ctx.lineWidth = sz * 0.15;
+                ctx.beginPath(); ctx.arc(x - sz * 0.4, y, sz * 0.7, -Math.PI / 3, Math.PI / 3); ctx.stroke();
+                ctx.beginPath(); ctx.arc(x + sz * 0.4, y, sz * 0.7, Math.PI - Math.PI / 3, Math.PI + Math.PI / 3); ctx.stroke();
+            }
+        }
+
+        function renderPhaseUI() {
+            if (G.phase === PH.INNING_START) {
+                ctx.fillStyle = 'rgba(0,0,0,0.7)'; ctx.fillRect(0, H / 2 - 50, W, 100);
+                txt(`第 ${G.inning} 回  ${G.half === 0 ? '表' : '裏'}`, W / 2, H / 2 + 15, 40, '#FFF'); return;
+            }
+
+            if (G.phase === PH.PITCH_SELECT && !playerBatting()) {
+                const pitcher = getPitcher(); const cx = W / 2, cy = 160;
+                ctx.fillStyle = '#FFF'; ctx.beginPath(); ctx.arc(cx, cy, 22, 0, Math.PI * 2); ctx.fill();
+                ctx.strokeStyle = '#000'; ctx.lineWidth = 2; ctx.stroke();
+                ctx.strokeStyle = '#FF3333'; ctx.lineWidth = 1.5;
+                ctx.beginPath(); ctx.arc(cx - 13, cy, 10, -Math.PI / 3, Math.PI / 3); ctx.stroke();
+                ctx.beginPath(); ctx.arc(cx + 13, cy, 10, Math.PI - Math.PI / 3, Math.PI + Math.PI / 3); ctx.stroke();
+
+                pitcher.pitches.forEach((p, i) => {
+                    const pd = PITCH_DICT[p.id]; const isHover = (i === G.hoveredPitchChoice);
+                    if (pd.dir === 'center') {
+                        if (isHover) { ctx.fillStyle = 'rgba(255,255,0,0.5)'; ctx.beginPath(); ctx.arc(cx, cy, 22, 0, Math.PI * 2); ctx.fill(); }
+                        // Always show label for center pitch
+                        ctx.save(); ctx.font = 'bold 10px Arial'; ctx.textAlign = 'center'; ctx.fillStyle = isHover ? '#FFD700' : 'rgba(255,255,255,0.75)';
+                        ctx.fillText(pd.name, cx, cy + 36); ctx.restore();
+                    } else {
+                        ctx.save(); ctx.translate(cx, cy); ctx.rotate(pd.dir);
+                        ctx.fillStyle = isHover ? '#FFFF00' : '#4488FF'; ctx.strokeStyle = '#FFF'; ctx.lineWidth = 2;
+                        const len = p.lv * 6; ctx.beginPath(); ctx.moveTo(26, -8); ctx.lineTo(26 + len, -8); ctx.lineTo(26 + len, -14); ctx.lineTo(26 + len + 15, 0); ctx.lineTo(26 + len, 14); ctx.lineTo(26 + len, 8); ctx.lineTo(26, 8); ctx.closePath(); ctx.fill(); ctx.stroke();
+                        ctx.translate(26 + len + 15, 0); ctx.rotate(-pd.dir); ctx.fillStyle = '#003388'; ctx.beginPath(); ctx.arc(0, 0, 11, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+                        txt(p.lv, 0, 4, 13, '#FFF', 'center', 'Arial', false);
+                        // Always show pitch name next to level badge
+                        ctx.font = isHover ? 'bold 11px Arial' : '10px Arial';
+                        ctx.textAlign = 'center'; ctx.fillStyle = isHover ? '#FFD700' : 'rgba(220,235,255,0.8)';
+                        ctx.fillText(pd.name, 0, 24);
+                        ctx.restore();
+                    }
+                });
+                if (G.hoveredPitchChoice !== -1) { const selP = pitcher.pitches[G.hoveredPitchChoice]; drawGlossyPill(cx - 70, cy + 90, 140, 36, true, PITCH_DICT[selP.id].name, '#001144', '#0033AA'); }
+                const sbx = 10, sby = H - 50; const sHover = mouseX >= sbx && mouseX <= sbx + 120 && mouseY >= sby && mouseY <= sby + 38; drawGlossyPill(sbx, sby, 120, 38, sHover, '⚡ 自動', '#443300', '#886600', sHover ? '#FFD700' : '#FFF');
+                const pbx = W - 130, pby = H - 50; const pHHover = mouseX >= pbx && mouseX <= pbx + 120 && mouseY >= pby && mouseY <= pby + 38; drawGlossyPill(pbx, pby, 120, 38, pHHover, '🔄 換投手', '#004422', '#007733', pHHover ? '#FFD700' : '#FFF');
+            }
+
+            if (G.phase === PH.WAIT_PITCH && playerBatting()) {
+                const bbx = W - 130, bby = H - 50; const bHover = mouseX >= bbx && mouseX <= bbx + 120 && mouseY >= bby && mouseY <= bby + 38; drawGlossyPill(bbx, bby, 120, 38, bHover, '🔄 換代打', '#004422', '#007733', bHover ? '#FFD700' : '#FFF');
+                if (G.runners[0] || G.runners[1]) { const stx = W - 130, sty = H - 100; const stHover = mouseX >= stx && mouseX <= stx + 120 && mouseY >= sty && mouseY <= sty + 38; drawGlossyPill(stx, sty, 120, 38, stHover, '🏃 盜壘', '#883300', '#CC5500', stHover ? '#FFD700' : '#FFF'); }
+                if (mouseY >= H - 80) txt('－ 投球暫停中 (思考戰術) －', W / 2, H - 20, 16, '#00FFFF', 'center', '', false);
+            }
+
+            if (G.phase === PH.POWER_GAUGE && !playerBatting()) {
+                const gx = W / 2 - 100, gy = SZcy - SZh / 2 - 60, gw = 220, gh = 24;
+                ctx.fillStyle = '#FFF'; ctx.beginPath(); ctx.arc(gx - 10, gy + gh / 2, 18, 0, Math.PI * 2); ctx.fill(); ctx.strokeStyle = '#003388'; ctx.lineWidth = 3; ctx.stroke();
+                ctx.strokeStyle = '#FF3333'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(gx - 20, gy + gh / 2, 10, -Math.PI / 3, Math.PI / 3); ctx.stroke(); ctx.beginPath(); ctx.arc(gx, gy + gh / 2, 10, Math.PI - Math.PI / 3, Math.PI + Math.PI / 3); ctx.stroke();
+                ctx.fillStyle = '#FFF'; drawRoundRect(ctx, gx - 2, gy - 4, gw + 8, gh + 8, (gh + 8) / 2); ctx.fill(); ctx.strokeStyle = '#003388'; ctx.lineWidth = 2; ctx.stroke();
+                ctx.fillStyle = '#222'; drawRoundRect(ctx, gx + 10, gy, gw - 10, gh, gh / 2); ctx.fill();
+                ctx.save(); ctx.beginPath(); drawRoundRect(ctx, gx + 10, gy, gw - 10, gh, gh / 2); ctx.clip();
+                ctx.fillStyle = '#00DD00'; ctx.fillRect(gx + 10, gy, gw * 0.7, gh); ctx.fillStyle = '#DDDD00'; ctx.fillRect(gx + 10 + gw * 0.7, gy, gw * 0.2, gh); ctx.fillStyle = '#DD0000'; ctx.fillRect(gx + 10 + gw * 0.9, gy, gw * 0.1, gh); ctx.restore();
+                const curX = gx + 10 + G.gaugePos * (gw - 10);
+                ctx.fillStyle = '#FF8800'; ctx.strokeStyle = '#FFF'; ctx.lineWidth = 1;
+                ctx.beginPath(); ctx.moveTo(curX, gy - 2); ctx.lineTo(curX - 7, gy - 12); ctx.lineTo(curX + 7, gy - 12); ctx.closePath(); ctx.fill(); ctx.stroke();
+                ctx.beginPath(); ctx.moveTo(curX, gy + gh + 2); ctx.lineTo(curX - 7, gy + gh + 12); ctx.lineTo(curX + 7, gy + gh + 12); ctx.closePath(); ctx.fill(); ctx.stroke();
+            }
+
+            if (G.phase === PH.BATTING && playerBatting()) {
+                const tbW = 380, tbH = 28, tbX = W / 2 - tbW / 2, tbY = 552;
+                ctx.fillStyle = 'rgba(0,0,0,0.65)'; drawRoundRect(ctx, tbX - 4, tbY - 4, tbW + 8, tbH + 8, tbH / 2 + 4); ctx.fill();
+                ctx.strokeStyle = 'rgba(100,130,180,0.4)'; ctx.lineWidth = 1; drawRoundRect(ctx, tbX - 4, tbY - 4, tbW + 8, tbH + 8, tbH / 2 + 4); ctx.stroke();
+                ctx.save(); ctx.beginPath(); drawRoundRect(ctx, tbX, tbY, tbW, tbH, tbH / 2); ctx.clip();
+                ctx.fillStyle = '#441111'; ctx.fillRect(tbX, tbY, tbW * 0.22, tbH); ctx.fillStyle = '#441111'; ctx.fillRect(tbX + tbW * 0.78, tbY, tbW * 0.22, tbH);
+                ctx.fillStyle = '#aa4400'; ctx.fillRect(tbX + tbW * 0.22, tbY, tbW * 0.16, tbH); ctx.fillStyle = '#aa4400'; ctx.fillRect(tbX + tbW * 0.62, tbY, tbW * 0.16, tbH);
+                const swG = ctx.createLinearGradient(tbX + tbW * 0.38, 0, tbX + tbW * 0.62, 0); swG.addColorStop(0, '#cc8800'); swG.addColorStop(0.5, '#ffdd00'); swG.addColorStop(1, '#cc8800');
+                ctx.fillStyle = swG; ctx.fillRect(tbX + tbW * 0.38, tbY, tbW * 0.24, tbH);
+                ctx.strokeStyle = 'rgba(255,255,255,0.15)'; ctx.lineWidth = 1;
+                [0.22, 0.38, 0.62, 0.78].forEach(f => { ctx.beginPath(); ctx.moveTo(tbX + tbW * f, tbY); ctx.lineTo(tbX + tbW * f, tbY + tbH); ctx.stroke(); }); ctx.restore();
+                ctx.font = 'bold 9px Arial'; ctx.textAlign = 'center'; ctx.fillStyle = 'rgba(255,220,80,0.9)'; ctx.fillText('SWEET', tbX + tbW * 0.5, tbY + tbH + 12);
+                ctx.fillStyle = 'rgba(255,150,60,0.7)'; ctx.fillText('GOOD', tbX + tbW * 0.3, tbY + tbH + 12); ctx.fillText('GOOD', tbX + tbW * 0.7, tbY + tbH + 12);
+                if (!G.phDone) {
+                    const cursorX = tbX + G.phPos * tbW; ctx.save(); ctx.shadowColor = '#fff'; ctx.shadowBlur = 12; ctx.fillStyle = '#fff'; ctx.fillRect(cursorX - 3, tbY - 6, 6, tbH + 12); ctx.shadowBlur = 0; ctx.restore();
+                    ctx.font = 'bold 11px Arial'; ctx.textAlign = 'center'; ctx.fillStyle = 'rgba(255,255,255,0.7)'; ctx.fillText('タイミング  TIMING', W / 2, tbY - 10);
+                }
+            }
+        }
+
+        function renderResult() {
+            if (G.phase !== PH.RESULT || G.resTimer <= 0) return;
+            const alpha = Math.min(1, G.resTimer / 10); ctx.save(); ctx.globalAlpha = alpha;
+            if (G.hitType && G.hitEffectFrame > 0) {
+                const elapsed = G.frame - G.hitEffectFrame; const maxFly = G.hitType === 'HR' ? 95 : 75;
+                if (elapsed >= 0 && elapsed < maxFly) {
+                    const t = elapsed / maxFly; const isHR = G.hitType === 'HR'; const startX = SZcx + G.curX * (SZw / 2), startY = SZcy;
+                    const endX = startX + G.hitFlyDir * W * (isHR ? 0.8 : 0.5); const groundY = isHR ? H * 0.15 : H * 0.35; const arc = isHR ? 250 : 120;
+                    const bx = lerp(startX, endX, t), shadowY = lerp(startY, groundY, t), by = shadowY - Math.sin(t * Math.PI) * arc;
+                    const bSize = lerp(8, isHR ? 15 : 12, Math.sin(t * Math.PI));
+                    ctx.fillStyle = 'rgba(0, 0, 0, 0.4)'; ctx.beginPath(); ctx.ellipse(bx, shadowY, bSize * 1.6, bSize * 0.6, 0, 0, Math.PI * 2); ctx.fill();
+                    for (let i = 5; i >= 1; i--) {
+                        const tt = Math.max(0, t - i * 0.04); const tx = lerp(startX, endX, tt); const tsy = lerp(startY, groundY, tt); const ty = tsy - Math.sin(tt * Math.PI) * arc;
+                        ctx.globalAlpha = alpha * (0.12 - i * 0.018); ctx.fillStyle = isHR ? '#FFD700' : '#FFFFFF'; ctx.beginPath(); ctx.arc(tx, ty, bSize * 0.7, 0, Math.PI * 2); ctx.fill();
+                    }
+                    ctx.globalAlpha = alpha; ctx.shadowColor = isHR ? '#FFD700' : '#FFFFFF'; ctx.shadowBlur = 18; ctx.fillStyle = '#FFFFFF';
+                    ctx.beginPath(); ctx.arc(bx, by, bSize, 0, Math.PI * 2); ctx.fill();
+                    if (bSize > 5) {
+                        ctx.strokeStyle = '#FF3333'; ctx.lineWidth = bSize * 0.15;
+                        ctx.beginPath(); ctx.arc(bx - bSize * 0.35, by, bSize * 0.65, -Math.PI / 3, Math.PI / 3); ctx.stroke();
+                        ctx.beginPath(); ctx.arc(bx + bSize * 0.35, by, bSize * 0.65, Math.PI - Math.PI / 3, Math.PI + Math.PI / 3); ctx.stroke();
+                    }
+                    ctx.shadowBlur = 0;
+                }
+            }
+            ctx.globalAlpha = alpha;
+            const rBg = ctx.createLinearGradient(0, H / 2 - 70, 0, H / 2 + 70);
+            rBg.addColorStop(0, 'rgba(0,0,0,0)'); rBg.addColorStop(0.2, 'rgba(0,0,0,0.85)'); rBg.addColorStop(0.8, 'rgba(0,0,0,0.85)'); rBg.addColorStop(1, 'rgba(0,0,0,0)');
+            ctx.fillStyle = rBg; ctx.fillRect(0, H / 2 - 70, W, 140);
+            ctx.fillStyle = G.resCol + '88'; ctx.fillRect(0, H / 2 - 70, W, 3); ctx.fillStyle = G.resCol + '88'; ctx.fillRect(0, H / 2 + 67, W, 3);
+            ctx.shadowColor = G.resCol; ctx.shadowBlur = 15; txt(G.resText, W / 2, H / 2 + 12, 64, G.resCol); ctx.shadowBlur = 0;
+            if (G.resSub) { ctx.font = 'bold 20px Arial'; ctx.textAlign = 'center'; ctx.fillStyle = 'rgba(255,255,255,0.65)'; ctx.fillText(G.resSub, W / 2, H / 2 + 40); }
+            ctx.restore();
+        }
+
+        function renderHalfEnd() {
+            const bg = ctx.createLinearGradient(0, 0, 0, H); bg.addColorStop(0, '#010d1a'); bg.addColorStop(1, '#021528'); ctx.fillStyle = bg; ctx.fillRect(0, 0, W, H);
+            const aw = TEAMS[G.awayIdx], hw = TEAMS[G.homeIdx]; const endedHalf = G.half; const nextHalf = (endedHalf + 1) % 2; const nextInning = nextHalf === 0 ? G.inning + 1 : G.inning;
+            ctx.save(); ctx.shadowColor = '#44aaff'; ctx.shadowBlur = 14; txt(`${G.inning}局${endedHalf === 0 ? '上' : '下'} 結束`, W / 2, 34, 22, '#88ccff'); ctx.restore();
+            txt(`比分  ${aw.abbr} ${G.score[0]} - ${G.score[1]} ${hw.abbr}`, W / 2, 60, 17, '#FFD700');
+
+            function statLine(st) {
+                let s = `${st.h}-${st.ab}`; if (st.bb > 0) s += ` BB${st.bb > 1 ? st.bb : ''}`; if (st.hr > 0) s += ` HR`;
+                if (st.rbi > 0) s += ` ${st.rbi}打點`; if (st.k > 0) s += ` K${st.k > 1 ? st.k : ''}`; return s;
+            }
+            const colW = 368, colH = 440, padX = 16; const leftX = W / 2 - colW - 6, rightX = W / 2 + 6;
+            function drawTeamPanel(panelX, team, sideIdx) {
+                const pbg = ctx.createLinearGradient(panelX, 75, panelX, 75 + colH);
+                pbg.addColorStop(0, team.c1 + '22'); pbg.addColorStop(1, 'rgba(2,10,20,0.92)');
+                ctx.fillStyle = pbg; drawRoundRect(ctx, panelX, 75, colW, colH, 10); ctx.fill();
+                ctx.strokeStyle = team.c1 + '66'; ctx.lineWidth = 1.5; drawRoundRect(ctx, panelX, 75, colW, colH, 10); ctx.stroke();
+
+                ctx.fillStyle = team.c1; ctx.fillRect(panelX + 2, 77, colW - 4, 32);
+                txt(team.abbr, panelX + colW / 2, 99, 18, '#FFF');
+
+                let curY = 130;
+                for (let i = 0; i < 9; i++) {
+                    const bIdx = G.lineups[sideIdx][i];
+                    const b = team.roster.batters[bIdx];
+                    const st = G.batStats[sideIdx][i];
+                    ctx.font = '14px Arial'; ctx.textAlign = 'left'; ctx.fillStyle = '#88aaff'; ctx.fillText(`${i + 1}.`, panelX + padX, curY);
+                    ctx.font = 'bold 15px "PingFang TC", "Microsoft JhengHei", Arial'; ctx.fillStyle = '#fff'; ctx.fillText(b.name, panelX + padX + 26, curY);
+                    ctx.font = '13px Arial'; ctx.textAlign = 'right'; ctx.fillStyle = st.h > 0 ? '#ffdd00' : '#888'; ctx.fillText(statLine(st), panelX + colW - padX, curY);
+                    curY += 32;
+                }
+                const pitIdx = G.pitchers[sideIdx];
+                const p = team.roster.pitchers[pitIdx];
+                ctx.strokeStyle = 'rgba(255,255,255,0.2)'; ctx.beginPath(); ctx.moveTo(panelX + padX, curY - 10); ctx.lineTo(panelX + colW - padX, curY - 10); ctx.stroke();
+                ctx.font = '14px Arial'; ctx.textAlign = 'left'; ctx.fillStyle = '#ff88aa'; ctx.fillText('P.', panelX + padX, curY + 10);
+                ctx.font = 'bold 15px "PingFang TC", "Microsoft JhengHei", Arial'; ctx.fillStyle = '#fff'; ctx.fillText(p.name, panelX + padX + 26, curY + 10);
+                const pc = G.pitchCounts[sideIdx];
+                ctx.font = '13px Arial'; ctx.textAlign = 'right'; ctx.fillStyle = '#aaa'; ctx.fillText(`用球數 ${pc}`, panelX + colW - padX, curY + 10);
+            }
+            drawTeamPanel(leftX, aw, 0); drawTeamPanel(rightX, hw, 1);
+
+            if (G.halfEndTimer > 30) {
+                const pulse = 0.5 + 0.5 * Math.sin(G.frame * 0.1);
+                txt('▶ 點擊畫面繼續 (CLICK TO CONTINUE) ◀', W / 2, H - 30, 18, `rgba(0, 255, 255, ${pulse})`);
+            }
+        }
+
+        function renderOver() {
+            const bg = ctx.createLinearGradient(0, 0, 0, H); bg.addColorStop(0, '#000000'); bg.addColorStop(1, '#110000'); ctx.fillStyle = bg; ctx.fillRect(0, 0, W, H);
+            ctx.shadowColor = '#FF0000'; ctx.shadowBlur = 20; txt('GAME OVER', W / 2, 55, 46, '#FF4444'); ctx.shadowBlur = 0;
+            const aw = TEAMS[G.awayIdx], hw = TEAMS[G.homeIdx];
+            txt(`${aw.abbr} ${G.score[0]} - ${G.score[1]} ${hw.abbr}`, W / 2, 115, 44, '#FFD700');
+            const diff = G.score[1] - G.score[0];
+            let msg = ''; let col = '';
+            if (diff > 0) { msg = '恭喜獲勝！ YOU WIN!'; col = '#44FF88'; }
+            else if (diff < 0) { msg = '挑戰失敗 YOU LOSE'; col = '#FF4444'; }
+            else { msg = '平局 DRAW'; col = '#AAAAAA'; }
+            txt(msg, W / 2, 158, 28, col);
+
+            // Box score table
+            const innings = Math.max(G.innScores[0].length, G.innScores[1].length, 9);
+            const colW = Math.min(36, Math.floor((W - 180) / Math.max(innings, 9)));
+            const tX = W / 2 - (colW * innings + 100) / 2;
+            const tY = 185;
+            const rowH = 30;
+
+            // Header row
+            ctx.font = 'bold 11px Arial'; ctx.textAlign = 'center'; ctx.fillStyle = 'rgba(180,200,255,0.6)';
+            ctx.fillText('', tX + 45, tY + 18);
+            for (let i = 0; i < innings; i++) {
+                ctx.fillText(i + 1, tX + 90 + i * colW + colW / 2, tY + 18);
+            }
+            ctx.fillText('R', tX + 90 + innings * colW + 18, tY + 18);
+
+            [aw, hw].forEach((team, si) => {
+                const rowY = tY + rowH + si * rowH;
+                // Row background
+                ctx.fillStyle = `rgba(${si === 0 ? '20,35,55' : '35,20,20'},0.7)`;
+                ctx.fillRect(tX, rowY - rowH + 6, 90 + innings * colW + 36, rowH);
+                ctx.strokeStyle = si === 0 ? 'rgba(100,150,220,0.3)' : 'rgba(220,100,100,0.3)';
+                ctx.lineWidth = 1; ctx.strokeRect(tX, rowY - rowH + 6, 90 + innings * colW + 36, rowH);
+
+                // Team name
+                const abbrSz = team.abbr.length <= 2 ? 15 : 11;
+                ctx.font = `bold ${abbrSz}px "PingFang TC","Microsoft JhengHei",Arial`;
+                ctx.textAlign = 'center'; ctx.fillStyle = team.c1;
+                ctx.fillText(team.abbr, tX + 45, rowY + 2);
+
+                // Per-inning scores
+                ctx.font = '13px Arial'; ctx.textAlign = 'center';
+                for (let i = 0; i < innings; i++) {
+                    const sc = G.innScores[si][i];
+                    const cellX = tX + 90 + i * colW + colW / 2;
+                    if (sc !== undefined) {
+                        ctx.fillStyle = sc > 0 ? '#FFD700' : 'rgba(180,200,220,0.5)';
+                        ctx.fillText(sc, cellX, rowY + 2);
+                    } else {
+                        ctx.fillStyle = 'rgba(100,120,150,0.4)';
+                        ctx.fillText('—', cellX, rowY + 2);
+                    }
+                }
+                // Total
+                ctx.font = 'bold 15px Arial';
+                ctx.fillStyle = '#FFFFFF';
+                ctx.fillText(G.score[si], tX + 90 + innings * colW + 18, rowY + 2);
+            });
+
+            // Divider line between innings and total
+            const divX = tX + 90 + innings * colW;
+            ctx.strokeStyle = 'rgba(180,200,255,0.25)'; ctx.lineWidth = 1;
+            ctx.beginPath(); ctx.moveTo(divX + 4, tY + 8); ctx.lineTo(divX + 4, tY + rowH * 3); ctx.stroke();
+
+            if (Math.floor(G.frame / 20) % 2 === 0) txt('點擊畫面回主選單', W / 2, H - 35, 16, '#FFFFFF');
+        }
+
+        // ==========================================
+        // GAME LOOP & EVENTS
+        // ==========================================
+
+        function loop() {
+            update(); render();
+            const btnS = document.getElementById('swing-btn'); const btnC = document.getElementById('change-btn'); const btnA = document.getElementById('sim-btn'); const btnSt = document.getElementById('steal-btn');
+            if (isMobile && G.scr === SCR.GAME) {
+                if (playerBatting() && (G.phase === PH.WAIT_PITCH || G.phase === PH.BATTING)) {
+                    btnS.classList.add('show'); btnC.classList.add('show'); btnA.classList.remove('show');
+                    if (G.runners[0] || G.runners[1]) btnSt.classList.add('show'); else btnSt.classList.remove('show');
+                } else if (!playerBatting() && G.phase === PH.PITCH_SELECT) {
+                    btnS.classList.remove('show'); btnC.classList.add('show'); btnA.classList.add('show'); btnSt.classList.remove('show');
+                } else { btnS.classList.remove('show'); btnC.classList.remove('show'); btnA.classList.remove('show'); btnSt.classList.remove('show'); }
+            } else { btnS.classList.remove('show'); btnC.classList.remove('show'); btnA.classList.remove('show'); btnSt.classList.remove('show'); }
+            requestAnimationFrame(loop);
+        }
+        loop();
+
+        // Mobile Events
+        document.getElementById('swing-btn').addEventListener('touchstart', e => {
+            e.preventDefault();
+            if (G.scr === SCR.GAME && playerBatting() && G.phase === PH.BATTING && G.phDone && !G.phPressed) {
+                G.phPressed = true; G.phValue = G.phPos; resolveSwing(G.phValue, G.curX, G.curY);
+            }
+        }, { passive: false });
+        document.getElementById('swing-btn').addEventListener('mousedown', e => {
+            e.preventDefault();
+            if (G.scr === SCR.GAME && playerBatting() && G.phase === PH.BATTING && G.phDone && !G.phPressed) {
+                G.phPressed = true; G.phValue = G.phPos; resolveSwing(G.phValue, G.curX, G.curY);
+            }
+        });
+        document.getElementById('sim-btn').addEventListener('touchstart', e => {
+            e.preventDefault();
+            if (G.scr === SCR.GAME && !playerBatting() && G.phase === PH.PITCH_SELECT) simulateHalf();
+        }, { passive: false });
+        document.getElementById('sim-btn').addEventListener('mousedown', e => {
+            e.preventDefault();
+            if (G.scr === SCR.GAME && !playerBatting() && G.phase === PH.PITCH_SELECT) simulateHalf();
+        });
+        document.getElementById('change-btn').addEventListener('touchstart', e => {
+            e.preventDefault();
+            if (G.scr !== SCR.GAME) return;
+            if (!playerBatting() && G.phase === PH.PITCH_SELECT) { G.subType = 'P'; G.prevPhase = G.phase; G.phase = PH.SUB_MENU; }
+            else if (playerBatting() && G.phase === PH.WAIT_PITCH) { G.subType = 'B'; G.prevPhase = G.phase; G.phase = PH.SUB_MENU; }
+        }, { passive: false });
+        document.getElementById('change-btn').addEventListener('mousedown', e => {
+            e.preventDefault();
+            if (G.scr !== SCR.GAME) return;
+            if (!playerBatting() && G.phase === PH.PITCH_SELECT) { G.subType = 'P'; G.prevPhase = G.phase; G.phase = PH.SUB_MENU; }
+            else if (playerBatting() && G.phase === PH.WAIT_PITCH) { G.subType = 'B'; G.prevPhase = G.phase; G.phase = PH.SUB_MENU; }
+        });
+        document.getElementById('steal-btn').addEventListener('touchstart', e => {
+            e.preventDefault(); attemptSteal();
+        }, { passive: false });
+        document.getElementById('steal-btn').addEventListener('mousedown', e => {
+            e.preventDefault(); attemptSteal();
+        });
+    </script>
+</body>
+
+</html>
