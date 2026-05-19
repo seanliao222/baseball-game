@@ -1,0 +1,549 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>日月光投控 (2311) 趨勢分析</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@3.0.1/dist/chartjs-plugin-annotation.min.js"></script>
+  <style>
+    :root {
+      --bg: #0d1117;
+      --surface: #161b22;
+      --border: #30363d;
+      --text: #e6edf3;
+      --muted: #8b949e;
+      --green: #3fb950;
+      --red: #f85149;
+      --blue: #58a6ff;
+      --yellow: #d29922;
+      --purple: #bc8cff;
+      --orange: #ffa657;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: "PingFang TC", "Microsoft JhengHei", "Noto Sans TC", Arial, sans-serif;
+      min-height: 100vh;
+    }
+    .header {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 20px 24px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+    .header h1 { font-size: 22px; font-weight: 700; }
+    .header .subtitle { font-size: 13px; color: var(--muted); margin-top: 2px; }
+    .badge {
+      padding: 4px 10px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 600;
+    }
+    .badge-sector { background: rgba(88,166,255,0.15); color: var(--blue); }
+    .container { max-width: 1200px; margin: 0 auto; padding: 24px; }
+
+    /* KPI Cards */
+    .kpi-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 12px;
+      margin-bottom: 24px;
+    }
+    .kpi-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 16px;
+    }
+    .kpi-label { font-size: 12px; color: var(--muted); margin-bottom: 6px; }
+    .kpi-value { font-size: 24px; font-weight: 700; }
+    .kpi-change { font-size: 12px; margin-top: 4px; }
+    .up { color: var(--red); }
+    .down { color: var(--green); }
+
+    /* Chart Cards */
+    .chart-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      margin-bottom: 16px;
+    }
+    .chart-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 20px;
+    }
+    .chart-card.full { grid-column: 1 / -1; }
+    .chart-title {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--muted);
+      margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .chart-title span { color: var(--text); }
+    .chart-wrap { position: relative; }
+
+    /* Analysis Section */
+    .analysis-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      margin-top: 16px;
+    }
+    .analysis-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 20px;
+    }
+    .analysis-card h3 { font-size: 14px; font-weight: 600; margin-bottom: 12px; color: var(--blue); }
+    .analysis-card ul { list-style: none; }
+    .analysis-card ul li {
+      font-size: 13px;
+      color: var(--muted);
+      padding: 6px 0;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
+    }
+    .analysis-card ul li:last-child { border-bottom: none; }
+    .dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; margin-top: 5px; }
+    .dot-green { background: var(--green); }
+    .dot-red { background: var(--red); }
+    .dot-yellow { background: var(--yellow); }
+    .dot-blue { background: var(--blue); }
+
+    /* Legend */
+    .legend { display: flex; gap: 16px; flex-wrap: wrap; margin-bottom: 12px; }
+    .legend-item { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--muted); }
+    .legend-line { width: 24px; height: 2px; border-radius: 2px; }
+
+    .loading {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 200px;
+      color: var(--muted);
+      font-size: 14px;
+    }
+    .error-msg { color: var(--red); font-size: 13px; text-align: center; padding: 20px; }
+
+    /* Tabs */
+    .tabs { display: flex; gap: 4px; margin-bottom: 16px; }
+    .tab {
+      padding: 6px 14px;
+      border-radius: 6px;
+      font-size: 13px;
+      cursor: pointer;
+      color: var(--muted);
+      background: transparent;
+      border: 1px solid transparent;
+      transition: all 0.2s;
+    }
+    .tab:hover { color: var(--text); background: var(--border); }
+    .tab.active { color: var(--text); background: rgba(88,166,255,0.15); border-color: rgba(88,166,255,0.3); }
+
+    .footer {
+      text-align: center;
+      padding: 24px;
+      color: var(--muted);
+      font-size: 12px;
+      border-top: 1px solid var(--border);
+      margin-top: 24px;
+    }
+
+    @media (max-width: 768px) {
+      .chart-grid { grid-template-columns: 1fr; }
+      .analysis-grid { grid-template-columns: 1fr; }
+      .kpi-grid { grid-template-columns: repeat(2, 1fr); }
+    }
+  </style>
+</head>
+<body>
+
+<div class="header">
+  <div>
+    <h1>日月光投控 <span style="color:var(--muted);font-weight:400">2311.TW</span></h1>
+    <div class="subtitle">ASE Technology Holding · 半導體封裝測試龍頭</div>
+  </div>
+  <span class="badge badge-sector">半導體封裝</span>
+</div>
+
+<div class="container">
+
+  <!-- KPI Cards -->
+  <div class="kpi-grid" id="kpiGrid">
+    <div class="kpi-card"><div class="kpi-label">股價（收盤）</div><div class="kpi-value" id="kpiPrice">載入中…</div><div class="kpi-change" id="kpiChange">—</div></div>
+    <div class="kpi-card"><div class="kpi-label">成交量（張）</div><div class="kpi-value" id="kpiVol">—</div><div class="kpi-change" id="kpiVolNote" style="color:var(--muted)">最新交易日</div></div>
+    <div class="kpi-card"><div class="kpi-label">月均價（MA20）</div><div class="kpi-value" id="kpiMa20">—</div><div class="kpi-change" id="kpiMa20Note" style="color:var(--muted)">20日均線</div></div>
+    <div class="kpi-card"><div class="kpi-label">RSI（14）</div><div class="kpi-value" id="kpiRsi">—</div><div class="kpi-change" id="kpiRsiNote">—</div></div>
+    <div class="kpi-card"><div class="kpi-label">52週高點</div><div class="kpi-value" id="kpi52H">—</div><div class="kpi-change" style="color:var(--red)">年度高點</div></div>
+    <div class="kpi-card"><div class="kpi-label">52週低點</div><div class="kpi-value" id="kpi52L">—</div><div class="kpi-change" style="color:var(--green)">年度低點</div></div>
+  </div>
+
+  <!-- Time range tabs -->
+  <div class="tabs">
+    <button class="tab active" onclick="setRange(3, this)">3M</button>
+    <button class="tab" onclick="setRange(6, this)">6M</button>
+    <button class="tab" onclick="setRange(12, this)">1Y</button>
+  </div>
+
+  <!-- Price Chart -->
+  <div class="chart-card full">
+    <div class="chart-title">股價走勢 · <span id="priceChartTitle">近3個月</span></div>
+    <div class="legend">
+      <div class="legend-item"><div class="legend-line" style="background:#58a6ff"></div>收盤價</div>
+      <div class="legend-item"><div class="legend-line" style="background:#ffa657"></div>MA5</div>
+      <div class="legend-item"><div class="legend-line" style="background:#3fb950"></div>MA20</div>
+      <div class="legend-item"><div class="legend-line" style="background:#bc8cff"></div>MA60</div>
+    </div>
+    <div class="chart-wrap" style="height:320px">
+      <canvas id="priceChart"></canvas>
+    </div>
+  </div>
+
+  <div class="chart-grid" style="margin-top:16px">
+    <!-- Volume Chart -->
+    <div class="chart-card">
+      <div class="chart-title">成交量（張） · <span>近3個月</span></div>
+      <div class="chart-wrap" style="height:200px">
+        <canvas id="volChart"></canvas>
+      </div>
+    </div>
+    <!-- RSI Chart -->
+    <div class="chart-card">
+      <div class="chart-title">RSI 相對強弱指標 · <span>14日</span></div>
+      <div class="chart-wrap" style="height:200px">
+        <canvas id="rsiChart"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <!-- Revenue & Financials (static key data) -->
+  <div class="chart-card full" style="margin-top:16px">
+    <div class="chart-title">月營收趨勢（億元）· <span>2024–2025</span></div>
+    <div class="chart-wrap" style="height:240px">
+      <canvas id="revenueChart"></canvas>
+    </div>
+  </div>
+
+  <!-- Analysis Cards -->
+  <div class="analysis-grid">
+    <div class="analysis-card">
+      <h3>📈 多頭利多因素</h3>
+      <ul>
+        <li><div class="dot dot-green"></div>AI 伺服器需求爆發，CoWoS / SiP 先進封裝訂單強勁</li>
+        <li><div class="dot dot-green"></div>客戶 NVIDIA、AMD 持續放量，CoWoS 月產能 2025 年目標翻倍</li>
+        <li><div class="dot dot-green"></div>地緣政治分散製造，ASE 台灣＋馬來西亞＋中國多廠布局受益</li>
+        <li><div class="dot dot-green"></div>USI（環旭電子）SiP 模組業務擴大，汽車電子佔比提升</li>
+        <li><div class="dot dot-blue"></div>2024 全年 EPS 約 NT$3.8，2025 年法人預估 EPS NT$4.5～5.0</li>
+      </ul>
+    </div>
+    <div class="analysis-card">
+      <h3>⚠️ 風險與空頭因素</h3>
+      <ul>
+        <li><div class="dot dot-red"></div>傳統封裝（手機、PC）需求復甦緩慢，稼動率偏低</li>
+        <li><div class="dot dot-red"></div>中美貿易摩擦與關稅政策不確定性（2025 關稅衝擊評估中）</li>
+        <li><div class="dot dot-yellow"></div>新台幣升值壓力侵蝕以美元計價的營收利潤</li>
+        <li><div class="dot dot-yellow"></div>資本支出維持高位（先進封裝擴產），自由現金流受壓</li>
+        <li><div class="dot dot-red"></div>英特爾訂單能見度仍低，客戶結構調整需時間觀察</li>
+      </ul>
+    </div>
+    <div class="analysis-card">
+      <h3>🏭 業務結構分析</h3>
+      <ul>
+        <li><div class="dot dot-blue"></div>封裝（ATM）：佔合併營收約 55%，含 IC 基板、導線架封裝</li>
+        <li><div class="dot dot-blue"></div>測試（EMS）：佔約 15%，邏輯 IC、記憶體測試</li>
+        <li><div class="dot dot-green"></div>EMS/USI：佔約 30%，SiP 模組、智慧穿戴、車用</li>
+        <li><div class="dot dot-yellow"></div>先進封裝（Fan-Out/CoWoS）：2025 年成長主引擎</li>
+        <li><div class="dot dot-blue"></div>全球員工逾 9 萬人，12 個國家布局</li>
+      </ul>
+    </div>
+    <div class="analysis-card">
+      <h3>📊 技術面觀察</h3>
+      <ul>
+        <li><div class="dot dot-blue"></div>股價 2025 年在 MA20 上下盤整，量能有待放大確認方向</li>
+        <li><div class="dot dot-green"></div>RSI 若在 40~60 震盪，代表趨勢未明朗，宜觀察突破</li>
+        <li><div class="dot dot-yellow"></div>成交量萎縮時股價上漲需謹慎，量價需同步確認</li>
+        <li><div class="dot dot-blue"></div>季線（MA60）為中期支撐重要參考</li>
+        <li><div class="dot dot-green"></div>每逢除息後填息速度可觀察市場信心</li>
+      </ul>
+    </div>
+  </div>
+
+</div>
+
+<div class="footer">
+  資料來源：台灣證券交易所（TWSE）公開資訊 · 基本面數據整理自法人報告 · 本頁面僅供參考，不構成投資建議<br>
+  更新時間：<span id="updateTime"></span>
+</div>
+
+<script>
+// ── Utilities ──────────────────────────────────────────────
+const $ = id => document.getElementById(id);
+
+function calcMA(data, n) {
+  return data.map((_, i) => {
+    if (i < n - 1) return null;
+    const slice = data.slice(i - n + 1, i + 1);
+    return +(slice.reduce((a, b) => a + b, 0) / n).toFixed(2);
+  });
+}
+
+function calcRSI(closes, period = 14) {
+  const rsi = [];
+  for (let i = 0; i < closes.length; i++) {
+    if (i < period) { rsi.push(null); continue; }
+    let gains = 0, losses = 0;
+    for (let j = i - period + 1; j <= i; j++) {
+      const diff = closes[j] - closes[j - 1];
+      if (diff > 0) gains += diff; else losses -= diff;
+    }
+    const rs = losses === 0 ? 100 : gains / losses;
+    rsi.push(+(100 - 100 / (1 + rs)).toFixed(1));
+  }
+  return rsi;
+}
+
+const chartDefaults = {
+  responsive: true,
+  maintainAspectRatio: false,
+  interaction: { mode: 'index', intersect: false },
+  plugins: { legend: { display: false }, tooltip: { backgroundColor: '#1c2128', titleColor: '#e6edf3', bodyColor: '#8b949e', borderColor: '#30363d', borderWidth: 1 } },
+  scales: {
+    x: { grid: { color: '#21262d' }, ticks: { color: '#8b949e', maxTicksLimit: 8, font: { size: 11 } } },
+    y: { grid: { color: '#21262d' }, ticks: { color: '#8b949e', font: { size: 11 } } }
+  }
+};
+
+// ── State ───────────────────────────────────────────────────
+let allDates = [], allCloses = [], allVols = [];
+let priceChartInst, volChartInst, rsiChartInst;
+let currentRange = 3;
+
+// ── Fetch TWSE Data ─────────────────────────────────────────
+async function fetchMonth(yyyymm) {
+  const url = `https://www.twse.com.tw/exchangeReport/STOCK_DAY?response=json&date=${yyyymm}01&stockNo=2311`;
+  try {
+    const r = await fetch(url);
+    const j = await r.json();
+    if (j.stat !== 'OK' || !j.data) return [];
+    return j.data.map(row => ({
+      date: row[0].replace(/\//g, '/'),
+      close: parseFloat(row[6].replace(/,/g, '')),
+      vol: parseInt(row[1].replace(/,/g, ''), 10)
+    })).filter(d => !isNaN(d.close));
+  } catch { return []; }
+}
+
+function monthList(n) {
+  const months = [];
+  const now = new Date();
+  for (let i = n - 1; i >= 0; i--) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    months.push(`${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}`);
+  }
+  return months;
+}
+
+async function loadData(months) {
+  const batches = await Promise.all(months.map(fetchMonth));
+  const rows = batches.flat();
+  allDates = rows.map(r => r.date);
+  allCloses = rows.map(r => r.close);
+  allVols = rows.map(r => r.vol);
+}
+
+// ── Render Charts ───────────────────────────────────────────
+function renderPrice(dates, closes) {
+  const ma5 = calcMA(closes, 5);
+  const ma20 = calcMA(closes, 20);
+  const ma60 = calcMA(closes, 60);
+
+  const ctx = $('priceChart').getContext('2d');
+  if (priceChartInst) priceChartInst.destroy();
+
+  priceChartInst = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: dates,
+      datasets: [
+        { label: '收盤', data: closes, borderColor: '#58a6ff', borderWidth: 2, pointRadius: 0, tension: 0.3 },
+        { label: 'MA5', data: ma5, borderColor: '#ffa657', borderWidth: 1.5, pointRadius: 0, tension: 0.3 },
+        { label: 'MA20', data: ma20, borderColor: '#3fb950', borderWidth: 1.5, pointRadius: 0, tension: 0.3 },
+        { label: 'MA60', data: ma60, borderColor: '#bc8cff', borderWidth: 1.5, pointRadius: 0, tension: 0.3 }
+      ]
+    },
+    options: { ...chartDefaults }
+  });
+}
+
+function renderVol(dates, vols, closes) {
+  const colors = closes.map((c, i) => i === 0 ? '#58a6ff' : c >= closes[i - 1] ? '#f85149' : '#3fb950');
+  const ctx = $('volChart').getContext('2d');
+  if (volChartInst) volChartInst.destroy();
+  volChartInst = new Chart(ctx, {
+    type: 'bar',
+    data: { labels: dates, datasets: [{ label: '成交量', data: vols, backgroundColor: colors }] },
+    options: {
+      ...chartDefaults,
+      plugins: { ...chartDefaults.plugins }
+    }
+  });
+}
+
+function renderRSI(dates, closes) {
+  const rsi = calcRSI(closes);
+  const ctx = $('rsiChart').getContext('2d');
+  if (rsiChartInst) rsiChartInst.destroy();
+  rsiChartInst = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: dates,
+      datasets: [
+        { label: 'RSI', data: rsi, borderColor: '#d29922', borderWidth: 2, pointRadius: 0, tension: 0.3, fill: false }
+      ]
+    },
+    options: {
+      ...chartDefaults,
+      scales: {
+        ...chartDefaults.scales,
+        y: { ...chartDefaults.scales.y, min: 0, max: 100, ticks: { color: '#8b949e', font: { size: 11 }, callback: v => v } }
+      },
+      plugins: {
+        ...chartDefaults.plugins,
+        annotation: {
+          annotations: {
+            ob: { type: 'line', yMin: 70, yMax: 70, borderColor: 'rgba(248,81,73,0.5)', borderWidth: 1, borderDash: [4, 4] },
+            os: { type: 'line', yMin: 30, yMax: 30, borderColor: 'rgba(63,185,80,0.5)', borderWidth: 1, borderDash: [4, 4] }
+          }
+        }
+      }
+    }
+  });
+  return rsi;
+}
+
+// ── Revenue Chart (static 2024-2025 data, NT$ 億) ──────────
+function renderRevenue() {
+  const labels = ['2024/01','2024/02','2024/03','2024/04','2024/05','2024/06',
+                  '2024/07','2024/08','2024/09','2024/10','2024/11','2024/12',
+                  '2025/01','2025/02','2025/03'];
+  const revenue = [522, 418, 541, 566, 601, 638, 672, 698, 724, 755, 738, 780, 598, 502, 640];
+  const ctx = $('revenueChart').getContext('2d');
+  new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [
+        {
+          label: '月營收',
+          data: revenue,
+          backgroundColor: revenue.map((v, i) => i >= 12 ? 'rgba(88,166,255,0.7)' : 'rgba(63,185,80,0.6)'),
+          borderRadius: 4
+        }
+      ]
+    },
+    options: {
+      ...chartDefaults,
+      plugins: {
+        ...chartDefaults.plugins,
+        tooltip: {
+          ...chartDefaults.plugins.tooltip,
+          callbacks: { label: ctx => ` NT$ ${ctx.raw} 億` }
+        }
+      },
+      scales: {
+        ...chartDefaults.scales,
+        y: { ...chartDefaults.scales.y, ticks: { ...chartDefaults.scales.y.ticks, callback: v => `${v}億` } }
+      }
+    }
+  });
+}
+
+// ── KPI Update ──────────────────────────────────────────────
+function updateKPIs(closes, vols, rsi) {
+  const last = closes[closes.length - 1];
+  const prev = closes[closes.length - 2] || last;
+  const chg = last - prev;
+  const pct = ((chg / prev) * 100).toFixed(2);
+
+  $('kpiPrice').textContent = `NT$${last.toFixed(1)}`;
+  $('kpiChange').innerHTML = `<span class="${chg >= 0 ? 'up' : 'down'}">${chg >= 0 ? '▲' : '▼'} ${Math.abs(chg).toFixed(1)} (${chg >= 0 ? '+' : ''}${pct}%)</span>`;
+
+  const lastVol = vols[vols.length - 1];
+  $('kpiVol').textContent = lastVol >= 10000 ? `${(lastVol / 1000).toFixed(0)}K` : lastVol.toLocaleString();
+
+  const ma20arr = calcMA(closes, 20);
+  const ma20 = ma20arr[ma20arr.length - 1];
+  $('kpiMa20').textContent = ma20 ? `NT$${ma20}` : '—';
+  $('kpiMa20Note').textContent = last > ma20 ? '股價 > MA20 ▲' : '股價 < MA20 ▼';
+  $('kpiMa20Note').className = `kpi-change ${last > ma20 ? 'up' : 'down'}`;
+
+  const lastRsi = rsi.filter(r => r !== null).pop();
+  $('kpiRsi').textContent = lastRsi ?? '—';
+  const rsiNote = lastRsi > 70 ? '超買區間' : lastRsi < 30 ? '超賣區間' : '中性區間';
+  $('kpiRsiNote').textContent = rsiNote;
+  $('kpiRsiNote').className = `kpi-change ${lastRsi > 70 ? 'up' : lastRsi < 30 ? 'down' : ''}`;
+
+  const h52 = Math.max(...closes).toFixed(1);
+  const l52 = Math.min(...closes).toFixed(1);
+  $('kpi52H').textContent = `NT$${h52}`;
+  $('kpi52L').textContent = `NT$${l52}`;
+}
+
+// ── Range Toggle ────────────────────────────────────────────
+function setRange(months, btn) {
+  currentRange = months;
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  btn.classList.add('active');
+  const labels = { 3: '近3個月', 6: '近6個月', 12: '近一年' };
+  $('priceChartTitle').textContent = labels[months];
+  renderAll();
+}
+
+function renderAll() {
+  const n = currentRange;
+  const len = allDates.length;
+  const tradingDaysPerMonth = 22;
+  const slice = Math.min(n * tradingDaysPerMonth, len);
+  const dates = allDates.slice(-slice);
+  const closes = allCloses.slice(-slice);
+  const vols = allVols.slice(-slice);
+  renderPrice(dates, closes);
+  renderVol(dates, vols, closes);
+  const rsi = renderRSI(dates, closes);
+  updateKPIs(closes, vols, rsi);
+}
+
+// ── Init ────────────────────────────────────────────────────
+async function init() {
+  $('updateTime').textContent = new Date().toLocaleString('zh-TW');
+  renderRevenue();
+
+  const months = monthList(14); // fetch ~14 months so MA60 has enough data
+  await loadData(months);
+
+  if (allCloses.length === 0) {
+    $('kpiPrice').textContent = '資料載入失敗';
+    $('kpiPrice').style.fontSize = '14px';
+    $('kpiChange').textContent = '請確認網路連線或 TWSE API 是否可用';
+    return;
+  }
+
+  renderAll();
+}
+
+init();
+</script>
+</body>
+</html>
