@@ -563,7 +563,7 @@
         });
 
         const SCR = { TITLE: 0, SELECT: 1, LINEUP: 4, GAME: 2, OVER: 3, HALF_END: 5 };
-        const PH = { INNING_START: 0, PITCH_SELECT: 1, AIM: 2, POWER_GAUGE: 3, WAIT_PITCH: 4, BALL_FLIGHT: 5, BATTING: 6, RESULT: 7, SUB_MENU: 8 };
+        const PH = { INNING_START: 0, PITCH_SELECT: 1, AIM: 2, POWER_GAUGE: 3, WAIT_PITCH: 4, BALL_FLIGHT: 5, BATTING: 6, RESULT: 7, SUB_MENU: 8, HR_RUN: 9 };
         let G = {};
 
         const SZcx = W / 2, SZcy = 400, SZw = 110, SZh = 110;
@@ -594,7 +594,9 @@
                     Array.from({ length: 9 }, () => ({ ab: 0, h: 0, bb: 0, hr: 0, rbi: 0, k: 0 })),
                     Array.from({ length: 9 }, () => ({ ab: 0, h: 0, bb: 0, hr: 0, rbi: 0, k: 0 }))
                 ],
-                halfEndTimer: 0
+                halfEndTimer: 0,
+                runnerAnimPhase: 0, scoreFlash: [0, 0],
+                hrRunners: [], hrRunFrame: 0
             };
         }
         initState();
@@ -704,6 +706,27 @@
                             o.type = 'square'; o.frequency.value = i === 0 ? 300 : 220;
                             env(g, c.currentTime + dt, 0.2, 0, 0.08, 0.18);
                             o.start(c.currentTime + dt); o.stop(c.currentTime + dt + 0.25);
+                        });
+                    });
+                },
+                crowd() {
+                    play(c => {
+                        // Three layered noise bands simulating crowd roar
+                        [[400, 0.38, 0], [1100, 0.22, 0.12], [2600, 0.10, 0.22]].forEach(([freq, vol, delay]) => {
+                            const len = c.sampleRate * 2.4;
+                            const buf = c.createBuffer(1, len, c.sampleRate);
+                            const d = buf.getChannelData(0);
+                            for (let i = 0; i < len; i++)
+                                d[i] = (Math.random() * 2 - 1) * Math.pow(Math.sin(i / len * Math.PI), 0.45);
+                            const src = c.createBufferSource(), filt = c.createBiquadFilter(), g = c.createGain();
+                            filt.type = 'bandpass'; filt.frequency.value = freq; filt.Q.value = 0.45;
+                            src.buffer = buf; src.connect(filt); filt.connect(g); g.connect(c.destination);
+                            const t0 = c.currentTime + delay;
+                            g.gain.setValueAtTime(0, t0);
+                            g.gain.linearRampToValueAtTime(vol, t0 + 0.3);
+                            g.gain.linearRampToValueAtTime(vol * 0.75, t0 + 1.2);
+                            g.gain.exponentialRampToValueAtTime(0.0001, t0 + 2.4);
+                            src.start(t0);
                         });
                     });
                 }
@@ -967,19 +990,30 @@
             const st = G.batStats[bat][slotIdx];
             if (type === 'HR') {
                 const runs = 1 + G.runners.filter(r => r).length;
+                const preRunners = [...G.runners];
                 G.score[bat] += runs; G.runners = [false, false, false];
-                text = '全壘打！'; sub = 'HOMERUN'; col = '#FFD700';
-                SFX.homerun();
+                G.scoreFlash[bat] = 50;
+                SFX.homerun(); SFX.crowd();
                 st.ab++; st.h++; st.hr++; st.rbi += runs;
+                G.batOrder[G.half] = (G.batOrder[G.half] + 1) % 9;
+                // Build HR runner list: batter first, then any baserunners
+                G.hrRunners = [{ startBase: 0 }];
+                if (preRunners[2]) G.hrRunners.push({ startBase: 3 });
+                if (preRunners[1]) G.hrRunners.push({ startBase: 2 });
+                if (preRunners[0]) G.hrRunners.push({ startBase: 1 });
+                G.hrRunFrame = G.frame;
+                G.phase = PH.HR_RUN;
+                return; // skip showRes – fired later when animation ends
             } else if (type === '2B') {
                 const rbi = (G.runners[2] ? 1 : 0) + (G.runners[1] ? 1 : 0);
                 if (G.runners[2]) G.score[bat]++; if (G.runners[1]) G.score[bat]++;
+                if (rbi > 0) G.scoreFlash[bat] = 35;
                 G.runners = [false, true, G.runners[0] && Math.random() < 0.5]; text = '二壘安打！'; sub = '2 BASE HIT'; col = '#44FF88';
                 SFX.crack();
                 st.ab++; st.h++; st.rbi += rbi;
             } else if (type === '1B') {
                 const rbi = G.runners[2] ? 1 : 0;
-                if (G.runners[2]) G.score[bat]++;
+                if (G.runners[2]) { G.score[bat]++; G.scoreFlash[bat] = 35; }
                 const r2 = G.runners[1] && Math.random() < 0.5; const r1 = G.runners[0];
                 G.runners = [true, r1, r2]; text = '安打！'; sub = 'HIT'; col = '#44FF88';
                 SFX.crack();
@@ -1089,6 +1123,9 @@
 
         function update() {
             G.frame++;
+            G.runnerAnimPhase = (G.runnerAnimPhase + 0.12) % (Math.PI * 2);
+            if (G.scoreFlash[0] > 0) G.scoreFlash[0]--;
+            if (G.scoreFlash[1] > 0) G.scoreFlash[1]--;
             if (G.scr === SCR.TITLE) { if (actionTrigger()) { G.scr = SCR.SELECT; G.selStep = 0; G.cursor = 0; } clearInput(); return; }
 
             if (G.scr === SCR.SELECT) {
@@ -1255,6 +1292,14 @@
                     else if (G.phDone && !G.phPressed) resolveNoSwing();
                     break;
                 }
+                case PH.HR_RUN: {
+                    const hrElapsed = G.frame - G.hrRunFrame;
+                    const HR_LEG = 22; // frames per base leg
+                    if (hrElapsed >= 4 * HR_LEG + 18) {
+                        showRes('全壘打！', 'HOMERUN', '#FFD700', false);
+                    }
+                    break;
+                }
                 case PH.RESULT:
                     G.resTimer--;
                     if (G.resTimer <= 0) { if (G.resEndHalf) endHalf(); else if (G._continueAtBat) { G._continueAtBat = false; startAtBat(true); } else startAtBat(); }
@@ -1343,6 +1388,218 @@
                 ctx.beginPath(); ctx.ellipse(0, 2, 3, 2.5, 0, 0, Math.PI * 2); ctx.fill();
             }
             ctx.restore();
+        }
+
+        // ── Defensive fielders ──
+        function drawFieldDefenders() {
+            const team = pitTeamInfo();
+            // [x, y, position label] in canvas perspective coords
+            const positions = [
+                [W/2, 468, 'C'],
+                [W/2 + 198, 390, '1B'],
+                [W/2 + 90, 322, '2B'],
+                [W/2 - 90, 322, 'SS'],
+                [W/2 - 198, 390, '3B'],
+                [W/2 - 188, 158, 'LF'],
+                [W/2,       142, 'CF'],
+                [W/2 + 188, 158, 'RF'],
+            ];
+            positions.forEach(([fx, fy, pos]) => {
+                const ps = 0.22 + (fy - 140) / (540 - 140) * 0.52;
+                ctx.save();
+                ctx.translate(fx, fy);
+                ctx.scale(ps, ps);
+
+                // Shadow
+                ctx.fillStyle = 'rgba(0,0,0,0.28)';
+                ctx.beginPath(); ctx.ellipse(0, 20, 10, 4, 0, 0, Math.PI * 2); ctx.fill();
+
+                // Legs
+                const legCol = team.c2 === '#FFFFFF' ? '#BBBBBB' : team.c2;
+                ctx.fillStyle = legCol;
+                ctx.fillRect(-5, 8, 4, 14); ctx.fillRect(2, 8, 4, 14);
+
+                // Body (jersey)
+                ctx.fillStyle = team.jersey || '#FFFFFF';
+                ctx.beginPath(); ctx.ellipse(0, 0, 8, 10, 0, 0, Math.PI * 2); ctx.fill();
+                ctx.strokeStyle = team.c1; ctx.lineWidth = 1.5;
+                ctx.beginPath(); ctx.ellipse(0, 0, 8, 10, 0, 0, Math.PI * 2); ctx.stroke();
+
+                // Head
+                ctx.fillStyle = '#FFD0A0';
+                ctx.beginPath(); ctx.arc(0, -14, 8, 0, Math.PI * 2); ctx.fill();
+
+                // Hat
+                ctx.fillStyle = team.c1;
+                ctx.beginPath(); ctx.arc(0, -16, 9, Math.PI, 0); ctx.fill();
+                ctx.fillRect(-9, -17, 18, 5);
+
+                // Arms — drawn LAST so they're never hidden under head/hat
+                // Use a clearly contrasting colour: team.c1 or dark sleeve tone
+                const armCol = team.c1 === '#FFFFFF' ? '#888888' : team.c1;
+                ctx.strokeStyle = armCol; ctx.lineWidth = 5; ctx.lineCap = 'round';
+                // Left arm: from shoulder out to the side (glove hand, angled down-left)
+                ctx.beginPath(); ctx.moveTo(-8, -7); ctx.lineTo(-22, 3); ctx.stroke();
+                // Right arm: raised and out to the right
+                ctx.beginPath(); ctx.moveTo(8, -7); ctx.lineTo(22, -14); ctx.stroke();
+
+                // Glove on left hand (brown)
+                ctx.fillStyle = '#7B3A10';
+                ctx.beginPath(); ctx.arc(-22, 3, 6, 0, Math.PI * 2); ctx.fill();
+                ctx.strokeStyle = '#D2691E'; ctx.lineWidth = 1.5;
+                ctx.beginPath(); ctx.arc(-22, 3, 6, 0, Math.PI * 2); ctx.stroke();
+
+                // Throwing hand (skin tone dot on right)
+                ctx.fillStyle = '#FFD0A0';
+                ctx.beginPath(); ctx.arc(22, -14, 4, 0, Math.PI * 2); ctx.fill();
+
+                ctx.restore();
+            });
+        }
+
+        // ── HR base-run animation ──
+        function drawHRRunners() {
+            if (G.phase !== PH.HR_RUN || !G.hrRunners.length) return;
+            const HR_LEG = 22;
+            const elapsed = G.frame - G.hrRunFrame;
+            const team = batTeamInfo();
+            const basePts = [
+                { x: W/2,       y: 490 }, // home (start)
+                { x: W/2 + 142, y: 372 }, // 1B
+                { x: W/2,       y: 195 }, // 2B
+                { x: W/2 - 142, y: 372 }, // 3B
+                { x: W/2,       y: 490 }, // home (finish)
+            ];
+
+            G.hrRunners.forEach(runner => {
+                const totalLegs = 4 - runner.startBase;
+                const runElapsed = elapsed; // all start at same time
+                if (runElapsed >= totalLegs * HR_LEG) return; // already scored
+
+                const legIdx = Math.floor(runElapsed / HR_LEG);
+                const legT   = (runElapsed % HR_LEG) / HR_LEG;
+                const t      = legT * legT * (3 - 2 * legT); // smoothstep
+
+                const fromBase = runner.startBase + legIdx;
+                const toBase   = fromBase + 1;
+                const from     = basePts[fromBase], to = basePts[toBase];
+                const rx = lerp(from.x, to.x, t);
+                const ry = lerp(from.y, to.y, t);
+
+                const ps = 0.28 + (ry - 148) / (540 - 148) * 0.58;
+                const bob = Math.sin(G.runnerAnimPhase * 2.8) * 2.5;
+
+                ctx.save();
+                ctx.translate(rx, ry + bob * ps);
+
+                // HR glow trail
+                const grd = ctx.createRadialGradient(0, 0, 0, 0, 0, 30 * ps);
+                grd.addColorStop(0, 'rgba(255,200,0,0.6)');
+                grd.addColorStop(1, 'rgba(255,100,0,0)');
+                ctx.fillStyle = grd;
+                ctx.beginPath(); ctx.arc(0, 0, 30 * ps, 0, Math.PI * 2); ctx.fill();
+
+                ctx.scale(ps, ps);
+
+                // Shadow
+                ctx.fillStyle = 'rgba(0,0,0,0.38)';
+                ctx.beginPath(); ctx.ellipse(0, 22, 12, 5, 0, 0, Math.PI * 2); ctx.fill();
+
+                // Animated legs
+                const stride = Math.sin(G.runnerAnimPhase * 2.8) * 9;
+                ctx.strokeStyle = team.c2 === '#FFFFFF' ? '#CCCCCC' : team.c2;
+                ctx.lineWidth = 4; ctx.lineCap = 'round';
+                ctx.beginPath(); ctx.moveTo(-3, 12); ctx.lineTo(-6 + stride, 22); ctx.stroke();
+                ctx.beginPath(); ctx.moveTo(3, 12); ctx.lineTo(6 - stride, 22); ctx.stroke();
+
+                // Body
+                ctx.fillStyle = team.jersey || '#FFFFFF';
+                ctx.beginPath(); ctx.ellipse(0, 4, 9, 11, 0, 0, Math.PI * 2); ctx.fill();
+                ctx.strokeStyle = team.c1; ctx.lineWidth = 2;
+                ctx.beginPath(); ctx.ellipse(0, 4, 9, 11, 0, 0, Math.PI * 2); ctx.stroke();
+
+                // Arms
+                const armSwing = Math.sin(G.runnerAnimPhase * 2.8) * 14;
+                ctx.strokeStyle = team.jersey || '#FFFFFF'; ctx.lineWidth = 3.5;
+                ctx.beginPath(); ctx.moveTo(-8, -2); ctx.lineTo(-16, 4 + armSwing); ctx.stroke();
+                ctx.beginPath(); ctx.moveTo(8, -2); ctx.lineTo(16, 4 - armSwing); ctx.stroke();
+
+                // Head
+                ctx.fillStyle = '#FFD0A0';
+                ctx.beginPath(); ctx.arc(0, -13, 9, 0, Math.PI * 2); ctx.fill();
+
+                // Hat (team colour)
+                ctx.fillStyle = team.c1;
+                ctx.beginPath(); ctx.arc(0, -15, 10, Math.PI, 0); ctx.fill();
+                ctx.fillRect(-10, -15, 20, 5);
+
+                ctx.restore();
+            });
+        }
+
+        // ── Runner figures on field ──
+        function drawFieldRunners() {
+            if (!G.runners[0] && !G.runners[1] && !G.runners[2]) return;
+            const team = batTeamInfo();
+            const bob = Math.sin(G.runnerAnimPhase) * 2.5;
+            // Field perspective: lower y = farther from viewer
+            // 1B right, 2B behind pitcher, 3B left
+            const bases = [
+                { x: W / 2 + 142, y: 372, active: G.runners[0] },
+                { x: W / 2,       y: 195, active: G.runners[1] },
+                { x: W / 2 - 142, y: 372, active: G.runners[2] }
+            ];
+            bases.forEach(({ x, y, active }) => {
+                if (!active) return;
+                // perspective scale: larger near viewer (large y), smaller far (small y)
+                const ps = 0.28 + (y - 148) / (540 - 148) * 0.58;
+                ctx.save();
+                ctx.translate(x, y + bob * ps);
+
+                // glow pulse
+                const glowR = 26 * ps * (0.8 + 0.2 * Math.sin(G.runnerAnimPhase * 1.3));
+                const grd = ctx.createRadialGradient(0, 0, 0, 0, 0, glowR);
+                grd.addColorStop(0, 'rgba(255,200,0,0.55)');
+                grd.addColorStop(1, 'rgba(255,140,0,0)');
+                ctx.fillStyle = grd;
+                ctx.beginPath(); ctx.arc(0, 0, glowR, 0, Math.PI * 2); ctx.fill();
+
+                ctx.scale(ps, ps);
+
+                // shadow
+                ctx.fillStyle = 'rgba(0,0,0,0.38)';
+                ctx.beginPath(); ctx.ellipse(0, 22, 12, 5, 0, 0, Math.PI * 2); ctx.fill();
+
+                // legs (animated stride)
+                const stride = Math.sin(G.runnerAnimPhase * 2.2) * 8;
+                ctx.strokeStyle = team.c2 === '#FFFFFF' ? '#CCCCCC' : team.c2;
+                ctx.lineWidth = 4; ctx.lineCap = 'round';
+                ctx.beginPath(); ctx.moveTo(-3, 12); ctx.lineTo(-6 + stride, 22); ctx.stroke();
+                ctx.beginPath(); ctx.moveTo(3, 12); ctx.lineTo(6 - stride, 22); ctx.stroke();
+
+                // body
+                ctx.fillStyle = team.jersey || '#FFFFFF';
+                ctx.beginPath(); ctx.ellipse(0, 4, 9, 11, 0, 0, Math.PI * 2); ctx.fill();
+                ctx.strokeStyle = team.c1; ctx.lineWidth = 1.5;
+                ctx.beginPath(); ctx.ellipse(0, 4, 9, 11, 0, 0, Math.PI * 2); ctx.stroke();
+
+                // arms (animated)
+                const armSwing = Math.sin(G.runnerAnimPhase * 2.2) * 12;
+                ctx.strokeStyle = team.jersey || '#FFFFFF'; ctx.lineWidth = 3.5;
+                ctx.beginPath(); ctx.moveTo(-8, -2); ctx.lineTo(-16, 4 + armSwing); ctx.stroke();
+                ctx.beginPath(); ctx.moveTo(8, -2); ctx.lineTo(16, 4 - armSwing); ctx.stroke();
+
+                // head
+                ctx.fillStyle = '#FFD0A0';
+                ctx.beginPath(); ctx.arc(0, -13, 9, 0, Math.PI * 2); ctx.fill();
+
+                // hat
+                ctx.fillStyle = team.c1;
+                ctx.beginPath(); ctx.arc(0, -15, 10, Math.PI, 0); ctx.fill();
+                ctx.fillRect(-10, -15, 20, 5);
+
+                ctx.restore();
+            });
         }
 
         // ==========================================
@@ -1503,10 +1760,15 @@
 
         function renderGame() {
             renderPowerProsField();
+            drawFieldDefenders();
+            drawFieldRunners();
+            drawHRRunners();
             drawPawapuroPitcher();
-            drawPawapuroBatter();
+            if (G.phase !== PH.HR_RUN) drawPawapuroBatter();
 
-            if (!playerBatting()) renderPitchingZone(); else renderBattingZone();
+            if (G.phase !== PH.HR_RUN) {
+                if (!playerBatting()) renderPitchingZone(); else renderBattingZone();
+            }
             if (G.ballActive) renderBall();
             if (playerBatting() && (G.phase === PH.WAIT_PITCH || G.phase === PH.BATTING)) renderBatCursor();
 
@@ -1625,6 +1887,62 @@
 
             ctx.fillStyle = '#fff';
             ctx.beginPath(); ctx.moveTo(W / 2 - 18, 513); ctx.lineTo(W / 2 + 18, 513); ctx.lineTo(W / 2 + 18, 524); ctx.lineTo(W / 2, 538); ctx.lineTo(W / 2 - 18, 524); ctx.fill();
+
+            // ── STADIUM ATMOSPHERE ──
+            // Outfield wall/fence
+            ctx.fillStyle = '#1e4820'; ctx.fillRect(0, 56, W, 22);
+            ctx.strokeStyle = '#2d6e33'; ctx.lineWidth = 2;
+            ctx.beginPath(); ctx.moveTo(0, 56); ctx.lineTo(W, 56); ctx.stroke();
+            ctx.beginPath(); ctx.moveTo(0, 77); ctx.lineTo(W, 77); ctx.stroke();
+            for (let wx = 0; wx < W; wx += 72) {
+                ctx.strokeStyle = 'rgba(50,110,55,0.4)'; ctx.lineWidth = 1;
+                ctx.beginPath(); ctx.moveTo(wx, 56); ctx.lineTo(wx, 78); ctx.stroke();
+            }
+            // Scoreboard in centre field
+            ctx.fillStyle = 'rgba(10,10,20,0.92)'; drawRoundRect(ctx, W/2-48, 30, 96, 28, 4); ctx.fill();
+            ctx.strokeStyle = '#FFD700'; ctx.lineWidth = 1.5; drawRoundRect(ctx, W/2-48, 30, 96, 28, 4); ctx.stroke();
+            ctx.font = 'bold 11px Arial'; ctx.textAlign = 'center'; ctx.fillStyle = '#FFD700';
+            ctx.fillText('⚾ BASEBALL ⚾', W/2, 49);
+
+            // Stadium stands (drawn on top so they cover far end of field)
+            const standH = 58;
+            ctx.fillStyle = 'rgba(14,12,25,0.97)'; ctx.fillRect(0, 0, W, standH);
+
+            // Seat rows
+            const secColors = ['rgba(200,30,30,0.65)', 'rgba(25,45,160,0.65)', 'rgba(25,130,45,0.65)', 'rgba(40,40,55,0.65)'];
+            for (let row = 0; row < 4; row++) {
+                for (let col = 0; col < 68; col++) {
+                    const sx = col * 12 + (row % 2) * 6;
+                    const sy = row * 12 + 3;
+                    if (sx > W - 10) continue;
+                    const occ = Math.abs(Math.sin(col * 6.1 + row * 4.3)) > 0.3;
+                    ctx.fillStyle = occ ? secColors[(col + row) % 4] : 'rgba(30,28,48,0.5)';
+                    ctx.fillRect(sx, sy, 10, 10);
+                    if (occ) {
+                        const hr = 130 + (col * 11) % 70, hg = 90 + (row * 17) % 50, hb = 60 + (col * 7) % 40;
+                        ctx.fillStyle = `rgba(${hr},${hg},${hb},0.9)`;
+                        ctx.beginPath(); ctx.arc(sx + 5, sy + 1, 3.5, 0, Math.PI * 2); ctx.fill();
+                    }
+                }
+            }
+
+            // Foul poles (yellow vertical lines at the foul line boundaries)
+            [[W/2 - 415, 56], [W/2 + 415, 56]].forEach(([fx, fy]) => {
+                ctx.fillStyle = '#FFEE44'; ctx.fillRect(fx - 2, fy, 4, 95);
+                ctx.fillStyle = 'rgba(255,240,100,0.5)';
+                ctx.beginPath(); ctx.arc(fx, fy, 6, 0, Math.PI * 2); ctx.fill();
+            });
+
+            // Stadium light glow (top-left and top-right)
+            [[60, 0], [W - 60, 0]].forEach(([lx, ly]) => {
+                const lg = ctx.createRadialGradient(lx, ly + 40, 0, lx, ly + 40, 130);
+                lg.addColorStop(0, 'rgba(255,255,200,0.10)');
+                lg.addColorStop(1, 'rgba(0,0,0,0)');
+                ctx.fillStyle = lg; ctx.fillRect(lx - 130, ly, 260, 200);
+                ctx.fillStyle = '#999'; ctx.fillRect(lx - 3, ly, 6, 52);
+                ctx.fillStyle = 'rgba(255,250,180,0.9)';
+                ctx.beginPath(); ctx.ellipse(lx, ly + 12, 14, 4, 0, 0, Math.PI * 2); ctx.fill();
+            });
         }
 
         // ==========================================
@@ -1819,20 +2137,66 @@
 
         function renderHitEffect() {
             const eTime = G.frame - G.hitEffectFrame;
-            if (eTime >= 0 && eTime < 25) {
-                const cx = SZcx + G.curX * (SZw / 2), cy = SZcy + G.curY * (SZh / 2);
-                ctx.save(); ctx.translate(cx, cy);
-                const alpha = 1 - eTime / 25; ctx.globalAlpha = alpha;
-                if (G.hitType === 'HR' && eTime < 5) { ctx.fillStyle = `rgba(255, 255, 255, ${0.5 - eTime * 0.1})`; ctx.fillRect(-W, -H, W * 2, H * 2); }
-                ctx.fillStyle = G.hitType === 'HR' ? '#FFD700' : '#FFF';
-                for (let i = 0; i < 8; i++) {
-                    const angle = (Math.PI * 2 / 8) * i + eTime * 0.1; const dist = eTime * 8;
-                    ctx.beginPath(); ctx.arc(Math.cos(angle) * dist, Math.sin(angle) * dist, 6 + (G.hitType === 'HR' ? 4 : 0), 0, Math.PI * 2); ctx.fill();
-                }
-                ctx.strokeStyle = G.hitType === 'HR' ? '#FF4444' : '#00FFFF'; ctx.lineWidth = 5;
-                ctx.beginPath(); ctx.arc(0, 0, eTime * 12, 0, Math.PI * 2); ctx.stroke();
-                ctx.restore();
+            if (eTime < 0 || eTime >= 40) return;
+            const cx = SZcx + G.curX * (SZw / 2), cy = SZcy + G.curY * (SZh / 2);
+            const isHR = G.hitType === 'HR';
+            const alpha = Math.max(0, 1 - eTime / 38);
+            ctx.save(); ctx.translate(cx, cy); ctx.globalAlpha = alpha;
+
+            // Flash on contact
+            if (eTime < 5) {
+                ctx.fillStyle = `rgba(255,255,255,${(0.55 - eTime * 0.1)})`;
+                ctx.fillRect(-W, -H, W * 2, H * 2);
             }
+
+            // Expanding shockwave rings
+            const ringCols = isHR ? ['#FF4444', '#FFD700', '#FF8800'] : ['#00FFFF', '#44AAFF'];
+            ringCols.forEach((col, ri) => {
+                const delay = ri * 5;
+                if (eTime < delay) return;
+                const r = (eTime - delay) * (isHR ? 14 : 11);
+                ctx.strokeStyle = col; ctx.lineWidth = isHR ? 4 : 2.5;
+                ctx.globalAlpha = alpha * (1 - ri * 0.3);
+                ctx.beginPath(); ctx.arc(0, 0, r, 0, Math.PI * 2); ctx.stroke();
+            });
+            ctx.globalAlpha = alpha;
+
+            // Spark particles (radial burst)
+            const sparkCol = isHR ? '#FFD700' : '#FFFFFF';
+            const sparkCount = isHR ? 14 : 9;
+            for (let i = 0; i < sparkCount; i++) {
+                const angle = (Math.PI * 2 / sparkCount) * i + eTime * 0.08;
+                const dist = eTime * (isHR ? 10 : 7.5);
+                const sz = Math.max(0, 8 + (isHR ? 4 : 0) - eTime * 0.4);
+                ctx.fillStyle = sparkCol;
+                ctx.beginPath(); ctx.arc(Math.cos(angle) * dist, Math.sin(angle) * dist, sz, 0, Math.PI * 2); ctx.fill();
+            }
+
+            // Spark streaks (short lines shooting outward)
+            if (eTime < 15) {
+                const streakCol = isHR ? '#FFA500' : '#88DDFF';
+                ctx.strokeStyle = streakCol; ctx.lineWidth = isHR ? 3 : 2; ctx.lineCap = 'round';
+                const streakCount = isHR ? 10 : 7;
+                for (let i = 0; i < streakCount; i++) {
+                    const angle = (Math.PI * 2 / streakCount) * i + 0.3;
+                    const r0 = eTime * 4, r1 = eTime * 9;
+                    ctx.globalAlpha = alpha * (1 - eTime / 15) * 0.85;
+                    ctx.beginPath(); ctx.moveTo(Math.cos(angle) * r0, Math.sin(angle) * r0); ctx.lineTo(Math.cos(angle) * r1, Math.sin(angle) * r1); ctx.stroke();
+                }
+            }
+
+            // HR bonus: gold star burst + second ring wave
+            if (isHR && eTime < 30) {
+                ctx.globalAlpha = alpha * 0.7;
+                for (let i = 0; i < 6; i++) {
+                    const angle2 = (Math.PI * 2 / 6) * i + eTime * 0.15;
+                    const d2 = eTime * 6;
+                    ctx.fillStyle = '#FFFFFF';
+                    ctx.beginPath(); ctx.arc(Math.cos(angle2) * d2, Math.sin(angle2) * d2, 5, 0, Math.PI * 2); ctx.fill();
+                }
+            }
+
+            ctx.restore();
         }
 
         function renderClassicUI() {
@@ -1852,9 +2216,26 @@
             const hwAbbrSz = hw.abbr.length <= 2 ? 18 : 13;
             ctx.font = `bold ${awAbbrSz}px "PingFang TC", "Microsoft JhengHei", Arial`; ctx.textAlign = 'left';
             ctx.fillStyle = aw.c1; ctx.fillText(aw.abbr, spX + 8, scY);
-            txt(`${G.score[0]}`, spX + 68, scY, 28, '#fff');
+            // Score flash glow when run scores
+            [0, 1].forEach(si => {
+                if (G.scoreFlash[si] <= 0) return;
+                const flashAlpha = G.scoreFlash[si] / 50;
+                const flashX = si === 0 ? spX + 68 : spX + spW - 68;
+                const flashTeam = si === 0 ? aw : hw;
+                const fg = ctx.createRadialGradient(flashX, scY - 10, 0, flashX, scY - 10, 36);
+                fg.addColorStop(0, flashTeam.c1 + Math.round(flashAlpha * 200).toString(16).padStart(2, '0'));
+                fg.addColorStop(1, 'rgba(0,0,0,0)');
+                ctx.fillStyle = fg; ctx.beginPath(); ctx.arc(flashX, scY - 10, 36, 0, Math.PI * 2); ctx.fill();
+            });
+            const s0Col = G.scoreFlash[0] > 0 ? '#FFD700' : '#fff';
+            const s1Col = G.scoreFlash[1] > 0 ? '#FFD700' : '#fff';
+            if (G.scoreFlash[0] > 0) { ctx.save(); ctx.shadowColor = '#FFD700'; ctx.shadowBlur = 18; }
+            txt(`${G.score[0]}`, spX + 68, scY, 28, s0Col);
+            if (G.scoreFlash[0] > 0) ctx.restore();
             ctx.font = 'bold 16px Arial'; ctx.textAlign = 'center'; ctx.fillStyle = 'rgba(180,200,220,0.7)'; ctx.fillText('−', spX + spW / 2, scY - 2);
-            txt(`${G.score[1]}`, spX + spW - 68, scY, 28, '#fff');
+            if (G.scoreFlash[1] > 0) { ctx.save(); ctx.shadowColor = '#FFD700'; ctx.shadowBlur = 18; }
+            txt(`${G.score[1]}`, spX + spW - 68, scY, 28, s1Col);
+            if (G.scoreFlash[1] > 0) ctx.restore();
             ctx.font = `bold ${hwAbbrSz}px "PingFang TC", "Microsoft JhengHei", Arial`; ctx.textAlign = 'right';
             ctx.fillStyle = hw.c1; ctx.fillText(hw.abbr, spX + spW - 8, scY);
 
@@ -2017,6 +2398,23 @@
         function renderBall() {
             const t = ballProgress(); if (t <= 0 || t > 1.05) return;
             const x = lerp(G.ballSX, G.ballEX + G.ballCX * t, t), y = lerp(G.ballSY, G.ballEY + G.ballCY * t, t); const sz = lerp(2, 14, t);
+
+            // Motion trail
+            ctx.save();
+            for (let i = 1; i <= 6; i++) {
+                const tt = clamp(t - i * 0.055, 0, 1);
+                if (tt <= 0) continue;
+                const tx = lerp(G.ballSX, G.ballEX + G.ballCX * tt, tt);
+                const ty = lerp(G.ballSY, G.ballEY + G.ballCY * tt, tt);
+                const tsz = lerp(2, 14, tt);
+                ctx.globalAlpha = (0.22 - i * 0.032);
+                ctx.fillStyle = i <= 2 ? '#FFFFCC' : '#AAAAFF';
+                ctx.beginPath(); ctx.arc(tx, ty, tsz * 0.85, 0, Math.PI * 2); ctx.fill();
+            }
+            ctx.globalAlpha = 1;
+            ctx.restore();
+
+            // Ball
             ctx.shadowColor = 'rgba(0,0,0,0.5)'; ctx.shadowBlur = 5; ctx.fillStyle = '#FFF'; ctx.beginPath(); ctx.arc(x, y, sz, 0, Math.PI * 2); ctx.fill(); ctx.shadowBlur = 0;
             if (sz > 4) {
                 ctx.strokeStyle = '#FF3333'; ctx.lineWidth = sz * 0.15;
@@ -2027,8 +2425,57 @@
 
         function renderPhaseUI() {
             if (G.phase === PH.INNING_START) {
-                ctx.fillStyle = 'rgba(0,0,0,0.7)'; ctx.fillRect(0, H / 2 - 50, W, 100);
-                txt(`第 ${G.inning} 回  ${G.half === 0 ? '表' : '裏'}`, W / 2, H / 2 + 15, 40, '#FFF'); return;
+                const elapsed = 100 - G.phaseTimer; // 0→100 as banner lives
+                // slide in from right over 18 frames, hold, fade out last 20 frames
+                const slideIn = clamp(elapsed / 18, 0, 1);
+                const fadeOut = clamp((G.phaseTimer - 20) / 20, 0, 1);
+                const slideX = (1 - slideIn) * (W + 60);
+                const alpha = Math.min(slideIn, fadeOut);
+
+                const batTeam = G.half === 0 ? TEAMS[G.awayIdx] : TEAMS[G.homeIdx];
+                const halfLabel = G.half === 0 ? '表' : '裏';
+
+                ctx.save(); ctx.globalAlpha = alpha;
+
+                // Dark backdrop panel
+                ctx.fillStyle = 'rgba(0,0,0,0.82)';
+                ctx.fillRect(-slideX, H / 2 - 58, W + slideX * 2, 116);
+
+                // Team colour accent bars
+                ctx.fillStyle = batTeam.c1;
+                ctx.fillRect(-slideX, H / 2 - 58, W + slideX * 2, 5);
+                ctx.fillRect(-slideX, H / 2 + 53, W + slideX * 2, 5);
+
+                // Secondary colour stripe
+                ctx.fillStyle = (batTeam.c2 && batTeam.c2 !== '#FFFFFF') ? batTeam.c2 : 'rgba(255,255,255,0.18)';
+                ctx.fillRect(-slideX, H / 2 - 53, W + slideX * 2, 3);
+                ctx.fillRect(-slideX, H / 2 + 50, W + slideX * 2, 3);
+
+                // Inning number — big
+                ctx.shadowColor = batTeam.c1; ctx.shadowBlur = 24;
+                txt(`第 ${G.inning} 回  ${halfLabel}`, W / 2 - slideX, H / 2 + 16, 50, '#FFFFFF');
+                ctx.shadowBlur = 0;
+
+                // Team name + "攻擊" label above
+                const abbrSz = batTeam.abbr.length <= 2 ? 20 : 15;
+                txt(`${batTeam.abbr}  ${halfLabel === '表' ? '先攻' : '後攻'}`, W / 2 - slideX, H / 2 - 22, abbrSz, batTeam.c1 === '#000000' ? '#FFD700' : batTeam.c1);
+
+                // Score badge on the right
+                const badgeX = W - 120 - slideX;
+                ctx.fillStyle = 'rgba(0,0,0,0.6)'; drawRoundRect(ctx, badgeX, H / 2 - 38, 110, 76, 8); ctx.fill();
+                ctx.strokeStyle = 'rgba(255,255,255,0.2)'; ctx.lineWidth = 1; drawRoundRect(ctx, badgeX, H / 2 - 38, 110, 76, 8); ctx.stroke();
+                const aw2 = TEAMS[G.awayIdx], hw2 = TEAMS[G.homeIdx];
+                ctx.font = 'bold 10px Arial'; ctx.textAlign = 'left'; ctx.fillStyle = 'rgba(200,220,255,0.7)';
+                ctx.fillText(aw2.abbr, badgeX + 10, H / 2 - 20);
+                ctx.textAlign = 'right'; ctx.fillText(hw2.abbr, badgeX + 100, H / 2 - 20);
+                ctx.font = 'bold 26px Arial'; ctx.textAlign = 'center';
+                ctx.fillStyle = G.half === 1 ? '#FFD700' : '#fff'; ctx.fillText(G.score[0], badgeX + 28, H / 2 + 12);
+                ctx.fillStyle = 'rgba(180,200,220,0.6)'; ctx.fillText('−', badgeX + 55, H / 2 + 12);
+                ctx.fillStyle = G.half === 0 ? '#FFD700' : '#fff'; ctx.fillText(G.score[1], badgeX + 82, H / 2 + 12);
+                ctx.font = '9px Arial'; ctx.fillStyle = 'rgba(160,190,230,0.55)'; ctx.fillText('SCORE', badgeX + 55, H / 2 + 30);
+
+                ctx.restore();
+                return;
             }
 
             if (G.phase === PH.PITCH_SELECT && !playerBatting()) {
