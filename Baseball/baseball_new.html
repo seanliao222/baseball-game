@@ -110,6 +110,68 @@
         .mbtn.show {
             display: flex;
         }
+
+        #mp-overlay {
+            position: fixed;
+            inset: 0;
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 14px;
+            background: rgba(4, 10, 20, 0.92);
+            z-index: 200;
+            font-family: "PingFang TC", "Microsoft JhengHei", "Noto Sans TC", Arial, sans-serif;
+            color: #fff;
+            text-align: center;
+            padding: 20px;
+        }
+
+        #mp-overlay.show {
+            display: flex;
+        }
+
+        #mp-overlay h2 {
+            font-size: 22px;
+            color: #ffd700;
+        }
+
+        #mp-overlay .mp-btn {
+            padding: 14px 28px;
+            font-size: 16px;
+            border-radius: 10px;
+            border: 2px solid rgba(100, 150, 255, 0.7);
+            background: radial-gradient(circle at 40% 35%, #4466aa, #1a2a44);
+            color: #fff;
+            cursor: pointer;
+        }
+
+        #mp-overlay .mp-btn:active {
+            transform: scale(0.96);
+        }
+
+        #mp-qr {
+            background: #fff;
+            padding: 10px;
+            border-radius: 8px;
+        }
+
+        #mp-room-code {
+            font-size: 20px;
+            letter-spacing: 2px;
+            color: #44ff88;
+            font-weight: bold;
+            word-break: break-all;
+        }
+
+        #mp-status {
+            font-size: 14px;
+            color: #ccc;
+        }
+
+        .mp-hidden {
+            display: none !important;
+        }
     </style>
 </head>
 
@@ -121,6 +183,35 @@
         <button class="mbtn" id="swing-btn">⚾<br>打擊!</button>
         <button class="mbtn" id="change-btn">🔄<br>換人</button>
     </div>
+    <div id="mp-overlay">
+        <div id="mp-view-menu">
+            <h2>雙人連線對戰</h2>
+            <div style="display:flex; flex-direction:column; gap:10px; margin-top:10px;">
+                <button class="mp-btn" id="mp-create-btn">建立房間</button>
+                <button class="mp-btn" id="mp-close-btn" style="background:radial-gradient(circle at 40% 35%,#666,#333);">返回</button>
+            </div>
+        </div>
+        <div id="mp-view-host" class="mp-hidden">
+            <h2>等待對手加入</h2>
+            <div id="mp-qr"></div>
+            <div id="mp-room-code"></div>
+            <div id="mp-status">請對方掃描 QR code 加入</div>
+            <div id="mp-team-pick" class="mp-hidden" style="display:flex; flex-direction:column; gap:10px; margin-top:10px;">
+                <div>選擇你的隊伍：</div>
+                <div style="display:flex; gap:10px;">
+                    <button class="mp-btn" id="mp-pick-home">主場</button>
+                    <button class="mp-btn" id="mp-pick-away">客場</button>
+                </div>
+            </div>
+            <button class="mp-btn" id="mp-host-cancel" style="margin-top:10px; background:radial-gradient(circle at 40% 35%,#666,#333);">取消</button>
+        </div>
+        <div id="mp-view-guest" class="mp-hidden">
+            <h2>加入對戰</h2>
+            <div id="mp-guest-status">連線中...</div>
+        </div>
+    </div>
+    <script src="https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.js"></script>
     <script>
         const canvas = document.getElementById('c');
         const ctx = canvas.getContext('2d');
@@ -846,11 +937,11 @@
         function startAtBat(isContinue = false) {
             if (!isContinue) { G.balls = 0; G.strikes = 0; }
             G.ballActive = false; G.batSwingFrame = -999;
-            if (playerBatting()) {
+            if (MP.active || !playerBatting()) {
+                G.phase = PH.PITCH_SELECT; G.pitchChoice = 0; G.aimX = 0; G.aimY = 0; G.gaugePos = 0; G.gaugeDir = 1;
+            } else {
                 G.phase = PH.WAIT_PITCH; G.phaseTimer = 80; G.curX = 0; G.curY = 0;
                 G.phPos = 0; G.phPressed = false; G.phDone = false; G.phValue = 0;
-            } else {
-                G.phase = PH.PITCH_SELECT; G.pitchChoice = 0; G.aimX = 0; G.aimY = 0; G.gaugePos = 0; G.gaugeDir = 1;
             }
         }
 
@@ -889,7 +980,7 @@
             G._actualAimX = (G.ballEX - SZcx) / (SZw / 2);
             G._actualAimY = (G.ballEY - SZcy) / (SZh / 2);
 
-            if (!playerBatting()) {
+            if (!MP.active && !playerBatting()) {
                 const batter = getBatter();
                 const inZone = Math.abs(G._actualAimX) <= 1 && Math.abs(G._actualAimY) <= 1;
                 const aiSwingMult = [0.45, 1.0, 1.45][G.difficulty];
@@ -1122,11 +1213,18 @@
         }
 
         function update() {
+            mpSyncInput();
             G.frame++;
             G.runnerAnimPhase = (G.runnerAnimPhase + 0.12) % (Math.PI * 2);
             if (G.scoreFlash[0] > 0) G.scoreFlash[0]--;
             if (G.scoreFlash[1] > 0) G.scoreFlash[1]--;
-            if (G.scr === SCR.TITLE) { if (actionTrigger()) { G.scr = SCR.SELECT; G.selStep = 0; G.cursor = 0; } clearInput(); return; }
+            if (G.scr === SCR.TITLE) {
+                if (isMouseJustPressed) {
+                    const bx = W / 2 - 140, by = H * 0.84 - 26, bw = 280, bh = 52;
+                    if (mouseX >= bx && mouseX <= bx + bw && mouseY >= by && mouseY <= by + bh) { mpOpenMenu(); clearInput(); return; }
+                }
+                if (actionTrigger()) { G.scr = SCR.SELECT; G.selStep = 0; G.cursor = 0; } clearInput(); return;
+            }
 
             if (G.scr === SCR.SELECT) {
                 if (isMouseJustPressed) {
@@ -1170,7 +1268,13 @@
                 clearInput(); return;
             }
 
-            if (G.scr === SCR.OVER) { if (actionTrigger()) initState(); clearInput(); return; }
+            if (G.scr === SCR.OVER) {
+                if (actionTrigger()) {
+                    if (MP.active) { MP.active = false; MP.isHost = false; if (MP.conn) MP.conn.close(); if (MP.peer) MP.peer.destroy(); }
+                    initState();
+                }
+                clearInput(); return;
+            }
 
             if (G.scr === SCR.HALF_END) {
                 G.halfEndTimer++;
@@ -1230,7 +1334,7 @@
                         }
                     }
                     G.hoveredPitchChoice = hovered;
-                    if (isMouseJustPressed && !playerBatting()) {
+                    if (isMouseJustPressed && (MP.active || !playerBatting())) {
                         const sbx = 10, sby = H - 50;
                         if (mouseX >= sbx && mouseX <= sbx + 120 && mouseY >= sby && mouseY <= sby + 38) { simulateHalf(); break; }
                         const pbx = W - 130, pby = H - 50;
@@ -1255,7 +1359,7 @@
                     if (actionTrigger()) { G.gaugePower = G.gaugePos; throwBall(G.gaugePower); }
                     break;
                 case PH.WAIT_PITCH: {
-                    if (isMobile) {
+                    if (isMobile && !mpRemoteTurn()) {
                         if (G.isDraggingBat) { const sens = 0.008; G.curX = clamp(G.baseCurX + (mouseX - G.dragStartX) * sens, -1.5, 1.5); G.curY = clamp(G.baseCurY + (mouseY - G.dragStartY) * sens, -1.5, 1.5); }
                     } else {
                         G.curX = clamp((mouseX - SZcx) / (SZw / 2), -1.5, 1.5); G.curY = clamp((mouseY - SZcy) / (SZh / 2), -1.5, 1.5);
@@ -1283,7 +1387,7 @@
                     break;
                 }
                 case PH.BATTING: {
-                    if (isMobile) {
+                    if (isMobile && !mpRemoteTurn()) {
                         if (G.isDraggingBat) { const sens = 0.008; G.curX = clamp(G.baseCurX + (mouseX - G.dragStartX) * sens, -1.5, 1.5); G.curY = clamp(G.baseCurY + (mouseY - G.dragStartY) * sens, -1.5, 1.5); }
                     } else { G.curX = clamp((mouseX - SZcx) / (SZw / 2), -1.5, 1.5); G.curY = clamp((mouseY - SZcy) / (SZh / 2), -1.5, 1.5); }
                     const prog = ballProgress();
@@ -1654,6 +1758,12 @@
             ctx.strokeStyle = 'rgba(255,255,255,0.88)'; ctx.lineWidth = 2.5; drawRoundRect(ctx, -155, -30, 310, 60, 30); ctx.stroke();
             txt('▶  點擊畫面開始遊戲  ◀', 0, 9, 22, '#fff');
             ctx.restore();
+
+            ctx.save(); ctx.translate(W / 2, H * 0.84);
+            ctx.strokeStyle = 'rgba(255,255,255,0.5)'; ctx.lineWidth = 2; drawRoundRect(ctx, -140, -26, 280, 52, 26); ctx.stroke();
+            ctx.fillStyle = 'rgba(20,40,70,0.6)'; drawRoundRect(ctx, -140, -26, 280, 52, 26); ctx.fill();
+            txt('📱 雙人連線對戰', 0, 7, 18, '#88ddff');
+            ctx.restore();
         }
 
         function renderSelect() {
@@ -1767,10 +1877,11 @@
             if (G.phase !== PH.HR_RUN) drawPawapuroBatter();
 
             if (G.phase !== PH.HR_RUN) {
-                if (!playerBatting()) renderPitchingZone(); else renderBattingZone();
+                const fieldingPhase = (G.phase === PH.PITCH_SELECT || G.phase === PH.AIM || G.phase === PH.POWER_GAUGE || G.phase === PH.BALL_FLIGHT);
+                if (fieldingPhase) renderPitchingZone(); else renderBattingZone();
             }
             if (G.ballActive) renderBall();
-            if (playerBatting() && (G.phase === PH.WAIT_PITCH || G.phase === PH.BATTING)) renderBatCursor();
+            if ((MP.active || playerBatting()) && (G.phase === PH.WAIT_PITCH || G.phase === PH.BATTING)) renderBatCursor();
 
             renderHitEffect();
             renderClassicUI();
@@ -1958,7 +2069,7 @@
             ctx.fillStyle = 'rgba(0,0,0,0.3)'; ctx.beginPath(); ctx.ellipse(0, 35, 25, 8, 0, 0, Math.PI * 2); ctx.fill();
 
             const f = G.ballActive ? (G.frame - G.ballFrame) : 999;
-            const inWindup = (G.phase === PH.POWER_GAUGE || G.phase === PH.AIM) && !playerBatting();
+            const inWindup = (G.phase === PH.POWER_GAUGE || G.phase === PH.AIM) && (MP.active || !playerBatting());
             const wu = inWindup ? G.gaugePos : 0;
 
             function head() {
@@ -2049,7 +2160,7 @@
             const isLeft = batter.bats === 'L';
             const bx = W / 2 + (isLeft ? 90 : -90); const by = 500;
             const swingTime = G.frame - G.batSwingFrame;
-            const isSwinging = (playerBatting() && G.phPressed && swingTime >= 0) || (!playerBatting() && G.aiSwing && G.frame >= G.aiSwingFrame - 10);
+            const isSwinging = (G.phPressed && swingTime >= 0) || (!MP.active && !playerBatting() && G.aiSwing && G.frame >= G.aiSwingFrame - 10);
             const swingProg = isSwinging ? Math.min(swingTime / 15, 1) : 0;
 
             ctx.save(); ctx.translate(bx, by);
@@ -2478,7 +2589,7 @@
                 return;
             }
 
-            if (G.phase === PH.PITCH_SELECT && !playerBatting()) {
+            if (G.phase === PH.PITCH_SELECT && (MP.active || !playerBatting())) {
                 const pitcher = getPitcher(); const cx = W / 2, cy = 160;
                 ctx.fillStyle = '#FFF'; ctx.beginPath(); ctx.arc(cx, cy, 22, 0, Math.PI * 2); ctx.fill();
                 ctx.strokeStyle = '#000'; ctx.lineWidth = 2; ctx.stroke();
@@ -2517,7 +2628,7 @@
                 if (mouseY >= H - 80) txt('－ 投球暫停中 (思考戰術) －', W / 2, H - 20, 16, '#00FFFF', 'center', '', false);
             }
 
-            if (G.phase === PH.POWER_GAUGE && !playerBatting()) {
+            if (G.phase === PH.POWER_GAUGE && (MP.active || !playerBatting())) {
                 const gx = W / 2 - 100, gy = SZcy - SZh / 2 - 60, gw = 220, gh = 24;
                 ctx.fillStyle = '#FFF'; ctx.beginPath(); ctx.arc(gx - 10, gy + gh / 2, 18, 0, Math.PI * 2); ctx.fill(); ctx.strokeStyle = '#003388'; ctx.lineWidth = 3; ctx.stroke();
                 ctx.strokeStyle = '#FF3333'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(gx - 20, gy + gh / 2, 10, -Math.PI / 3, Math.PI / 3); ctx.stroke(); ctx.beginPath(); ctx.arc(gx, gy + gh / 2, 10, Math.PI - Math.PI / 3, Math.PI + Math.PI / 3); ctx.stroke();
@@ -2531,7 +2642,7 @@
                 ctx.beginPath(); ctx.moveTo(curX, gy + gh + 2); ctx.lineTo(curX - 7, gy + gh + 12); ctx.lineTo(curX + 7, gy + gh + 12); ctx.closePath(); ctx.fill(); ctx.stroke();
             }
 
-            if (G.phase === PH.BATTING && playerBatting()) {
+            if (G.phase === PH.BATTING && (MP.active || playerBatting())) {
                 const tbW = 380, tbH = 28, tbX = W / 2 - tbW / 2, tbY = 552;
                 ctx.fillStyle = 'rgba(0,0,0,0.65)'; drawRoundRect(ctx, tbX - 4, tbY - 4, tbW + 8, tbH + 8, tbH / 2 + 4); ctx.fill();
                 ctx.strokeStyle = 'rgba(100,130,180,0.4)'; ctx.lineWidth = 1; drawRoundRect(ctx, tbX - 4, tbY - 4, tbW + 8, tbH + 8, tbH / 2 + 4); ctx.stroke();
@@ -2701,13 +2812,184 @@
         }
 
         // ==========================================
+        // MULTIPLAYER (PeerJS WebRTC + QR join, no server needed)
+        // ==========================================
+
+        const MP = {
+            active: false, isHost: false, peer: null, conn: null,
+            remoteX: 0, remoteY: 0, remoteDown: false, remoteUp: false,
+            roomId: null, pendingRoomId: null
+        };
+
+        function mpSend(msg) { if (MP.conn && MP.conn.open) MP.conn.send(msg); }
+
+        function mpRemoteTurn() {
+            if (!MP.active || G.scr !== SCR.GAME) return false;
+            if (G.phase === PH.SUB_MENU) return G.subType === 'P' ? playerBatting() : !playerBatting();
+            if (G.phase === PH.PITCH_SELECT || G.phase === PH.AIM || G.phase === PH.POWER_GAUGE) return playerBatting();
+            if (G.phase === PH.BATTING) return !playerBatting();
+            return false;
+        }
+
+        function mpSyncInput() {
+            if (!MP.active || !MP.isHost) return;
+            if (mpRemoteTurn()) {
+                mouseX = MP.remoteX; mouseY = MP.remoteY;
+                isMouseJustPressed = MP.remoteDown; isMouseJustReleased = MP.remoteUp;
+                MP.remoteDown = false; MP.remoteUp = false;
+            }
+        }
+
+        function mpBroadcastState() { mpSend({ t: 'state', g: G }); }
+
+        function mpWireConn(conn) {
+            MP.conn = conn;
+            conn.on('data', mpHandleData);
+            conn.on('close', () => { mpSetStatus('對手已離線'); });
+            conn.on('error', err => console.error('MP conn error', err));
+        }
+
+        function mpSetStatus(text) {
+            const hostStatus = document.getElementById('mp-status');
+            const guestStatus = document.getElementById('mp-guest-status');
+            if (MP.isHost && hostStatus) hostStatus.textContent = text;
+            if (!MP.isHost && guestStatus) guestStatus.textContent = text;
+        }
+
+        function mpHandleData(data) {
+            if (!data || !data.t) return;
+            if (data.t === 'ptr') { MP.remoteX = data.x; MP.remoteY = data.y; }
+            else if (data.t === 'down') { MP.remoteDown = true; }
+            else if (data.t === 'up') { MP.remoteUp = true; }
+            else if (data.t === 'assign') {
+                MP.mySide = 1 - data.hostSide;
+                mpSetStatus('你是' + (MP.mySide === 1 ? '主場' : '客場') + '，等待房主開始比賽...');
+            } else if (data.t === 'start') {
+                MP.active = true; mpCloseOverlay();
+            } else if (data.t === 'state') {
+                if (!MP.isHost) G = data.g;
+            }
+        }
+
+        function mpOpenMenu() {
+            document.getElementById('mp-view-menu').classList.remove('mp-hidden');
+            document.getElementById('mp-view-host').classList.add('mp-hidden');
+            document.getElementById('mp-view-guest').classList.add('mp-hidden');
+            document.getElementById('mp-overlay').classList.add('show');
+        }
+        function mpCloseOverlay() { document.getElementById('mp-overlay').classList.remove('show'); }
+
+        function mpStartHost() {
+            MP.isHost = true;
+            document.getElementById('mp-view-menu').classList.add('mp-hidden');
+            document.getElementById('mp-view-host').classList.remove('mp-hidden');
+            document.getElementById('mp-team-pick').classList.add('mp-hidden');
+            document.getElementById('mp-status').textContent = '建立房間中...';
+            MP.peer = new Peer();
+            MP.peer.on('open', id => {
+                MP.roomId = id;
+                const joinUrl = location.origin + location.pathname + '?room=' + id;
+                document.getElementById('mp-room-code').textContent = id;
+                const qrDiv = document.getElementById('mp-qr'); qrDiv.innerHTML = '';
+                try {
+                    const qr = qrcode(0, 'M'); qr.addData(joinUrl); qr.make();
+                    qrDiv.innerHTML = qr.createImgTag(5, 4);
+                } catch (e) { qrDiv.textContent = joinUrl; }
+                document.getElementById('mp-status').textContent = '請對方掃描 QR code 加入';
+            });
+            MP.peer.on('connection', conn => {
+                mpWireConn(conn);
+                conn.on('open', () => {
+                    document.getElementById('mp-status').textContent = '對手已連線！請選擇你的隊伍';
+                    document.getElementById('mp-team-pick').classList.remove('mp-hidden');
+                });
+            });
+            MP.peer.on('error', err => { document.getElementById('mp-status').textContent = '連線服務錯誤，請重新整理再試'; console.error(err); });
+        }
+
+        function mpHostStart(hostSide) {
+            initState();
+            G.playerSide = hostSide; G.awayIdx = 0; G.homeIdx = 1; G.difficulty = 1;
+            G.usedBatters = [Array(TEAMS[0].roster.batters.length).fill(false), Array(TEAMS[1].roster.batters.length).fill(false)];
+            G.usedPitchers = [Array(TEAMS[0].roster.pitchers.length).fill(false), Array(TEAMS[1].roster.pitchers.length).fill(false)];
+            for (let i = 0; i < 9; i++) { G.usedBatters[0][i] = true; G.usedBatters[1][i] = true; }
+            G.usedPitchers[0][0] = true; G.usedPitchers[1][0] = true;
+            G.scr = SCR.LINEUP; G.introTimer = 0; G.ballActive = false;
+            MP.active = true;
+            mpSend({ t: 'assign', hostSide: hostSide });
+            mpSend({ t: 'start' });
+            mpCloseOverlay();
+        }
+
+        document.getElementById('mp-create-btn').addEventListener('click', mpStartHost);
+        document.getElementById('mp-close-btn').addEventListener('click', mpCloseOverlay);
+        document.getElementById('mp-host-cancel').addEventListener('click', () => {
+            if (MP.peer) MP.peer.destroy();
+            MP.isHost = false; MP.active = false; mpCloseOverlay();
+        });
+        document.getElementById('mp-pick-home').addEventListener('click', () => mpHostStart(1));
+        document.getElementById('mp-pick-away').addEventListener('click', () => mpHostStart(0));
+
+        (function mpCheckAutoJoin() {
+            const room = new URLSearchParams(location.search).get('room');
+            if (!room) return;
+            MP.isHost = false; MP.pendingRoomId = room;
+            document.getElementById('mp-view-menu').classList.add('mp-hidden');
+            document.getElementById('mp-view-host').classList.add('mp-hidden');
+            document.getElementById('mp-view-guest').classList.remove('mp-hidden');
+            document.getElementById('mp-overlay').classList.add('show');
+            document.getElementById('mp-guest-status').textContent = '連線中...';
+            MP.peer = new Peer();
+            MP.peer.on('open', () => {
+                const conn = MP.peer.connect(room);
+                mpWireConn(conn);
+                conn.on('open', () => { document.getElementById('mp-guest-status').textContent = '已連線，等待房主選擇隊伍...'; });
+            });
+            MP.peer.on('error', err => { document.getElementById('mp-guest-status').textContent = '連線失敗，請確認連結正確，或請房主重新建立房間'; console.error(err); });
+        })();
+
+        // Relay guest's own pointer/touch input to the host over the data channel
+        function mpCanvasXY(clientX, clientY) {
+            const rect = canvas.getBoundingClientRect();
+            return { x: (clientX - rect.left) * (canvas.width / rect.width), y: (clientY - rect.top) * (canvas.height / rect.height) };
+        }
+        let mpLastPtrSend = 0;
+        canvas.addEventListener('mousemove', e => {
+            if (!MP.active || MP.isHost) return;
+            const now = performance.now(); if (now - mpLastPtrSend < 25) return; mpLastPtrSend = now;
+            const p = mpCanvasXY(e.clientX, e.clientY); mpSend({ t: 'ptr', x: p.x, y: p.y });
+        });
+        canvas.addEventListener('touchmove', e => {
+            if (!MP.active || MP.isHost || e.touches.length === 0) return;
+            const now = performance.now(); if (now - mpLastPtrSend < 25) return; mpLastPtrSend = now;
+            const p = mpCanvasXY(e.touches[0].clientX, e.touches[0].clientY); mpSend({ t: 'ptr', x: p.x, y: p.y });
+        });
+        canvas.addEventListener('mousedown', e => {
+            if (!MP.active || MP.isHost) return;
+            const p = mpCanvasXY(e.clientX, e.clientY); mpSend({ t: 'ptr', x: p.x, y: p.y }); mpSend({ t: 'down' });
+        });
+        canvas.addEventListener('touchstart', e => {
+            if (!MP.active || MP.isHost || e.touches.length === 0) return;
+            const p = mpCanvasXY(e.touches[0].clientX, e.touches[0].clientY); mpSend({ t: 'ptr', x: p.x, y: p.y }); mpSend({ t: 'down' });
+        });
+        canvas.addEventListener('mouseup', () => { if (MP.active && !MP.isHost) mpSend({ t: 'up' }); });
+        canvas.addEventListener('touchend', () => { if (MP.active && !MP.isHost) mpSend({ t: 'up' }); });
+
+        // ==========================================
         // GAME LOOP & EVENTS
         // ==========================================
 
         function loop() {
-            update(); render();
+            if (MP.active && !MP.isHost) {
+                render();
+            } else {
+                update(); render();
+                if (MP.active && MP.isHost) mpBroadcastState();
+            }
             const btnS = document.getElementById('swing-btn'); const btnC = document.getElementById('change-btn'); const btnA = document.getElementById('sim-btn'); const btnSt = document.getElementById('steal-btn');
-            if (isMobile && G.scr === SCR.GAME) {
+            if (MP.active && !MP.isHost) {
+                btnS.classList.remove('show'); btnC.classList.remove('show'); btnA.classList.remove('show'); btnSt.classList.remove('show');
+            } else if (isMobile && G.scr === SCR.GAME) {
                 if (playerBatting() && (G.phase === PH.WAIT_PITCH || G.phase === PH.BATTING)) {
                     btnS.classList.add('show'); btnC.classList.add('show'); btnA.classList.remove('show');
                     if (G.runners[0] || G.runners[1]) btnSt.classList.add('show'); else btnSt.classList.remove('show');
