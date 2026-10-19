@@ -33,6 +33,21 @@
             box-shadow: 0 0 0 2px rgba(0, 200, 100, 0.15), 0 0 50px rgba(0, 140, 60, 0.2), 0 0 100px rgba(0, 0, 0, 0.95);
         }
 
+        #c3d {
+            position: fixed;
+            left: 0;
+            top: 0;
+            display: none;
+            pointer-events: none;
+            box-shadow: none;
+            cursor: default;
+        }
+
+        #c {
+            position: relative;
+            z-index: 1;
+        }
+
         #mobile-overlay {
             position: fixed;
             bottom: 0;
@@ -176,6 +191,7 @@
 </head>
 
 <body>
+    <canvas id="c3d"></canvas>
     <canvas id="c"></canvas>
     <div id="mobile-overlay">
         <button class="mbtn" id="sim-btn">⚡<br>自動</button>
@@ -210,6 +226,8 @@
             <div id="mp-guest-status">連線中...</div>
         </div>
     </div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="stadium3d.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.js"></script>
     <script>
@@ -217,11 +235,21 @@
         const ctx = canvas.getContext('2d');
         const W = 800, H = 600;
 
+        const S3D = Stadium3D;
+        const c3d = document.getElementById('c3d');
+        let uiScale = 1;
         function resize() {
             const s = Math.min(window.innerWidth / W, window.innerHeight / H);
+            const dpr = Math.min(window.devicePixelRatio || 1, 2);
             canvas.style.width = W * s + 'px'; canvas.style.height = H * s + 'px';
-            canvas.width = W; canvas.height = H;
+            canvas.width = Math.round(W * s * dpr); canvas.height = Math.round(H * s * dpr);
+            uiScale = canvas.width / W;
+            if (S3D.ok) {
+                const r = canvas.getBoundingClientRect();
+                S3D.resize(window.innerWidth, window.innerHeight, { x: r.left, y: r.top, w: r.width, h: r.height });
+            }
         }
+        S3D.init(c3d);
         resize();
         window.addEventListener('resize', resize);
 
@@ -832,8 +860,8 @@
 
         function updatePointerPos(clientX, clientY) {
             const rect = canvas.getBoundingClientRect();
-            mouseX = (clientX - rect.left) * (canvas.width / rect.width);
-            mouseY = (clientY - rect.top) * (canvas.height / rect.height);
+            mouseX = (clientX - rect.left) * (W / rect.width);
+            mouseY = (clientY - rect.top) * (H / rect.height);
         }
 
         canvas.addEventListener('mousemove', e => updatePointerPos(e.clientX, e.clientY));
@@ -1024,7 +1052,7 @@
                 type = 'K';
             }
 
-            if (type === 'HR' || type === '1B' || type === '2B') {
+            if (type === 'HR' || type === '1B' || type === '2B' || type === 'OUT') {
                 G.hitEffectFrame = G.frame;
                 G.hitType = type;
                 G.hitFlyDir = (Math.random() < 0.5 ? 1 : -1) * (0.6 + Math.random() * 0.8);
@@ -1398,7 +1426,7 @@
                 }
                 case PH.HR_RUN: {
                     const hrElapsed = G.frame - G.hrRunFrame;
-                    const HR_LEG = 22; // frames per base leg
+                    const HR_LEG = 45; // frames per base leg
                     if (hrElapsed >= 4 * HR_LEG + 18) {
                         showRes('全壘打！', 'HOMERUN', '#FFD700', false);
                     }
@@ -1417,7 +1445,11 @@
         // ==========================================
 
         function render() {
+            ctx.setTransform(uiScale, 0, 0, uiScale, 0, 0);
             ctx.clearRect(0, 0, W, H);
+            const want3D = S3D.ok && (G.scr === SCR.GAME || G.scr === SCR.TITLE);
+            if (want3D !== S3D.visible) { S3D.show(want3D); canvas.style.boxShadow = want3D ? 'none' : ''; }
+            if (want3D && G.scr === SCR.TITLE) S3D.renderTitle();
             if (G.scr === SCR.TITLE) renderTitle();
             else if (G.scr === SCR.SELECT) renderSelect();
             else if (G.scr === SCR.LINEUP) renderLineup();
@@ -1564,7 +1596,7 @@
         // ── HR base-run animation ──
         function drawHRRunners() {
             if (G.phase !== PH.HR_RUN || !G.hrRunners.length) return;
-            const HR_LEG = 22;
+            const HR_LEG = 45;
             const elapsed = G.frame - G.hrRunFrame;
             const team = batTeamInfo();
             const basePts = [
@@ -1711,14 +1743,16 @@
         // ==========================================
 
         function renderTitle() {
-            const bg = ctx.createRadialGradient(W / 2, H * 0.42, 20, W / 2, H * 0.42, W);
-            bg.addColorStop(0, '#0c2240'); bg.addColorStop(0.55, '#061528'); bg.addColorStop(1, '#020810');
+            const live3D = S3D.ok && S3D.visible;
+            const bg = ctx.createRadialGradient(W / 2, H * 0.42, 20, W / 2, H * 0.42, live3D ? W * 0.5 : W);
+            if (live3D) { bg.addColorStop(0, 'rgba(3,10,22,0.8)'); bg.addColorStop(0.55, 'rgba(3,10,22,0.42)'); bg.addColorStop(1, 'rgba(3,10,22,0)'); }
+            else { bg.addColorStop(0, '#0c2240'); bg.addColorStop(0.55, '#061528'); bg.addColorStop(1, '#020810'); }
             ctx.fillStyle = bg; ctx.fillRect(0, 0, W, H);
             const grassGlow = ctx.createRadialGradient(W / 2, H + 30, 20, W / 2, H + 30, 350);
             grassGlow.addColorStop(0, 'rgba(0,140,50,0.18)'); grassGlow.addColorStop(1, 'rgba(0,0,0,0)');
-            ctx.fillStyle = grassGlow; ctx.fillRect(0, H / 2, W, H / 2);
+            if (!live3D) { ctx.fillStyle = grassGlow; ctx.fillRect(0, H / 2, W, H / 2); }
 
-            for (let i = 0; i < 90; i++) {
+            for (let i = 0; i < (live3D ? 0 : 90); i++) {
                 const px = (i * 197.3 + G.frame * 0.12) % W;
                 const py = (i * 83.7 + Math.sin(i) * 40) % (H * 0.78);
                 const alpha = (0.15 + 0.55 * Math.abs(Math.sin(G.frame * 0.055 + i * 0.9))) * 0.7;
@@ -1868,7 +1902,167 @@
             });
         }
 
+        function stage3DInfo() {
+            const aw = TEAMS[G.awayIdx], hw = TEAMS[G.homeIdx];
+            return {
+                PH, batTeam: batTeamInfo(), pitTeam: pitTeamInfo(), batter: getBatter(), pitcher: getPitcher(),
+                humanPitching: MP.active || !playerBatting(), humanBatting: MP.active || playerBatting(),
+                ballProgress: G.ballActive ? ballProgress() : 0,
+                awayAbbr: aw.abbr, homeAbbr: hw.abbr, awayCol: aw.c1, homeCol: hw.c1
+            };
+        }
+
+        // ==========================================
+        // BROADCAST-STYLE HUD (used with the 3D stadium)
+        // ==========================================
+        const HUD_FONT = '"PingFang TC","Microsoft JhengHei","Noto Sans TC",Arial,sans-serif';
+        function hudText(str, x, y, size, col, align = 'left', weight = 'bold') {
+            ctx.font = `${weight} ${size}px ${HUD_FONT}`; ctx.textAlign = align; ctx.fillStyle = col; ctx.fillText(str, x, y);
+        }
+        function hudPanel(x, y, w, h, r = 10, accent = null) {
+            ctx.save();
+            ctx.shadowColor = 'rgba(0,0,0,0.5)'; ctx.shadowBlur = 14; ctx.shadowOffsetY = 3;
+            const g = ctx.createLinearGradient(0, y, 0, y + h);
+            g.addColorStop(0, 'rgba(22,30,46,0.9)'); g.addColorStop(1, 'rgba(8,12,22,0.92)');
+            ctx.fillStyle = g; drawRoundRect(ctx, x, y, w, h, r); ctx.fill();
+            ctx.shadowColor = 'transparent';
+            ctx.strokeStyle = 'rgba(255,255,255,0.12)'; ctx.lineWidth = 1; drawRoundRect(ctx, x + 0.5, y + 0.5, w - 1, h - 1, r); ctx.stroke();
+            if (accent) { ctx.fillStyle = accent; ctx.save(); drawRoundRect(ctx, x, y, w, h, r); ctx.clip(); ctx.fillRect(x, y, 5, h); ctx.restore(); }
+            ctx.restore();
+        }
+        function hudDots(x, y, n, max, col) {
+            for (let i = 0; i < max; i++) {
+                ctx.beginPath(); ctx.arc(x + i * 16, y, 5.5, 0, Math.PI * 2);
+                if (i < n) { ctx.fillStyle = col; ctx.shadowColor = col; ctx.shadowBlur = 8; ctx.fill(); ctx.shadowBlur = 0; }
+                else { ctx.fillStyle = 'rgba(255,255,255,0.12)'; ctx.fill(); ctx.strokeStyle = 'rgba(255,255,255,0.22)'; ctx.lineWidth = 1; ctx.stroke(); }
+            }
+        }
+        function hudTeamColor(t) { const c = t.c1 || '#888'; const r = parseInt(c.slice(1, 3), 16), g = parseInt(c.slice(3, 5), 16), b = parseInt(c.slice(5, 7), 16); return (0.299 * r + 0.587 * g + 0.114 * b) < 40 ? (t.c2 || '#888') : c; }
+
+        function renderBroadcastHUD() {
+            const aw = TEAMS[G.awayIdx], hw = TEAMS[G.homeIdx];
+            const batTeam = G.half === 0 ? aw : hw, pitTeam = G.half === 0 ? hw : aw;
+            const batter = getBatter(), pitcher = getPitcher();
+
+            // ── score bug (top-left) ──
+            const x0 = 14, y0 = 14, w0 = 252;
+            hudPanel(x0, y0, w0, 58, 10);
+            [[aw, 0], [hw, 1]].forEach(([t, i]) => {
+                const y = y0 + 5 + i * 25, active = (G.half === i);
+                ctx.fillStyle = hudTeamColor(t); drawRoundRect(ctx, x0 + 8, y + 2, 5, 19, 2); ctx.fill();
+                hudText(t.abbr, x0 + 20, y + 19, t.abbr.length <= 2 ? 17 : 14, active ? '#fff' : 'rgba(255,255,255,0.62)');
+                const flash = G.scoreFlash[i] > 0;
+                ctx.save();
+                if (flash) { ctx.shadowColor = '#FFD700'; ctx.shadowBlur = 16; }
+                hudText(String(G.score[i]), x0 + 128, y + 21, 22, flash ? '#FFD700' : '#fff', 'right');
+                ctx.restore();
+            });
+            ctx.strokeStyle = 'rgba(255,255,255,0.14)'; ctx.beginPath(); ctx.moveTo(x0 + 142, y0 + 8); ctx.lineTo(x0 + 142, y0 + 50); ctx.stroke();
+            hudText((G.half === 0 ? '▲' : '▼') + ' ' + G.inning, x0 + 153, y0 + 26, 19, '#7dffb0');
+            // bases diamond
+            const bx = x0 + 218, by = y0 + 30;
+            [[0, -11, G.runners[1]], [11, 0, G.runners[0]], [-11, 0, G.runners[2]]].forEach(([dx, dy, on]) => {
+                ctx.save(); ctx.translate(bx + dx, by + dy); ctx.rotate(Math.PI / 4);
+                if (on) { ctx.fillStyle = '#ffd23a'; ctx.shadowColor = '#ffb300'; ctx.shadowBlur = 10; } else ctx.fillStyle = 'rgba(255,255,255,0.16)';
+                ctx.fillRect(-5.5, -5.5, 11, 11); ctx.restore();
+            });
+            // count strip
+            hudPanel(x0, y0 + 64, w0, 28, 8);
+            hudText('B', x0 + 12, y0 + 83, 13, '#9fb0cc'); hudDots(x0 + 32, y0 + 78, G.balls, 3, '#35e07a');
+            hudText('S', x0 + 94, y0 + 83, 13, '#9fb0cc'); hudDots(x0 + 112, y0 + 78, G.strikes, 2, '#ffd23a');
+            hudText('O', x0 + 160, y0 + 83, 13, '#9fb0cc'); hudDots(x0 + 178, y0 + 78, G.outs, 2, '#ff5a44');
+
+            // ── batter card (bottom-left) ──
+            const cx = 14, cy = H - 84, cw = 226, chh = 70;
+            hudPanel(cx, cy, cw, chh, 12, hudTeamColor(batTeam));
+            ctx.fillStyle = hudTeamColor(batTeam); ctx.beginPath(); ctx.arc(cx + 34, cy + 28, 16, 0, Math.PI * 2); ctx.fill();
+            hudText(String(G.batOrder[G.half] + 1), cx + 34, cy + 34, 17, '#fff', 'center');
+            hudText(batter.name, cx + 58, cy + 30, 20, '#fff');
+            hudText(`打擊率 ${batter.avg}  ${batter.hr}轟  ${batter.rbi}打點`, cx + 58, cy + 48, 11, 'rgba(200,215,240,0.85)', 'left', 'normal');
+            const rating = Math.round((batter.con + batter.pow + batter.spd) / 3);
+            const cond = rating >= 85 ? '絕好調' : rating >= 72 ? '好調' : '普通';
+            hudText(cond, cx + cw - 12, cy + 28, 11, rating >= 85 ? '#ff9a3a' : rating >= 72 ? '#5dff9a' : '#aab', 'right');
+            const bx2 = cx + 58, bw2 = cw - 72, byy = cy + 56;
+            ctx.fillStyle = 'rgba(255,255,255,0.1)'; drawRoundRect(ctx, bx2, byy, bw2, 6, 3); ctx.fill();
+            const pg = ctx.createLinearGradient(bx2, 0, bx2 + bw2, 0); pg.addColorStop(0, '#2ee06a'); pg.addColorStop(0.65, '#d4f03a'); pg.addColorStop(1, '#ff5a2a');
+            ctx.save(); drawRoundRect(ctx, bx2, byy, bw2, 6, 3); ctx.clip(); ctx.fillStyle = pg; ctx.fillRect(bx2, byy, bw2 * batter.pow / 100, 6); ctx.restore();
+            
+
+            // ── pitcher card (top-right, under the exit button) ──
+            const pw = 234, px = W - pw - 14, py = 64, ph = 62;
+            hudPanel(px, py, pw, ph, 12, hudTeamColor(pitTeam));
+            hudText(pitcher.name, px + 16, py + 26, 19, '#fff');
+            const sideIdx = G.half === 0 ? 1 : 0, pc = G.pitchCounts[sideIdx];
+            const stm = Math.max(0, 1 - pc / pitcher.stm), tired = stm < 0.4;
+            hudText(`防禦率 ${pitcher.era}   K ${pitcher.k}`, px + 16, py + 44, 12, 'rgba(200,215,240,0.85)', 'left', 'normal');
+            hudText(`${pc} 球`, px + pw - 14, py + 44, 12, tired ? '#ff7a55' : 'rgba(200,215,240,0.85)', 'right', 'normal');
+            const sx = px + 16, sw = pw - 32, sy = py + 52;
+            ctx.fillStyle = 'rgba(255,255,255,0.1)'; drawRoundRect(ctx, sx, sy, sw, 5, 2.5); ctx.fill();
+            ctx.save(); drawRoundRect(ctx, sx, sy, sw, 5, 2.5); ctx.clip();
+            ctx.fillStyle = stm > 0.6 ? '#3de07a' : stm > 0.3 ? '#ffc93a' : '#ff4d3a'; ctx.fillRect(sx, sy, sw * stm, 5); ctx.restore();
+            if (tired) hudText('⚠ 疲勞', px + pw - 14, py + 26, 11, '#ff6a4a', 'right');
+        }
+
+        function renderSpeedGun3D() {
+            if (!G.lastPitchKmh || !G.speedGunTimer || G.speedGunTimer <= 0) return;
+            G.speedGunTimer--;
+            const a = Math.min(1, G.speedGunTimer / 14);
+            const pw = 234, px = W - pw - 14, py = 132;
+            ctx.save(); ctx.globalAlpha = a;
+            hudPanel(px, py, pw, 38, 10, '#ffcc33');
+            hudText(G.lastPitchName, px + 16, py + 24, 14, 'rgba(210,225,255,0.9)');
+            ctx.save(); ctx.shadowColor = '#ffcc33'; ctx.shadowBlur = 10;
+            hudText(String(G.lastPitchKmh), px + pw - 50, py + 28, 24, '#ffd84a', 'right'); ctx.restore();
+            hudText('km/h', px + pw - 14, py + 28, 11, 'rgba(255,255,255,0.6)', 'right', 'normal');
+            ctx.restore();
+        }
+
+        function renderZone3D() {
+            if (!S3D.isBatCam()) return;
+            const fielding = (G.phase === PH.PITCH_SELECT || G.phase === PH.AIM || G.phase === PH.POWER_GAUGE || G.phase === PH.BALL_FLIGHT);
+            const x = SZcx - SZw / 2, y = SZcy - SZh / 2;
+            ctx.save();
+            ctx.fillStyle = fielding ? 'rgba(255,255,255,0.07)' : 'rgba(255,60,200,0.06)'; ctx.fillRect(x, y, SZw, SZh);
+            ctx.strokeStyle = 'rgba(255,255,255,0.28)'; ctx.lineWidth = 1;
+            for (let i = 1; i < 3; i++) {
+                ctx.beginPath(); ctx.moveTo(x + SZw * i / 3, y); ctx.lineTo(x + SZw * i / 3, y + SZh); ctx.stroke();
+                ctx.beginPath(); ctx.moveTo(x, y + SZh * i / 3); ctx.lineTo(x + SZw, y + SZh * i / 3); ctx.stroke();
+            }
+            ctx.strokeStyle = fielding ? 'rgba(255,255,255,0.92)' : 'rgba(255,170,230,0.95)'; ctx.lineWidth = 2;
+            ctx.shadowColor = 'rgba(0,0,0,0.6)'; ctx.shadowBlur = 4; ctx.strokeRect(x, y, SZw, SZh);
+            ctx.restore();
+            if (fielding && (G.phase === PH.AIM || G.phase === PH.POWER_GAUGE)) {
+                const cx = SZcx + G.aimX * (SZw / 2), cy = SZcy + G.aimY * (SZh / 2);
+                ctx.save(); ctx.strokeStyle = '#37f0ff'; ctx.lineWidth = 2; ctx.shadowColor = '#37f0ff'; ctx.shadowBlur = 8;
+                ctx.beginPath(); ctx.arc(cx, cy, 9, 0, Math.PI * 2); ctx.stroke();
+                [[-16, 0, -9, 0], [9, 0, 16, 0], [0, -16, 0, -9], [0, 9, 0, 16]].forEach(([a, b, c, d]) => { ctx.beginPath(); ctx.moveTo(cx + a, cy + b); ctx.lineTo(cx + c, cy + d); ctx.stroke(); });
+                ctx.restore();
+            }
+        }
+
+        function renderGame3D() {
+            S3D.frame(G, stage3DInfo());
+            if (G.phase !== PH.HR_RUN) renderZone3D();
+            if (S3D.isBatCam() && (MP.active || playerBatting()) && (G.phase === PH.WAIT_PITCH || G.phase === PH.BATTING)) renderBatCursor();
+            renderHitFlash();
+            renderBroadcastHUD();
+            renderPhaseUI();
+            if (G.phase === PH.SUB_MENU) renderSubMenu();
+            renderResult();
+            renderSpeedGun3D();
+            const qx = W - 115, qy = 15, qw = 100, qh = 40;
+            const qHover = mouseX >= qx && mouseX <= qx + qw && mouseY >= qy && mouseY <= qy + qh;
+            drawGlossyPill(qx, qy, qw, qh, qHover, '🚪 離開', '#660000', '#AA2222', qHover ? '#FFD700' : '#FFF');
+        }
+
+        function renderHitFlash() {
+            const eTime = G.frame - G.hitEffectFrame;
+            if (eTime < 0 || eTime >= 8) return;
+            ctx.fillStyle = `rgba(255,255,255,${0.35 * (1 - eTime / 8)})`; ctx.fillRect(0, 0, W, H);
+        }
+
         function renderGame() {
+            if (S3D.ok && S3D.visible) { renderGame3D(); return; }
             renderPowerProsField();
             drawFieldDefenders();
             drawFieldRunners();
@@ -2248,7 +2442,7 @@
 
         function renderHitEffect() {
             const eTime = G.frame - G.hitEffectFrame;
-            if (eTime < 0 || eTime >= 40) return;
+            if (eTime < 0 || eTime >= 40 || G.hitType === 'OUT') return;
             const cx = SZcx + G.curX * (SZw / 2), cy = SZcy + G.curY * (SZh / 2);
             const isHR = G.hitType === 'HR';
             const alpha = Math.max(0, 1 - eTime / 38);
@@ -2477,8 +2671,8 @@
             const batter = getBatter(); const cx = SZcx + G.curX * (SZw / 2), cy = SZcy + G.curY * (SZh / 2);
             const diffMult = [1.3, 1.0, 0.7][G.difficulty];
             const rx = (30 + (batter.con / 100) * 20) * diffMult, ry = (18 + (batter.con / 100) * 12) * diffMult;
-            ctx.fillStyle = 'rgba(255, 255, 0, 0.3)'; ctx.beginPath(); ctx.ellipse(cx, cy, rx, ry, 0, 0, Math.PI * 2); ctx.fill();
-            ctx.strokeStyle = '#FFFF00'; ctx.lineWidth = 2; ctx.stroke();
+            ctx.fillStyle = 'rgba(255, 235, 60, 0.16)'; ctx.beginPath(); ctx.ellipse(cx, cy, rx, ry, 0, 0, Math.PI * 2); ctx.fill();
+            ctx.strokeStyle = 'rgba(255,238,90,0.95)'; ctx.lineWidth = 2; ctx.stroke();
             ctx.fillStyle = '#FFFFFF'; ctx.beginPath(); ctx.arc(cx, cy, 3, 0, Math.PI * 2); ctx.fill();
             ctx.strokeStyle = '#000000'; ctx.lineWidth = 1; ctx.stroke();
             ctx.strokeStyle = 'rgba(0, 0, 0, 0.8)'; ctx.lineWidth = 1;
@@ -2665,7 +2859,7 @@
         function renderResult() {
             if (G.phase !== PH.RESULT || G.resTimer <= 0) return;
             const alpha = Math.min(1, G.resTimer / 10); ctx.save(); ctx.globalAlpha = alpha;
-            if (G.hitType && G.hitEffectFrame > 0) {
+            if (G.hitType && G.hitType !== 'OUT' && G.hitEffectFrame > 0 && !(S3D.ok && S3D.visible)) {
                 const elapsed = G.frame - G.hitEffectFrame; const maxFly = G.hitType === 'HR' ? 95 : 75;
                 if (elapsed >= 0 && elapsed < maxFly) {
                     const t = elapsed / maxFly; const isHR = G.hitType === 'HR'; const startX = SZcx + G.curX * (SZw / 2), startY = SZcy;
@@ -2951,7 +3145,7 @@
         // Relay guest's own pointer/touch input to the host over the data channel
         function mpCanvasXY(clientX, clientY) {
             const rect = canvas.getBoundingClientRect();
-            return { x: (clientX - rect.left) * (canvas.width / rect.width), y: (clientY - rect.top) * (canvas.height / rect.height) };
+            return { x: (clientX - rect.left) * (W / rect.width), y: (clientY - rect.top) * (H / rect.height) };
         }
         let mpLastPtrSend = 0;
         canvas.addEventListener('mousemove', e => {
