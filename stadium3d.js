@@ -46,9 +46,17 @@ const Stadium3D = (function () {
     let cw = 800, ch = 600;                       // canvas px (CSS px; DPR handled by setPixelRatio)
     let rect = { x: 0, y: 0, w: 800, h: 600 };    // game rect inside the canvas
 
-    const sun = new THREE.DirectionalLight(0xfff1d6, 0.95);
+    const sun = new THREE.DirectionalLight(0xfff2dc, 1.15);
     let scoreboardCtx = null, scoreboardTex = null, scoreboardKey = '';
     let flashPts = null;
+    const flags = [];
+    function waveFlags(t) {
+        flags.forEach((f, i) => {
+            const pos = f.geometry.attributes.position, base = f.userData.base;
+            for (let k = 0; k < pos.count; k++) { const x = base[k * 3]; pos.array[k * 3 + 2] = Math.sin(x * 0.9 - t * 3 + i) * 0.45 * (x / 11); pos.array[k * 3 + 1] = base[k * 3 + 1] + Math.sin(x * 0.6 - t * 2.4 + i) * 0.12 * (x / 11); }
+            pos.needsUpdate = true;
+        });
+    }
 
     function canvasOf(w, h) { const c = document.createElement('canvas'); c.width = w; c.height = h; return c; }
     function texOf(c, o = {}) {
@@ -65,11 +73,11 @@ const Stadium3D = (function () {
         const c = canvasOf(S, S), g = c.getContext('2d');
         const X = x => (x - X0) * m, Z = z => (z - Z0) * m;
         const R = seeded(11);
-        g.fillStyle = '#2d7a34'; g.fillRect(0, 0, S, S);
+        g.fillStyle = '#26702f'; g.fillRect(0, 0, S, S);
 
         const stripes = () => {
             for (let i = 0, z = Z0; z < 60; z += 5.2, i++) {
-                g.fillStyle = i % 2 ? '#2c7a35' : '#36903f';
+                g.fillStyle = i % 2 ? '#256c2d' : '#2d7c37';
                 g.fillRect(0, Z(z), S, 5.2 * m + 1);
             }
         };
@@ -95,7 +103,7 @@ const Stadium3D = (function () {
 
         // infield skin
         const skin = g.createRadialGradient(X(0), Z(MOUND_Z), 3 * m, X(0), Z(MOUND_Z), 29 * m);
-        skin.addColorStop(0, '#b5834f'); skin.addColorStop(1, '#a8764a');
+        skin.addColorStop(0, '#a47248'); skin.addColorStop(1, '#996a42');
         g.fillStyle = skin; g.beginPath(); g.arc(X(0), Z(MOUND_Z), 28.6 * m, 0, Math.PI * 2); g.fill();
 
         // infield grass (diamond, scaled in around its centre)
@@ -107,7 +115,7 @@ const Stadium3D = (function () {
         grain(30000, ['rgba(20,70,25,0.16)', 'rgba(120,190,100,0.10)'], 2);
         g.restore();
         // mound + base cut-outs
-        g.fillStyle = '#b8884f';
+        g.fillStyle = '#a77649';
         g.beginPath(); g.arc(X(0), Z(MOUND_Z), 3.1 * m, 0, Math.PI * 2); g.fill();
         BASES.slice(1).forEach(([x, z]) => { g.beginPath(); g.arc(X(x), Z(z), 2.5 * m, 0, Math.PI * 2); g.fill(); });
         g.beginPath(); g.arc(X(0), Z(0), 4.4 * m, 0, Math.PI * 2); g.fill();
@@ -128,7 +136,7 @@ const Stadium3D = (function () {
     function buildPlateDirtTexture() {
         const S = 1536, c = canvasOf(S, S), g = c.getContext('2d'), R = seeded(5), m = S / 14;
         const X = x => (x + 7) * m, Z = z => (z + 7) * m;
-        g.fillStyle = '#b4824f'; g.fillRect(0, 0, S, S);
+        g.fillStyle = '#a2704a'; g.fillRect(0, 0, S, S);
         for (let i = 0; i < 150000; i++) {
             g.fillStyle = R() < 0.5 ? 'rgba(90,55,25,0.18)' : 'rgba(230,190,135,0.16)';
             g.fillRect(R() * S, R() * S, 2.5, 2.5);
@@ -181,10 +189,19 @@ const Stadium3D = (function () {
     }
 
     function buildSkyTexture() {
-        const c = canvasOf(8, 256), g = c.getContext('2d');
-        const gr = g.createLinearGradient(0, 0, 0, 256);
-        gr.addColorStop(0, '#04070f'); gr.addColorStop(0.55, '#0c1730'); gr.addColorStop(0.85, '#1b2c55'); gr.addColorStop(1, '#2b3c6a');
-        g.fillStyle = gr; g.fillRect(0, 0, 8, 256);
+        const c = canvasOf(1024, 512), g = c.getContext('2d'), R = seeded(21);
+        const gr = g.createLinearGradient(0, 0, 0, 512);
+        gr.addColorStop(0, '#2f78d2'); gr.addColorStop(0.45, '#5a9fe6'); gr.addColorStop(0.8, '#a6d0f3'); gr.addColorStop(1, '#d9ecfa');
+        g.fillStyle = gr; g.fillRect(0, 0, 1024, 512);
+        for (let i = 0; i < 26; i++) {           // soft cumulus puffs
+            const cx = R() * 1024, cy = 90 + R() * 300, n = 6 + (R() * 8 | 0);
+            for (let k = 0; k < n; k++) {
+                const x = cx + (R() - 0.5) * 150, y = cy + (R() - 0.5) * 26, r = 26 + R() * 44;
+                const rg = g.createRadialGradient(x, y, 0, x, y, r);
+                rg.addColorStop(0, 'rgba(255,255,255,0.55)'); rg.addColorStop(1, 'rgba(255,255,255,0)');
+                g.fillStyle = rg; g.fillRect(x - r, y - r, r * 2, r * 2);
+            }
+        }
         return c;
     }
 
@@ -219,10 +236,10 @@ const Stadium3D = (function () {
 
     function buildStadium() {
         scene.background = texOf(buildSkyTexture());
-        scene.fog = new THREE.FogExp2(0x0c1630, 0.0032);
+        scene.fog = new THREE.FogExp2(0xb9d6ee, 0.0017);
 
-        scene.add(new THREE.HemisphereLight(0xa9bde8, 0x2c3a26, 0.62));
-        sun.position.set(-28, 60, 30);
+        scene.add(new THREE.HemisphereLight(0xcfe2ff, 0x6f7f4c, 0.5));
+        sun.position.set(-38, 72, 40);
         sun.castShadow = true;
         sun.shadow.mapSize.set(2048, 2048);
         const sc = sun.shadow.camera; sc.left = -34; sc.right = 34; sc.top = 34; sc.bottom = -34; sc.near = 10; sc.far = 140;
@@ -265,7 +282,7 @@ const Stadium3D = (function () {
         });
 
         // mound + rubber
-        const mound = new THREE.Mesh(new THREE.CylinderGeometry(2.6, 4.2, 0.26, 40), new THREE.MeshStandardMaterial({ color: 0xb8864f, roughness: 1 }));
+        const mound = new THREE.Mesh(new THREE.CylinderGeometry(2.6, 4.2, 0.26, 40), new THREE.MeshStandardMaterial({ color: 0xa6764a, roughness: 1 }));
         mound.position.set(0, 0.13, MOUND_Z); mound.receiveShadow = true; mound.castShadow = false; scene.add(mound);
         const rubber = new THREE.Mesh(new THREE.BoxGeometry(0.61, 0.04, 0.15), chalk);
         rubber.position.set(0, 0.28, MOUND_Z); scene.add(rubber);
@@ -278,7 +295,7 @@ const Stadium3D = (function () {
             const x = r * Math.sin(th), z = -r * Math.cos(th);
             wallRows.push([[x, 0, z], [x, 3.0, z]]);
         }
-        const wall = stripMesh(wallRows, 1 / 64, 1 / 3.0, new THREE.MeshStandardMaterial({ map: wallTex, roughness: 0.7, side: THREE.DoubleSide, emissive: 0x223322, emissiveIntensity: 0.35 }));
+        const wall = stripMesh(wallRows, 1 / 64, 1 / 3.0, new THREE.MeshStandardMaterial({ map: wallTex, roughness: 0.7, side: THREE.DoubleSide, emissive: 0x112211, emissiveIntensity: 0.15 }));
         scene.add(wall);
 
         // batter's eye (dark green panel behind CF)
@@ -295,7 +312,7 @@ const Stadium3D = (function () {
         // stands: lower deck, concourse wall, upper deck, roof lip
         const crowdA = texOf(buildCrowdTexture(3, ['#c8102e', '#e0e0e0']), { wrap: true });
         const crowdB = texOf(buildCrowdTexture(9, ['#0b3d91', '#d8d8d8']), { wrap: true });
-        const mkCrowdMat = t => new THREE.MeshBasicMaterial({ map: t, side: THREE.DoubleSide, color: 0x9aa0b0 });
+        const mkCrowdMat = t => new THREE.MeshBasicMaterial({ map: t, side: THREE.DoubleSide, color: 0xe4e8f2 });
         const arc = (fnIn, yIn, fnOut, yOut, th0, th1, mat, su, sv) => {
             const rows = [], n = 200;
             for (let i = 0; i <= n; i++) {
@@ -306,19 +323,18 @@ const Stadium3D = (function () {
             const m = stripMesh(rows, su, sv, mat); scene.add(m); return m;
         };
         const T0 = -Math.PI * 0.62, T1 = Math.PI * 0.62;
-        arc(th => bowlR(th) + 2, 3.2, th => bowlR(th) + 24, 17, T0, T1, mkCrowdMat(crowdA), 1 / 40, 1 / 20);
-        arc(th => bowlR(th) + 24, 17, th => bowlR(th) + 27, 17, T0, T1, new THREE.MeshBasicMaterial({ color: 0x1b1f2b, side: THREE.DoubleSide }), 1, 1);
-        arc(th => bowlR(th) + 27, 17, th => bowlR(th) + 29, 26, T0, T1, new THREE.MeshBasicMaterial({ color: 0x222838, side: THREE.DoubleSide }), 1, 1);
-        arc(th => bowlR(th) + 29, 26, th => bowlR(th) + 56, 52, T0, T1, mkCrowdMat(crowdB), 1 / 40, 1 / 26);
-        arc(th => bowlR(th) + 56, 52, th => bowlR(th) + 56, 66, T0, T1, new THREE.MeshBasicMaterial({ color: 0x0c0f18, side: THREE.DoubleSide }), 1, 1);
-        arc(th => bowlR(th) + 56, 66, th => bowlR(th) + 22, 66, T0, T1, new THREE.MeshBasicMaterial({ color: 0x0a0c14, side: THREE.DoubleSide }), 1, 1);
-        // sideline / lower fascia glow strip
-        arc(th => bowlR(th) + 2, 3.2, th => bowlR(th) + 2, 0, T0, T1, new THREE.MeshBasicMaterial({ color: 0x20304a, side: THREE.DoubleSide }), 1, 1);
+        arc(th => bowlR(th) + 3, 3.2, th => bowlR(th) + 26, 10.5, T0, T1, mkCrowdMat(crowdA), 1 / 40, 1 / 20);
+        arc(th => bowlR(th) + 26, 10.5, th => bowlR(th) + 29, 10.5, T0, T1, new THREE.MeshBasicMaterial({ color: 0x8a93a6, side: THREE.DoubleSide }), 1, 1);
+        arc(th => bowlR(th) + 29, 10.5, th => bowlR(th) + 31, 15, T0, T1, new THREE.MeshBasicMaterial({ color: 0x9aa3b6, side: THREE.DoubleSide }), 1, 1);
+        arc(th => bowlR(th) + 31, 15, th => bowlR(th) + 58, 28, T0, T1, mkCrowdMat(crowdB), 1 / 40, 1 / 26);
+        arc(th => bowlR(th) + 58, 28, th => bowlR(th) + 58, 32, T0, T1, new THREE.MeshBasicMaterial({ color: 0x6c7488, side: THREE.DoubleSide }), 1, 1);
+        arc(th => bowlR(th) + 58, 32, th => bowlR(th) + 24, 32, T0, T1, new THREE.MeshBasicMaterial({ color: 0x5a6174, side: THREE.DoubleSide }), 1, 1);
+        arc(th => bowlR(th) + 3, 3.2, th => bowlR(th) + 3, 0, T0, T1, new THREE.MeshBasicMaterial({ color: 0x7b869c, side: THREE.DoubleSide }), 1, 1);
 
         // scoreboard
         const sb = canvasOf(1024, 400); scoreboardCtx = sb.getContext('2d'); scoreboardTex = texOf(sb);
         const board = new THREE.Mesh(new THREE.PlaneGeometry(36, 14), new THREE.MeshBasicMaterial({ map: scoreboardTex }));
-        board.position.set(0, 21, -bowlR(0) - 22.5); scene.add(board);
+        board.position.set(0, 14, -bowlR(0) - 14); scene.add(board);
         drawScoreboard(null);
 
         // light towers
@@ -334,16 +350,32 @@ const Stadium3D = (function () {
             const panel = new THREE.Mesh(new THREE.PlaneGeometry(14, 10), new THREE.MeshBasicMaterial({ map: panelTex, side: THREE.DoubleSide }));
             panel.position.y = 66; panel.lookAt(0, 66, 0); gr.add(panel);
             const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: glow, blending: THREE.AdditiveBlending, depthWrite: false, fog: false, opacity: 0.8 }));
-            sp.scale.set(46, 46, 1); sp.position.y = 66; gr.add(sp);
+            sp.scale.set(46, 46, 1); sp.position.y = 66;   // (glow only matters for night games)
             gr.position.set(x, 0, z); scene.add(gr);
             panel.rotation.set(0, Math.atan2(-x, -z) + Math.PI, 0);
+        });
+
+        // flags along the top of the upper deck
+        const fc = canvasOf(256, 140), fg0 = fc.getContext('2d');
+        for (let i = 0; i < 13; i++) { fg0.fillStyle = i % 2 ? '#ffffff' : '#c8202f'; fg0.fillRect(0, i * 140 / 13, 256, 140 / 13 + 1); }
+        fg0.fillStyle = '#2a3f8f'; fg0.fillRect(0, 0, 110, 76);
+        fg0.fillStyle = '#fff'; for (let y = 8; y < 74; y += 14) for (let x = 8; x < 108; x += 16) fg0.fillRect(x + ((y / 14) % 2 ? 8 : 0) - 2, y, 4, 4);
+        const flagTex = texOf(fc);
+        [[-42, 0.9], [0, 1.1], [42, 0.9]].forEach(([fx, sc2]) => {
+            const th = Math.atan2(fx, 150), r = bowlR(th) + 56;
+            const x = r * Math.sin(th), z = -r * Math.cos(th);
+            const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.16, 26, 8), new THREE.MeshStandardMaterial({ color: 0xe8e8ee, roughness: 0.4 }));
+            pole.position.set(x, 32 + 13, z); scene.add(pole);
+            const g2 = new THREE.PlaneGeometry(11 * sc2, 6.2 * sc2, 12, 4); g2.translate(5.5 * sc2, 0, 0);
+            const flag = new THREE.Mesh(g2, new THREE.MeshBasicMaterial({ map: flagTex, side: THREE.DoubleSide }));
+            flag.position.set(x, 32 + 22, z); flag.userData.base = g2.attributes.position.array.slice(); flags.push(flag); scene.add(flag);
         });
 
         // camera-flash sparkles in the crowd
         const n = 260, p = new Float32Array(n * 3), ph = new Float32Array(n), sz = new Float32Array(n);
         for (let i = 0; i < n; i++) {
             const th = rnd(-Math.PI * 0.55, Math.PI * 0.55), u = Math.random();
-            const r = bowlR(th) + lerp(4, 22, u), y = lerp(5, 16, u);
+            const r = bowlR(th) + lerp(6, 26, u), y = lerp(4, 11, u);
             p[i * 3] = r * Math.sin(th); p[i * 3 + 1] = y; p[i * 3 + 2] = -r * Math.cos(th);
             ph[i] = rnd(0, 100); sz[i] = rnd(1.5, 3.5);
         }
@@ -399,14 +431,24 @@ const Stadium3D = (function () {
         pts.sort((p1, p2) => p1.y - p2.y);
         return new THREE.LatheGeometry(pts, seg);
     }
+    // lathe limb from [radius, y] key points (top first); rounded caps at both ends
+    function limbGeo(keys, seg = 12) {
+        const pts = [], first = keys[0], last = keys[keys.length - 1];
+        for (let i = 0; i <= 5; i++) { const t = (i / 5) * Math.PI / 2; pts.push([first[0] * Math.sin(t), first[1] + first[0] * Math.cos(t)]); }
+        keys.forEach(k => pts.push(k));
+        for (let i = 1; i <= 5; i++) { const t = (i / 5) * Math.PI / 2; pts.push([last[0] * Math.cos(t), last[1] - last[0] * Math.sin(t)]); }
+        // smooth the key radii with a Catmull-Rom style resample
+        const v = pts.map(q => new THREE.Vector2(q[0], q[1])).sort((p1, p2) => p1.y - p2.y);
+        return new THREE.LatheGeometry(v, seg);
+    }
     function buildGeos() {
         const pr = [[0, -0.03], [0.15, -0.03], [0.162, 0.03], [0.152, 0.13], [0.17, 0.27], [0.2, 0.42], [0.208, 0.5], [0.185, 0.575], [0.1, 0.625], [0, 0.635]].map(([r, y]) => new THREE.Vector2(r, y));
         geo.torso = new THREE.LatheGeometry(pr, 18);
-        geo.upperArm = capsuleGeo(0.29, 0.058, 0.048, 10);
-        geo.foreArm = capsuleGeo(0.27, 0.047, 0.037, 10);
-        geo.thigh = capsuleGeo(0.46, 0.1, 0.074, 12);
-        geo.shin = capsuleGeo(0.44, 0.074, 0.05, 12);
-        geo.sock = new THREE.CylinderGeometry(0.067, 0.058, 0.2, 12).translate(0, -0.33, 0);
+        geo.upperArm = limbGeo([[0.06, 0], [0.066, -0.07], [0.066, -0.15], [0.054, -0.24], [0.047, -0.29]], 12);
+        geo.foreArm = limbGeo([[0.047, 0], [0.05, -0.05], [0.047, -0.11], [0.036, -0.22], [0.033, -0.27]], 12);
+        geo.thigh = limbGeo([[0.102, 0], [0.104, -0.08], [0.094, -0.26], [0.078, -0.42], [0.072, -0.46]], 14);
+        geo.shin = limbGeo([[0.072, 0], [0.078, -0.1], [0.076, -0.2], [0.058, -0.36], [0.05, -0.44]], 14);
+        geo.sock = new THREE.CylinderGeometry(0.084, 0.064, 0.2, 14).translate(0, -0.33, 0);
         geo.ball = new THREE.SphereGeometry(1, 14, 10);
         geo.head = new THREE.SphereGeometry(0.108, 20, 16);
         geo.cap = new THREE.SphereGeometry(0.122, 20, 10, 0, Math.PI * 2, 0, Math.PI * 0.5);
@@ -421,16 +463,20 @@ const Stadium3D = (function () {
         const m = {
             jersey: std(0xffffff), accent: std(0xcccccc), pants: std(0xeeeeee), sock: std(0xcccccc), skin: std(0xe0ac84, { roughness: 0.7 }),
             cap: std(0x222222, { roughness: 0.6 }), shoe: std(0x15151a, { roughness: 0.5 }), glove: std(0x6b3b1a, { roughness: 0.7 }),
-            dark: std(0x101014), gear: std(0x1a2238, { roughness: 0.6 }), bat: std(0xc99a5c, { roughness: 0.5 })
+            dark: std(0x101014), gear: std(0x1a2238, { roughness: 0.6 }), bat: std(0xc99a5c, { roughness: 0.5 }),
+            hand: std(0xe0ac84, { roughness: 0.7 }), sleeve: std(0xffffff), band: std(0xffffff, { roughness: 0.6 }), hair: std(0x17120e, { roughness: 0.9 }), sole: std(0xe6e6ea, { roughness: 0.6 })
         };
+        const jerseyC = canvasOf(256, 256), jerseyT = new THREE.CanvasTexture(jerseyC);
+        jerseyT.wrapS = THREE.RepeatWrapping; jerseyT.offset.x = 0.5; jerseyT.anisotropy = maxAniso; m.jersey.map = jerseyT;
+        const pantsC = canvasOf(64, 128), pantsT = new THREE.CanvasTexture(pantsC); pantsT.anisotropy = maxAniso; m.pants.map = pantsT;
         const root = new THREE.Group();
         const part = (g, mat, parent, shadow = true) => { const me = new THREE.Mesh(g, mat); me.castShadow = shadow; parent.add(me); return me; };
         const blob = (mat, parent, sx, sy, sz, x = 0, y = 0, z = 0) => { const me = new THREE.Mesh(geo.ball, mat); me.scale.set(sx, sy, sz); me.position.set(x, y, z); me.castShadow = true; parent.add(me); return me; };
         const hips = new THREE.Group(); hips.position.y = HIP_Y; root.add(hips);
-        blob(m.pants, hips, 0.175, 0.135, 0.125, 0, -0.04, 0);
+        blob(m.pants, hips, 0.19, 0.14, 0.14, 0, -0.04, 0);
         const torso = new THREE.Group(); torso.position.y = 0.03; hips.add(torso);
-        const torsoMesh = part(geo.torso, m.jersey, torso); torsoMesh.scale.z = 0.68;
-        const belt = part(new THREE.CylinderGeometry(0.157, 0.157, 0.04, 18).translate(0, -0.02, 0), m.dark, torso, false); belt.scale.z = 0.68;
+        const torsoMesh = part(geo.torso, m.jersey, torso); torsoMesh.scale.set(1.1, 1, 0.8);
+        const belt = part(new THREE.CylinderGeometry(0.157, 0.157, 0.04, 18).translate(0, -0.02, 0), m.dark, torso, false); belt.scale.set(1.1, 1, 0.8);
         const collar = part(new THREE.TorusGeometry(0.075, 0.016, 8, 16), m.accent, torso, false); collar.rotation.x = Math.PI / 2; collar.position.y = 0.625; collar.scale.y = 0.8;
         part(geo.neck, m.skin, torso, false);
         const head = new THREE.Group(); head.position.set(0, 0.74, 0.01); torso.add(head);
@@ -440,6 +486,7 @@ const Stadium3D = (function () {
         blob(m.skin, head, 0.055, 0.04, 0.05, 0, -0.085, 0.05);               // jaw
         [-0.04, 0.04].forEach(x => blob(m.dark, head, 0.013, 0.013, 0.013, x, 0.018, 0.1));   // eyes
         [-0.04, 0.04].forEach(x => { const br = blob(m.dark, head, 0.026, 0.005, 0.01, x, 0.045, 0.098); br.rotation.z = x > 0 ? -0.15 : 0.15; }); // brows
+        blob(m.hair, head, 0.094, 0.07, 0.08, 0, 0.0, -0.04);                // hair under the cap
         // cap / helmet
         const capG = new THREE.Group(); head.add(capG);
         const dome = part(geo.cap, m.cap, capG); dome.position.y = 0.034; dome.scale.set(1, 1.0, 1.05);
@@ -454,24 +501,26 @@ const Stadium3D = (function () {
 
         const mkArm = side => {
             const s = side === 'L' ? 1 : -1;
-            const sh = new THREE.Group(); sh.position.set(0.215 * s, 0.5, 0); torso.add(sh);
-            part(geo.upperArm, m.jersey, sh);
+            const sh = new THREE.Group(); sh.position.set(0.235 * s, 0.5, 0); torso.add(sh);
+            part(geo.upperArm, m.sleeve, sh).scale.set(1.22, 1, 1.22);
             const el = new THREE.Group(); el.position.y = -0.29; sh.add(el);
-            part(geo.foreArm, m.accent, el);
+            part(geo.foreArm, m.accent, el).scale.set(1.2, 1, 1.2);
             const hand = new THREE.Group(); hand.position.y = -0.285; el.add(hand);
-            blob(m.skin, hand, 0.044, 0.056, 0.04, 0, -0.01, 0);
+            blob(m.hand, hand, 0.046, 0.058, 0.042, 0, -0.012, 0);
+            const wb = part(new THREE.CylinderGeometry(0.041, 0.039, 0.05, 12).translate(0, -0.235, 0), m.band, el, false);
             return { sh, el, hand };
         };
         const armL = mkArm('L'), armR = mkArm('R');
         const mkLeg = side => {
             const s = side === 'L' ? 1 : -1;
-            const hp = new THREE.Group(); hp.position.set(0.1 * s, -0.03, 0); hips.add(hp);
-            part(geo.thigh, m.pants, hp);
+            const hp = new THREE.Group(); hp.position.set(0.105 * s, -0.03, 0); hips.add(hp);
+            part(geo.thigh, m.pants, hp).scale.set(1.15, 1, 1.15);
             const kn = new THREE.Group(); kn.position.y = -0.46; hp.add(kn);
-            part(geo.shin, m.pants, kn);
-            part(geo.sock, m.sock, kn, false);
+            part(geo.shin, m.pants, kn).scale.set(1.12, 1, 1.12);
+            part(geo.sock, m.sock, kn, false).scale.set(1.12, 1, 1.12);
             const an = new THREE.Group(); an.position.y = -0.44; kn.add(an);
-            blob(m.shoe, an, 0.055, 0.048, 0.15, 0, -0.04, 0.06);
+            blob(m.shoe, an, 0.056, 0.05, 0.15, 0, -0.035, 0.06);
+            blob(m.sole, an, 0.058, 0.012, 0.152, 0, -0.078, 0.06);
             return { hp, kn, an };
         };
         const legL = mkLeg('L'), legR = mkLeg('R');
@@ -489,9 +538,9 @@ const Stadium3D = (function () {
         // jersey number plate on the back
         const numC = canvasOf(128, 128), numT = new THREE.CanvasTexture(numC);
         const num = new THREE.Mesh(new THREE.PlaneGeometry(0.3, 0.3), new THREE.MeshBasicMaterial({ map: numT, transparent: true }));
-        num.position.set(0, 0.3, -0.132); num.rotation.y = Math.PI; torso.add(num); num.visible = false;
+        num.position.set(0, 0.33, -0.178); num.rotation.y = Math.PI; torso.add(num); num.visible = false;
 
-        const p = { kind, root, hips, torso, head, armL, armR, legL, legR, mats: m, capG, flap, mask, logoC, logoT, numC, numT, num, gloveG, holder, bat, chest, shinGuardL, shinGuardR, brim, belt, fade: 1, teamKey: '' };
+        const p = { kind, root, hips, torso, head, armL, armR, legL, legR, mats: m, jerseyC, jerseyT, pantsC, pantsT, capG, flap, mask, logoC, logoT, numC, numT, num, gloveG, holder, bat, chest, shinGuardL, shinGuardR, brim, belt, fade: 1, teamKey: '' };
         p.allMats = Object.values(m);
         root.traverse(o => { if (o.isMesh) o.frustumCulled = true; });
         scene.add(root);
@@ -511,13 +560,33 @@ const Stadium3D = (function () {
         const jl = lum(team.jersey || '#ffffff');
         const jersey = isHome ? (team.jersey || '#ffffff') : (jl > 0.8 ? '#c4c9d2' : (team.jersey || '#c4c9d2'));
         const c2 = team.c2 && team.c2.toLowerCase() !== '#ffffff' ? team.c2 : team.c1;
-        p.mats.jersey.color.set(jersey);
+        p.mats.jersey.color.set(0xffffff); p.mats.pants.color.set(0xffffff); p.mats.sleeve.color.set(jersey);
         p.mats.accent.color.set(isHome ? (jl > 0.6 ? '#f1f1f4' : c2) : c2);
-        p.mats.pants.color.set(isHome ? '#f3f3f6' : '#c9ced8');
+        p.mats.band.color.set(c2);
+        const pantsHex = isHome ? '#f3f3f6' : '#c9ced8';
+        // jersey texture: front lettering, side piping, subtle fabric noise
+        {
+            const g = p.jerseyC.getContext('2d'), w = 256, h = 256, pipe = lum(c2) > 0.85 ? team.c1 : c2;
+            g.fillStyle = jersey; g.fillRect(0, 0, w, h);
+            for (let i = 0; i < 700; i++) { g.fillStyle = Math.random() < 0.5 ? 'rgba(0,0,0,0.035)' : 'rgba(255,255,255,0.035)'; g.fillRect(Math.random() * w, Math.random() * h, 3, 2); }
+            g.fillStyle = pipe; [0.25, 0.75].forEach(f => g.fillRect(f * w - 2.5, 0, 5, h));
+            g.fillStyle = 'rgba(0,0,0,0.18)'; g.fillRect(0, h - 10, w, 10);
+            const lt = (team.abbr || '').length;
+            g.font = 'bold ' + (lt <= 2 ? 58 : lt === 3 ? 46 : 36) + 'px "PingFang TC","Microsoft JhengHei",Arial'; g.textAlign = 'center'; g.textBaseline = 'middle';
+            g.lineWidth = 6; g.strokeStyle = pipe; g.lineJoin = 'round'; g.strokeText(team.abbr || '', w / 2, 112);
+            g.fillStyle = lum(jersey) > 0.6 ? team.c1 : '#ffffff'; g.fillText(team.abbr || '', w / 2, 112);
+            g.strokeStyle = pipe; g.lineWidth = 4; g.beginPath(); g.moveTo(w / 2 - 22, 12); g.lineTo(w / 2, 36); g.lineTo(w / 2 + 22, 12); g.stroke();   // collar V
+            p.jerseyT.needsUpdate = true;
+            const q = p.pantsC.getContext('2d'); q.fillStyle = pantsHex; q.fillRect(0, 0, 64, 128);
+            q.fillStyle = pipe; [16, 48].forEach(x => q.fillRect(x - 2, 0, 4, 128));
+            for (let i = 0; i < 200; i++) { q.fillStyle = Math.random() < 0.5 ? 'rgba(0,0,0,0.04)' : 'rgba(255,255,255,0.05)'; q.fillRect(Math.random() * 64, Math.random() * 128, 2, 3); }
+            p.pantsT.needsUpdate = true;
+        }
+        p.gloves = !!opts.helmet; p.mats.hand.color.set(p.gloves ? 0xf4f4f6 : (p.skinColor || 0xe0ac84));
         p.mats.sock.color.set(c2);
         p.mats.cap.color.set(team.c1);
         p.flap.visible = !!opts.helmet;
-        p.mats.cap.roughness = opts.helmet ? 0.25 : 0.7;
+        p.mats.cap.roughness = opts.helmet ? 0.22 : 0.7; p.mats.cap.metalness = opts.helmet ? 0.15 : 0;
         // cap logo
         const g = p.logoC.getContext('2d'); g.clearRect(0, 0, 64, 64);
         const hc = lum(team.c1) > 0.5 ? '#111' : '#fff';
@@ -533,7 +602,7 @@ const Stadium3D = (function () {
 
     function setSkin(p, name) {
         const tones = [0xf1c9a3, 0xe0ac84, 0xc98f63, 0xa8704a, 0x8a5a3a];
-        const k = hash(name || '') % tones.length; p.skinKey = k; p.mats.skin.color.set(tones[k]);
+        const k = hash(name || '') % tones.length; p.skinKey = k; p.skinColor = tones[k]; p.mats.skin.color.set(tones[k]); p.mats.hand.color.set(p.gloves ? 0xf4f4f6 : tones[k]);
     }
 
     // ───────────── poses ─────────────
@@ -659,8 +728,8 @@ const Stadium3D = (function () {
     }
 
     // ───────────────────────── camera rig ─────────────────────────
-    const camS = { pos: new THREE.Vector3(0, 2.1, 7.4), look: new THREE.Vector3(0, ZONE_Y, 0), fov: 25, shift: 100 };
-    const BAT_CAM = { pos: new THREE.Vector3(0, 2.1, 7.4), look: new THREE.Vector3(0, ZONE_Y, 0), shift: 100 };
+    const camS = { pos: new THREE.Vector3(0, 1.6, 7.4), look: new THREE.Vector3(0, ZONE_Y, 0), fov: 25, shift: 100 };
+    const BAT_CAM = { pos: new THREE.Vector3(0, 1.6, 7.4), look: new THREE.Vector3(0, ZONE_Y, 0), shift: 100 };
     BAT_CAM.fov = 2 * Math.atan(GH / (2 * BAT_CAM.pos.distanceTo(BAT_CAM.look) * K)) * 180 / Math.PI;
 
     function applyCamera(cam, st) {
@@ -1161,7 +1230,7 @@ const Stadium3D = (function () {
     api.renderTitle = function () {
         if (!api.ok) return;
         const now = performance.now(); const dt = Math.min(0.1, (now - (S.lastT || now)) / 1000); S.lastT = now;
-        flashPts.material.uniforms.time.value = now / 1000;
+        flashPts.material.uniforms.time.value = now / 1000; waveFlags(now / 1000);
         titleCamera((now - S.birth) / 1000);
         updateParticles(dt);
         actors.fielders.forEach(f => { f.root.visible = false; });
@@ -1174,7 +1243,7 @@ const Stadium3D = (function () {
         if (!api.ok) return;
         const now = performance.now(); const dt = Math.min(0.1, (now - (S.lastT || now)) / 1000); S.lastT = now;
         const df = S.lastFrame === null ? 0 : clamp(G.frame - S.lastFrame, 0, 4); S.lastFrame = G.frame;
-        flashPts.material.uniforms.time.value = now / 1000;
+        flashPts.material.uniforms.time.value = now / 1000; waveFlags(now / 1000);
         actors.fielders.forEach(f => f.root.visible = true);
         actors.pitcher.root.visible = actors.catcher.root.visible = actors.umpire.root.visible = true;
 
