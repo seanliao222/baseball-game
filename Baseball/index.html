@@ -48,21 +48,16 @@
             z-index: 1;
         }
 
+        /* touch buttons sit in the left/right thumb zones so the zone + timing bar stay clear */
         #mobile-overlay {
             position: fixed;
-            bottom: 0;
-            left: 50%;
-            transform: translateX(-50%);
-            width: min(800px, 100vw);
-            padding: 8px 20px max(16px, env(safe-area-inset-bottom));
-            display: flex;
-            justify-content: space-between;
-            align-items: flex-end;
+            inset: 0;
             pointer-events: none;
             z-index: 100;
         }
 
         .mbtn {
+            position: absolute;
             pointer-events: auto;
             border: none;
             border-radius: 50%;
@@ -124,6 +119,26 @@
 
         .mbtn.show {
             display: flex;
+        }
+
+        #swing-btn {
+            right: max(18px, env(safe-area-inset-right));
+            bottom: max(18px, env(safe-area-inset-bottom));
+        }
+
+        #change-btn {
+            left: max(18px, env(safe-area-inset-left));
+            bottom: max(18px, env(safe-area-inset-bottom));
+        }
+
+        #sim-btn {
+            left: max(18px, env(safe-area-inset-left));
+            bottom: calc(max(18px, env(safe-area-inset-bottom)) + 84px);
+        }
+
+        #steal-btn {
+            left: max(18px, env(safe-area-inset-left));
+            bottom: calc(max(18px, env(safe-area-inset-bottom)) + 84px);
         }
 
         #mp-overlay {
