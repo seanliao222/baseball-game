@@ -391,22 +391,30 @@ const Stadium3D = (function () {
 
     // ───────────────────────── people ─────────────────────────
     const geo = {};
+    // capsule (hemisphere-capped tapered cylinder) whose cap centres sit at y = 0 and y = -len
+    function capsuleGeo(len, rTop, rBot, seg = 12) {
+        const pts = [];
+        for (let i = 0; i <= 6; i++) { const t = (i / 6) * Math.PI / 2; pts.push(new THREE.Vector2(rBot * Math.cos(t), -len - rBot * Math.sin(t))); }
+        for (let i = 0; i <= 6; i++) { const t = (i / 6) * Math.PI / 2; pts.push(new THREE.Vector2(rTop * Math.sin(t), rTop * Math.cos(t))); }
+        pts.sort((p1, p2) => p1.y - p2.y);
+        return new THREE.LatheGeometry(pts, seg);
+    }
     function buildGeos() {
-        geo.torso = new THREE.CylinderGeometry(0.205, 0.17, 0.58, 14).translate(0, 0.29, 0);
-        geo.pelvis = new THREE.CylinderGeometry(0.17, 0.155, 0.22, 14).translate(0, -0.02, 0);
-        geo.upperArm = new THREE.CylinderGeometry(0.056, 0.047, 0.29, 8).translate(0, -0.145, 0);
-        geo.foreArm = new THREE.CylinderGeometry(0.045, 0.038, 0.27, 8).translate(0, -0.135, 0);
-        geo.thigh = new THREE.CylinderGeometry(0.088, 0.068, 0.46, 10).translate(0, -0.23, 0);
-        geo.shin = new THREE.CylinderGeometry(0.064, 0.05, 0.44, 10).translate(0, -0.22, 0);
-        geo.foot = new THREE.BoxGeometry(0.105, 0.075, 0.28).translate(0, -0.03, 0.07);
-        geo.ball = new THREE.SphereGeometry(1, 10, 8);
-        geo.head = new THREE.SphereGeometry(0.115, 18, 14);
-        geo.cap = new THREE.SphereGeometry(0.128, 18, 10, 0, Math.PI * 2, 0, Math.PI * 0.5);
-        geo.brim = new THREE.CylinderGeometry(0.135, 0.135, 0.012, 16, 1, false, -Math.PI * 0.5, Math.PI).translate(0, 0, 0);
-        geo.neck = new THREE.CylinderGeometry(0.05, 0.055, 0.1, 8).translate(0, 0.62, 0);
+        const pr = [[0, -0.03], [0.15, -0.03], [0.162, 0.03], [0.152, 0.13], [0.17, 0.27], [0.2, 0.42], [0.208, 0.5], [0.185, 0.575], [0.1, 0.625], [0, 0.635]].map(([r, y]) => new THREE.Vector2(r, y));
+        geo.torso = new THREE.LatheGeometry(pr, 18);
+        geo.upperArm = capsuleGeo(0.29, 0.058, 0.048, 10);
+        geo.foreArm = capsuleGeo(0.27, 0.047, 0.037, 10);
+        geo.thigh = capsuleGeo(0.46, 0.1, 0.074, 12);
+        geo.shin = capsuleGeo(0.44, 0.074, 0.05, 12);
+        geo.sock = new THREE.CylinderGeometry(0.067, 0.058, 0.2, 12).translate(0, -0.33, 0);
+        geo.ball = new THREE.SphereGeometry(1, 14, 10);
+        geo.head = new THREE.SphereGeometry(0.108, 20, 16);
+        geo.cap = new THREE.SphereGeometry(0.122, 20, 10, 0, Math.PI * 2, 0, Math.PI * 0.5);
+        geo.brim = new THREE.CylinderGeometry(0.135, 0.135, 0.012, 18, 1, false, -Math.PI * 0.5, Math.PI);
+        geo.neck = new THREE.CylinderGeometry(0.052, 0.058, 0.12, 10).translate(0, 0.65, 0);
         // wooden bat (lathe profile, knob at origin, barrel along +y)
         const prof = [[0.0, 0], [0.024, 0], [0.026, 0.012], [0.013, 0.03], [0.012, 0.2], [0.02, 0.45], [0.032, 0.68], [0.036, 0.8], [0.032, 0.86], [0, 0.86]].map(([r, y]) => new THREE.Vector2(r, y));
-        geo.bat = new THREE.LatheGeometry(prof, 10);
+        geo.bat = new THREE.LatheGeometry(prof, 12);
     }
 
     function makePerson(kind) {
@@ -417,56 +425,53 @@ const Stadium3D = (function () {
         };
         const root = new THREE.Group();
         const part = (g, mat, parent, shadow = true) => { const me = new THREE.Mesh(g, mat); me.castShadow = shadow; parent.add(me); return me; };
-        const joint = (mat, parent, r, x = 0, y = 0, z = 0) => { const me = new THREE.Mesh(geo.ball, mat); me.scale.setScalar(r); me.position.set(x, y, z); me.castShadow = true; parent.add(me); return me; };
+        const blob = (mat, parent, sx, sy, sz, x = 0, y = 0, z = 0) => { const me = new THREE.Mesh(geo.ball, mat); me.scale.set(sx, sy, sz); me.position.set(x, y, z); me.castShadow = true; parent.add(me); return me; };
         const hips = new THREE.Group(); hips.position.y = HIP_Y; root.add(hips);
-        part(geo.pelvis, m.pants, hips);
-        const belt = part(new THREE.CylinderGeometry(0.172, 0.172, 0.04, 14).translate(0, 0.09, 0), m.dark, hips, false);
+        blob(m.pants, hips, 0.175, 0.135, 0.125, 0, -0.04, 0);
         const torso = new THREE.Group(); torso.position.y = 0.03; hips.add(torso);
-        const torsoMesh = part(geo.torso, m.jersey, torso); torsoMesh.scale.z = 0.64;
+        const torsoMesh = part(geo.torso, m.jersey, torso); torsoMesh.scale.z = 0.68;
+        const belt = part(new THREE.CylinderGeometry(0.157, 0.157, 0.04, 18).translate(0, -0.02, 0), m.dark, torso, false); belt.scale.z = 0.68;
+        const collar = part(new THREE.TorusGeometry(0.075, 0.016, 8, 16), m.accent, torso, false); collar.rotation.x = Math.PI / 2; collar.position.y = 0.625; collar.scale.y = 0.8;
         part(geo.neck, m.skin, torso, false);
-        const head = new THREE.Group(); head.position.set(0, 0.73, 0); torso.add(head);
-        const skull = part(geo.head, m.skin, head); skull.scale.set(0.96, 1.08, 1.0);
-        joint(m.skin, head, 0.03, 0, -0.01, 0.112);                    // nose
-        joint(m.skin, head, 0.032, 0.113, -0.005, 0); joint(m.skin, head, 0.032, -0.113, -0.005, 0); // ears
-        joint(m.skin, head, 0.05, 0, -0.085, 0.045).scale.set(0.07, 0.045, 0.06);              // chin
-        // eyes
-        [-0.042, 0.042].forEach(x => { const e = new THREE.Mesh(geo.ball, m.dark); e.scale.setScalar(0.014); e.position.set(x, 0.02, 0.103); head.add(e); });
+        const head = new THREE.Group(); head.position.set(0, 0.74, 0.01); torso.add(head);
+        const skull = part(geo.head, m.skin, head); skull.scale.set(0.95, 1.1, 1.02);
+        blob(m.skin, head, 0.026, 0.03, 0.03, 0, -0.012, 0.108);              // nose
+        blob(m.skin, head, 0.022, 0.034, 0.02, 0.104, -0.005, 0); blob(m.skin, head, 0.022, 0.034, 0.02, -0.104, -0.005, 0); // ears
+        blob(m.skin, head, 0.055, 0.04, 0.05, 0, -0.085, 0.05);               // jaw
+        [-0.04, 0.04].forEach(x => blob(m.dark, head, 0.013, 0.013, 0.013, x, 0.018, 0.1));   // eyes
+        [-0.04, 0.04].forEach(x => { const br = blob(m.dark, head, 0.026, 0.005, 0.01, x, 0.045, 0.098); br.rotation.z = x > 0 ? -0.15 : 0.15; }); // brows
         // cap / helmet
         const capG = new THREE.Group(); head.add(capG);
-        const dome = part(geo.cap, m.cap, capG); dome.position.y = 0.034; dome.scale.set(1, 1.0, 1.04);
-        // brim: half-disc (theta -90..90 deg) so it already points toward +z
-        const brim = part(geo.brim, m.cap, capG, false); brim.position.set(0, 0.05, 0.06); brim.rotation.x = -0.12; brim.scale.set(0.95, 1, 1.25);
-        const flap = part(new THREE.BoxGeometry(0.03, 0.1, 0.11), m.cap, head, false); flap.position.set(0.12, 0.0, 0.0); flap.visible = false;
+        const dome = part(geo.cap, m.cap, capG); dome.position.y = 0.034; dome.scale.set(1, 1.0, 1.05);
+        const brim = part(geo.brim, m.cap, capG, false); brim.position.set(0, 0.05, 0.06); brim.rotation.x = -0.14; brim.scale.set(0.95, 1, 1.25);
+        const flap = part(new THREE.BoxGeometry(0.03, 0.1, 0.11), m.cap, head, false); flap.position.set(0.115, 0.0, 0.0); flap.visible = false;
         // logo on cap front
         const logoC = canvasOf(64, 64), logoT = new THREE.CanvasTexture(logoC);
         const logo = new THREE.Mesh(new THREE.PlaneGeometry(0.07, 0.07), new THREE.MeshBasicMaterial({ map: logoT, transparent: true }));
-        logo.position.set(0, 0.095, 0.126); logo.rotation.x = -0.3; head.add(logo);
+        logo.position.set(0, 0.092, 0.124); logo.rotation.x = -0.3; head.add(logo);
         // face mask for catcher / umpire
-        const mask = part(new THREE.TorusGeometry(0.1, 0.012, 6, 16).translate(0, 0, 0), m.dark, head, false); mask.position.set(0, -0.005, 0.105); mask.visible = false;
+        const mask = part(new THREE.TorusGeometry(0.1, 0.012, 6, 16), m.dark, head, false); mask.position.set(0, -0.005, 0.105); mask.visible = false;
 
         const mkArm = side => {
             const s = side === 'L' ? 1 : -1;
             const sh = new THREE.Group(); sh.position.set(0.215 * s, 0.5, 0); torso.add(sh);
-            joint(m.jersey, sh, 0.06);
             part(geo.upperArm, m.jersey, sh);
             const el = new THREE.Group(); el.position.y = -0.29; sh.add(el);
-            joint(m.accent, el, 0.044);
             part(geo.foreArm, m.accent, el);
             const hand = new THREE.Group(); hand.position.y = -0.285; el.add(hand);
-            const hm = part(geo.ball, m.skin, hand); hm.scale.set(0.05, 0.055, 0.045);
+            blob(m.skin, hand, 0.044, 0.056, 0.04, 0, -0.01, 0);
             return { sh, el, hand };
         };
         const armL = mkArm('L'), armR = mkArm('R');
         const mkLeg = side => {
             const s = side === 'L' ? 1 : -1;
             const hp = new THREE.Group(); hp.position.set(0.1 * s, -0.03, 0); hips.add(hp);
-            joint(m.pants, hp, 0.09);
             part(geo.thigh, m.pants, hp);
             const kn = new THREE.Group(); kn.position.y = -0.46; hp.add(kn);
-            joint(m.pants, kn, 0.066);
-            part(geo.shin, m.sock, kn);
+            part(geo.shin, m.pants, kn);
+            part(geo.sock, m.sock, kn, false);
             const an = new THREE.Group(); an.position.y = -0.44; kn.add(an);
-            part(geo.foot, m.shoe, an);
+            blob(m.shoe, an, 0.055, 0.048, 0.15, 0, -0.04, 0.06);
             return { hp, kn, an };
         };
         const legL = mkLeg('L'), legR = mkLeg('R');
@@ -697,7 +702,7 @@ const Stadium3D = (function () {
     const P_LEAD = { crouch: 0.18, torsoX: 0.42, hipL: 0.45, hipR: 0.45, kneeL: 0.9, kneeR: 0.9, spreadL: 0.14, spreadR: 0.14, armL: 0.5, armR: 0.5, elbL: 0.7, elbR: 0.7, absL: 0.2, absR: 0.2 };
     const P_CROUCH = { crouch: 0.46, torsoX: 0.28, hipL: 1.5, hipR: 1.5, kneeL: 2.2, kneeR: 2.2, spreadL: 0.45, spreadR: 0.45, armL: 0.9, elbL: 0.3, armR: 0.6, elbR: 0.5, absL: 0.2, absR: 0.2 };
     const P_UMP = { crouch: 0.12, torsoX: 0.5, hipL: 0.5, hipR: 0.5, kneeL: 0.5, kneeR: 0.5, spreadL: 0.1, spreadR: 0.1, armL: 0.5, elbL: 0.2, armR: 0.5, elbR: 0.2, absL: 0.1, absR: 0.1 };
-    const P_SET = { torsoX: 0.12, hipL: 0.05, hipR: 0.05, kneeL: 0.1, kneeR: 0.1, spreadL: 0.1, spreadR: 0.1 };
+    const P_SET = { crouch: 0.05, torsoX: 0.2, headX: -0.1, hipL: 0.14, hipR: 0.1, kneeL: 0.3, kneeR: 0.26, spreadL: 0.1, spreadR: 0.1 };
     const P_WIND = [
         [0, P_SET],
         [0.55, { torsoX: -0.06, hipL: 1.0, kneeL: 1.25, hipR: 0.05, kneeR: 0.15, spreadL: 0.05, spreadR: 0.1, handHigh: 1 }],
@@ -953,36 +958,43 @@ const Stadium3D = (function () {
     // ── batter ──────────────────────────────────────────
     function updateBatter(G, info, dt, df) {
         const p = actors.batter, wrap = actors.batterWrap;
-        const left = info.batter.bats === 'L';
-        wrap.scale.x = left ? -1 : 1;
-        p.num.scale.x = left ? -1 : 1;
+        const left = info.batter.bats === 'L', mr = left ? -1 : 1;   // mr mirrors the right-handed pose for lefties
+        wrap.scale.x = 1;
+        p.root.position.x = -0.95 * mr; p.root.rotation.y = mr * Math.PI / 2;
         // swing progress
         let s = -1;
         if (G.batSwingFrame >= 0 && G.frame - G.batSwingFrame < 60) s = (G.frame - G.batSwingFrame) / 20 + 0.28;
         else if (!info.humanBatting && G.aiSwing && G.frame >= G.aiSwingFrame - 8 && G.ballActive) s = (G.frame - (G.aiSwingFrame - 8)) / 20 + 0.28;
         s = s >= 0 ? Math.min(s, 1.4) : -1;
-        const stance = { crouch: 0.1, torsoX: 0.28, torsoY: 0.0, hipsY: 0.0, hipL: 0.35, hipR: 0.3, kneeL: 0.6, kneeR: 0.7, spreadL: 0.32, spreadR: 0.32, headY: 0.0 };
+        // right-handed reference pose: front (pitcher-side) leg = left leg
+        const stance = { crouch: 0.14, torsoX: 0.22, torsoY: 0.08, hipsY: 0.12, hipL: 0.42, hipR: 0.38, kneeL: 0.78, kneeR: 0.85, spreadL: 0.34, spreadR: 0.34, headY: 1.2, headX: 0.08 };
         let P, hold = { rx: -0.05, rz: 0.55, ry: 0.0, px: -0.1, py: 0.4, pz: 0.12 };
         const wob = Math.sin(G.frame * 0.09) * 0.03;
         if (s < 0) {
             P = Object.assign({}, stance); P.torsoZ = wob; hold.rz += wob;
-            if (info.humanBatting === false || G.phase === info.PH.WAIT_PITCH || G.phase === info.PH.BATTING) { /* ready */ }
         } else {
             const T = clamp(s, 0, 1), e = ease(clamp(T / 0.9, 0, 1));
             P = Object.assign({}, stance);
-            P.hipsY = lerp(0, 1.15, ease(clamp(T / 0.7, 0, 1)));
-            P.torsoY = lerp(0, 1.3, e);
-            P.headY = lerp(0, -0.6, e);
-            P.hipL = lerp(0.35, 0.65, e); P.kneeL = lerp(0.6, 0.35, e); P.kneeR = lerp(0.7, 1.1, e); P.hipR = lerp(0.3, -0.1, e);
-            P.torsoX = lerp(0.28, 0.2, e);
+            P.hipsY = lerp(0.12, 1.15, ease(clamp(T / 0.7, 0, 1)));
+            P.torsoY = lerp(0.08, 1.3, e);
+            P.headY = clamp(1.2 - P.hipsY - P.torsoY, -0.9, 1.3);
+            P.hipL = lerp(0.42, 0.7, e); P.kneeL = lerp(0.78, 0.35, e); P.kneeR = lerp(0.85, 1.1, e); P.hipR = lerp(0.38, -0.1, e);
+            P.torsoX = lerp(0.22, 0.2, e);
             hold = { rx: lerp(-0.05, -0.12, e), rz: lerp(0.55, -1.52, ease(clamp(T / 0.55, 0, 1))), ry: lerp(0, 0.25, e), px: lerp(-0.1, 0.0, e), py: lerp(0.4, 0.34, e), pz: lerp(0.12, 0.34, e) };
+        }
+        if (left) { // mirror: swap legs, flip every lateral rotation
+            [P.hipL, P.hipR] = [P.hipR, P.hipL]; [P.kneeL, P.kneeR] = [P.kneeR, P.kneeL];
+            P.torsoY *= -1; P.hipsY *= -1; P.headY *= -1; P.torsoZ = -(P.torsoZ || 0);
+            hold.rz *= -1; hold.ry *= -1; hold.px *= -1;
         }
         applyPose(p, P);
         p.holder.position.set(hold.px, hold.py, hold.pz); p.holder.rotation.set(hold.rx, hold.ry, hold.rz);
         p.root.updateMatrixWorld(true);
-        // hands grip the bat handle
-        p.holder.localToWorld(v1.set(0, 0.06, 0)); p.holder.localToWorld(v2.set(0, 0.2, 0));
-        ikArm(p.armR, v1, _hintDown.set(-0.3, -1, 0.3)); ikArm(p.armL, v2, _hintDown.set(0.3, -1, 0.3));
+        // hands grip the handle: bottom hand = the one on the pitcher side
+        p.holder.localToWorld(v1.set(0, 0.05, 0)); p.holder.localToWorld(v2.set(0, 0.19, 0));
+        const bottom = left ? p.armR : p.armL, top = left ? p.armL : p.armR;
+        ikArm(bottom, v1, _hintDown.set(0.3 * (left ? -1 : 1), -1, 0.3));
+        ikArm(top, v2, _hintDown.set(-0.3 * (left ? -1 : 1), -1, 0.3));
         _hintDown.set(0, -1, 0);
     }
 
@@ -1100,6 +1112,7 @@ const Stadium3D = (function () {
     }
 
     function updateCamera(G, info, dt) {
+        if (S.dbgCam) { applyCamera(camera, S.dbgCam); S.nearBat = false; return; }
         const tgt = cameraTarget(G, info);
         const k = tgt === BAT_CAM ? 5.5 : (tgt === FOLLOW ? 7 : 3.2);
         camS.pos.x = damp(camS.pos.x, tgt.pos.x, k, dt); camS.pos.y = damp(camS.pos.y, tgt.pos.y, k, dt); camS.pos.z = damp(camS.pos.z, tgt.pos.z, k, dt);
@@ -1139,6 +1152,7 @@ const Stadium3D = (function () {
         } catch (e) { console.error('Stadium3D init failed', e); api.ok = false; }
         return api.ok;
     };
+    api.debugCam = function (pos, look, fov) { S.dbgCam = pos ? { pos: new THREE.Vector3(...pos), look: new THREE.Vector3(...look), fov: fov || 30, shift: 0 } : null; };
     api.resize = resize;
     api.pxToPlane = pxToPlane;
     api.isBatCam = function () { return !!S.nearBat; };
