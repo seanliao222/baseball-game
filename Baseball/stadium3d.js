@@ -945,11 +945,14 @@ const Stadium3D = (function () {
     function startFlight(G, info) {
         const type = G.hitType; if (!type) return;
         const R = Math.random;
-        const th = clamp(G.hitFlyDir * 0.5, -0.72, 0.72);
+        let th = clamp(G.hitFlyDir * 0.5, -0.72, 0.72);
         const dir = new THREE.Vector3(Math.sin(th), 0, -Math.cos(th));
         const start = new THREE.Vector3(clamp(G.curX, -1.5, 1.5) * 0.31, 0.85, -0.15);
         let kind, dist, apex, dur, roll = 0, rollDist = 0;
-        if (type === 'HR') { kind = 'fly'; dist = bowlR(th) + 18; apex = 38; dur = 112; }
+        if (type === 'FOUL') {                         // tipped / glanced: a short ball into foul territory
+            const sgn = Math.sign(G.hitFlyDir) || 1; th = sgn * (0.95 + R() * 0.35);
+            dir.set(Math.sin(th), 0, -Math.cos(th)); kind = 'fly'; dist = 18 + R() * 26; apex = 10 + R() * 12; dur = 52;
+        } else if (type === 'HR') { kind = 'fly'; dist = bowlR(th) + 18; apex = 38; dur = 112; }
         else if (type === '2B') { kind = 'fly'; dist = 78 + R() * 12; apex = 22; dur = 76; roll = 36; rollDist = 18; }
         else if (type === '1B') {
             if (R() < 0.5) { kind = 'grounder'; dist = 42; apex = 0.9; dur = 52; roll = 30; rollDist = 18; }
@@ -966,7 +969,7 @@ const Stadium3D = (function () {
         const rest = roll ? end.clone().addScaledVector(dir, rollDist) : end;
         let best = null, bd = 1e9;
         actors.fielders.forEach(f => { const d = Math.hypot(f.home.x - rest.x, f.home.z - rest.z); if (d < bd) { bd = d; best = f; } });
-        if (type !== 'HR') {
+        if (type !== 'HR' && type !== 'FOUL') {
             fl.fielder = best; fl.rest = rest;
             const tx = fl.catch ? end.x : rest.x, tz = fl.catch ? end.z : rest.z;
             best.chase = { tx, tz, t0: G.frame, arrive: G.frame + (fl.catch ? dur - 2 : dur + roll + 6) };
@@ -1124,6 +1127,95 @@ const Stadium3D = (function () {
     }
 
     // ── runners ─────────────────────────────────────────
+
+    // ── stealing a base: sprint, slide, dust ──────────────
+    function slidePose(P) {
+        return Object.assign(P, { crouch: 0.62, torsoX: -0.7, hipL: 1.35, kneeL: 0.12, hipR: 0.3, kneeR: 1.7, spreadL: 0.05, spreadR: 0.2, armL: 2.3, elbL: 0.3, armR: 1.9, elbR: 0.4, absL: 0.3, absR: 0.3 });
+    }
+    function dust(x, z, n = 16) {
+        for (let i = 0; i < n; i++) {
+            const a = rnd(0, Math.PI * 2), sp = rnd(1, 3.6);
+            const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTex, color: 0xc9a06a, transparent: true, depthWrite: false, opacity: 0.7 }));
+            s.position.set(x, 0.12, z); s.scale.set(0.9, 0.9, 1); scene.add(s);
+            particles.push({ s, v: new THREE.Vector3(Math.cos(a) * sp, rnd(0.3, 1.8), Math.sin(a) * sp), life: 0.9 });
+        }
+    }
+    function stealRunners(G, st, holdPos, pool) {
+        if (S.stealInit !== st.t0) {
+            S.stealInit = st.t0; S.stealRun = [];
+            if (!S.runnerObjs) S.runnerObjs = [null, null, null];
+            st.moves.forEach(m => {
+                let o = S.runnerObjs[m.k];
+                if (!o) {
+                    o = pool.find(q => !q.root.visible && !q.runnerBusy); if (!o) return;
+                    const hp = holdPos(m.k); o.root.visible = true; o.runnerBusy = true; o.root.position.set(hp.x, 0, hp.z); o.path = []; S.runnerObjs[m.k] = o;
+                }
+                const to = BASES[(m.k + 2) % 4], lead = m.k === st.leadK;
+                const arr = m.res === 'out' && lead ? Math.max(30, st.ballArrive + 3) : st.R;       // caught runners arrive just after the ball
+                S.stealRun.push({ k: m.k, o, res: m.res, from: { x: o.root.position.x, z: o.root.position.z }, to: { x: to[0], z: to[1] }, arr, phase: 0, dusted: false });
+            });
+        }
+        const t = G.frame - st.t0;
+        (S.stealRun || []).forEach(e => {
+            const o = e.o; o.stealing = true; o.path = [];
+            const u = clamp(t / e.arr, 0, 1), acc = u < 1 ? 0.45 * u + 0.55 * u * u : 1;                // accelerates out of the lead
+            const reach = e.res === 'stay' ? 0.3 * Math.sin(Math.PI * u) : acc;
+            o.root.position.x = lerp(e.from.x, e.to.x, reach); o.root.position.z = lerp(e.from.z, e.to.z, reach);
+            const tx = e.res === 'stay' && u > 0.5 ? e.from.x : e.to.x, tz = e.res === 'stay' && u > 0.5 ? e.from.z : e.to.z;
+            if (u < 1) faceToward(o, tx, tz);
+            const sliding = e.res !== 'stay' && t > e.arr - 14 && t < e.arr + 14;
+            if (sliding) {
+                applyPose(o, slidePose({}));
+                if (!e.dusted && t >= e.arr - 2) { e.dusted = true; dust(e.to.x, e.to.z, e.res === 'out' ? 22 : 16); }
+            } else if (u < 1 || (e.res === 'stay' && u < 1)) { e.phase += 0.7 * df_(); applyPose(o, runPose({}, e.phase, 1)); }
+            else applyPose(o, P_LEAD);
+            o.root.updateMatrixWorld(true);
+        });
+    }
+    let _df = 1; function df_() { return _df; }
+
+    // defenders, catcher and the throw during a steal (runs late in the frame so it overrides the idle poses)
+    function stealActors(G, info, dt, df) {
+        const st = G.phase === info.PH.STEAL ? G.steal : null;
+        if (!st) { S.stealCoverF = null; return; }
+        _df = df;
+        const t = G.frame - st.t0, k = st.leadK, bi = (k + 2) % 4, base = BASES[bi], cat = actors.catcher;
+        // covering fielder runs to the bag and waits with the glove down
+        const d = Math.hypot(base[0], base[1]) || 1, cx = base[0] - base[0] / d * 0.9, cz = base[1] - base[1] / d * 0.9;
+        let f = null; if (bi === 2) f = actors.fielders.find(p => p.pos === st.cover); else if (bi === 3) f = actors.fielders.find(p => p.pos === '3B');
+        if (f) {
+            const u = easeOut(clamp(t / 30, 0, 1));
+            f.root.position.x = lerp(f.home.x, cx, u); f.root.position.z = lerp(f.home.z, cz, u); f.cur.x = f.root.position.x; f.cur.z = f.root.position.z;
+            faceToward(f, 0, 0);
+            if (u < 1) { f.phase += 0.55 * df; applyPose(f, runPose({}, f.phase, 1)); } else applyPose(f, P_FIELD);
+            f.root.updateMatrixWorld(true);
+            const reach = t >= st.ballArrive - 5;
+            ikArm(f.armL, v1.set(base[0], reach ? 0.3 : 0.75, base[1]), _hintDown.set(0.3, -1, 0.2)); _hintDown.set(0, -1, 0);
+            S.stealCoverF = f;
+        }
+        // catcher: receives the pitch, springs up and fires to the base (nothing to throw on a steal of home)
+        if (bi !== 0 && t >= 26) {
+            const p = clamp((t - 26) / 12, 0, 1);
+            applyPose(cat, Object.assign({}, P_STAND, { crouch: 0.1 * (1 - p), torsoX: 0.25 }));
+            cat.root.rotation.y = lerp(Math.PI, Math.atan2(base[0], base[1] - 0.95), clamp(p * 2, 0, 1));
+            cat.root.updateMatrixWorld(true);
+            const wind = [-0.25, 1.72, -0.3], rel = [-0.1, 1.62, 0.6], fol = [0.05, 1.0, 0.55];
+            const q = p < 0.45 ? wind : p < 0.8 ? rel : fol;
+            cat.root.localToWorld(v2.set(q[0], q[1], q[2]));
+            ikArm(cat.armR, v2, _hintDown.set(-0.4, -1, -0.3));
+            cat.root.localToWorld(v2.set(0.25, 1.2, 0.3)); ikArm(cat.armL, v2, _hintDown.set(0.4, -1, 0.2)); _hintDown.set(0, -1, 0);
+        }
+        // the throw
+        const t0 = 31;
+        if (bi !== 0 && t >= t0) {
+            const u = clamp((t - t0) / Math.max(6, st.ballArrive - t0), 0, 1);
+            v1.set(0.1, 1.6, 0.4); v3.set(base[0], 0.55, base[1]);
+            hitBall.position.copy(v1).lerp(v3, u); hitBall.position.y += Math.sin(u * Math.PI) * 1.4; hitBall.visible = true; hitBall.rotation.x += 0.6;
+            ball.visible = false;
+            ballShadow.visible = u < 1; ballShadow.position.set(hitBall.position.x, 0.03, hitBall.position.z); ballShadow.scale.set(0.35, 0.35, 1);
+        }
+    }
+
     function updateRunners(G, info, dt, df) {
         const now = G.runners.slice();
         const pool = actors.extras;
@@ -1143,7 +1235,9 @@ const Stadium3D = (function () {
         if (!S.runnerObjs) S.runnerObjs = [null, null, null];
         const prev = S.runnersPrev;
         const phaseHR = G.phase === info.PH.HR_RUN;
-        if (!phaseHR) {
+        const st = G.phase === info.PH.STEAL ? G.steal : null;
+        if (!st) { S.stealRun = null; pool.forEach(o => o.stealing = false); } else stealRunners(G, st, holdPos, pool);
+        if (!phaseHR && !st) {
             let changed = false; for (let k = 0; k < 3; k++) if (prev[k] !== now[k]) changed = true;
             if (changed) {
                 const used = [false, false, false];
@@ -1172,7 +1266,7 @@ const Stadium3D = (function () {
                 S.runnerObjs = newObjs;
             }
             S.runnersPrev = now;
-        } else if (!S.hrHandled) {
+        } else if (phaseHR && !S.hrHandled) {
             // home run: everyone circles the bases
             S.hrHandled = true;
             S.runnersPrev = [false, false, false];
@@ -1184,7 +1278,7 @@ const Stadium3D = (function () {
         }
         if (!phaseHR) S.hrHandled = false;
         pool.forEach(o => {
-            if (!o.root.visible) return;
+            if (!o.root.visible || o.stealing) return;
             if (!o.path || !o.path.length) { // standing at base
                 applyPose(o, P_LEAD); o.phase += 0.05 * df; o.root.position.y = 0;
                 faceToward(o, o.root.position.x * 0.5 + 0, o.root.position.z - 8); o.hips.position.y += Math.sin(o.phase) * 0.01;
@@ -1224,15 +1318,28 @@ const Stadium3D = (function () {
     function cameraTarget(G, info) {
         const PH = info.PH; let tgt;
         const fl = S.flight;
-        const flying = fl && (G.frame - fl.t0) < fl.dur + fl.roll + 10 && hitBall.visible;
+        const flying = fl && fl.type !== 'FOUL' && (G.frame - fl.t0) < fl.dur + fl.roll + 10 && hitBall.visible;
         if (G.phase === PH.HR_RUN || (fl && fl.type === 'HR' && G.phase === PH.RESULT)) {
             if (fl && G.frame - fl.t0 < fl.dur * 0.62) tgt = followCam(fl, G);
             else tgt = HRCAM;
         } else if (flying && G.phase === PH.RESULT) tgt = followCam(fl, G);
         else if (G.phase === PH.RESULT && (G.resSub === 'HIT' || G.resSub === '2 BASE HIT' || G.resSub === 'OUT' || G.resSub === 'WALK')) tgt = flying ? followCam(fl, G) : (G.resSub === 'WALK' ? BAT_CAM : WIDE);
+        else if (G.phase === PH.STEAL) tgt = stealCam(G);
         else if (G.phase === PH.INNING_START) tgt = WIDE;
         else tgt = BAT_CAM;
         return tgt;
+    }
+    const STEAL_CAM = { pos: new THREE.Vector3(), look: new THREE.Vector3(), fov: 38, shift: 0 };
+    function stealCam(G) {
+        const e = S.stealRun && (S.stealRun.find(x => x.k === G.steal.leadK) || S.stealRun[0]);
+        if (!e) return WIDE;
+        if (G.steal.moves.length > 1) { STEAL_CAM.look.set(0, 1.0, -22); STEAL_CAM.pos.set(-4, 13, 20); STEAL_CAM.fov = 58; return STEAL_CAM; }   // double steal: show the whole diamond
+        STEAL_CAM.fov = 38;
+        const p = e.o.root.position;
+        STEAL_CAM.look.set(lerp(p.x, e.to.x, 0.35), 1.0, lerp(p.z, e.to.z, 0.35));
+        const side = e.k === 0 ? -1 : 1;
+        STEAL_CAM.pos.set(STEAL_CAM.look.x + side * 15, 6.5, STEAL_CAM.look.z + 17);
+        return STEAL_CAM;
     }
     const FOLLOW = { pos: new THREE.Vector3(), look: new THREE.Vector3(), fov: 38, shift: 0 };
     function followCam(fl, G) {
@@ -1246,7 +1353,7 @@ const Stadium3D = (function () {
     function updateCamera(G, info, dt) {
         if (S.dbgCam) { applyCamera(camera, S.dbgCam); S.nearBat = false; return; }
         const tgt = cameraTarget(G, info);
-        const k = tgt === BAT_CAM ? 5.5 : (tgt === FOLLOW ? 7 : 3.2);
+        const k = tgt === BAT_CAM ? 5.5 : (tgt === FOLLOW ? 7 : (tgt === STEAL_CAM ? 5 : 3.2));
         camS.pos.x = damp(camS.pos.x, tgt.pos.x, k, dt); camS.pos.y = damp(camS.pos.y, tgt.pos.y, k, dt); camS.pos.z = damp(camS.pos.z, tgt.pos.z, k, dt);
         camS.look.x = damp(camS.look.x, tgt.look.x, k * 1.2, dt); camS.look.y = damp(camS.look.y, tgt.look.y, k * 1.2, dt); camS.look.z = damp(camS.look.z, tgt.look.z, k * 1.2, dt);
         camS.fov = damp(camS.fov, tgt.fov, k, dt); camS.shift = damp(camS.shift, tgt.shift, k, dt);
@@ -1343,6 +1450,7 @@ const Stadium3D = (function () {
         updateRunners(G, info, dt, df);
         S.prevScore = G.score.slice();
         updateBall(G, info, dt, df);
+        stealActors(G, info, dt, df);
         updateParticles(dt);
         updateCamera(G, info, dt);
         // catcher/umpire would cover the strike zone from the batter camera: show only the mitt there

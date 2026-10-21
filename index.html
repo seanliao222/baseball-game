@@ -697,7 +697,7 @@
         });
 
         const SCR = { TITLE: 0, SELECT: 1, LINEUP: 4, GAME: 2, OVER: 3, HALF_END: 5 };
-        const PH = { INNING_START: 0, PITCH_SELECT: 1, AIM: 2, POWER_GAUGE: 3, WAIT_PITCH: 4, BALL_FLIGHT: 5, BATTING: 6, RESULT: 7, SUB_MENU: 8, HR_RUN: 9 };
+        const PH = { INNING_START: 0, PITCH_SELECT: 1, AIM: 2, POWER_GAUGE: 3, WAIT_PITCH: 4, BALL_FLIGHT: 5, BATTING: 6, RESULT: 7, SUB_MENU: 8, HR_RUN: 9, STEAL_MENU: 10, STEAL: 11 };
         let G = {};
 
         const SZcx = W / 2, SZcy = 400, SZw = 110, SZh = 110;
@@ -1225,48 +1225,103 @@
                 type = Math.random() < 0.72 ? '1B' : 'OUT';
             } else if (quality > 0.32) {
                 type = Math.random() < 0.42 ? '1B' : 'OUT';
-            } else if (quality > 0.14) {
-                type = Math.random() < 0.18 ? '1B' : 'OUT';
+            } else if (quality > 0.2) {
+                const r = Math.random();                       // weak contact: mostly foul, sometimes a bloop hit or an easy out
+                type = r < 0.5 ? 'FOUL' : r < 0.65 ? '1B' : 'OUT';
+            } else if (quality > 0.1) {
+                type = Math.random() < 0.6 ? 'FOUL' : 'MISS';  // tipped / glanced
             } else {
-                type = 'K';
+                type = 'MISS';                                 // clean swing and miss
             }
 
             if (type === 'OUT') G.outKind = Math.random() < 0.55 ? 'fly' : 'ground';
-            if (type === 'HR' || type === '1B' || type === '2B' || type === 'OUT') {
+            if (type === 'HR' || type === '1B' || type === '2B' || type === 'OUT' || type === 'FOUL') {
                 G.hitEffectFrame = G.frame;
                 G.hitType = type;
-                G.hitFlyDir = (Math.random() < 0.5 ? 1 : -1) * (0.6 + Math.random() * 0.8);
+                G.hitFlyDir = (Math.random() < 0.5 ? 1 : -1) * (type === 'FOUL' ? 1.5 + Math.random() * 0.7 : 0.6 + Math.random() * 0.8);
             }
 
+            if (type === 'FOUL') {                // a foul is a strike, but never the third one
+                if (G.strikes < 2) G.strikes++;
+                SFX.strike();
+                showRes('界外球', 'FOUL BALL', '#FFAA44', false); G._continueAtBat = true;
+                return;
+            }
+            if (type === 'MISS') {                // swinging strike
+                G.strikes++; SFX.strike();
+                if (G.strikes >= 3) applyPlay('K');
+                else { showRes('揮棒落空！', 'SWINGING STRIKE', '#FF8844', false); G._continueAtBat = true; }
+                return;
+            }
             applyPlay(type);
         }
 
+        // ── Stealing ──────────────────────────────────────────
+        // Which runners can go, and the choices the player gets (single steal / double steal / hold a runner).
+        function stealOptions() {
+            const r = G.runners, o = [];
+            if (r[0] && r[1] && r[2]) return o;                                   // bases loaded: nowhere to go
+            if (r[0] && !r[1] && !r[2]) o.push({ label: '一壘跑者盜二壘', moves: [0] });
+            else if (!r[0] && r[1] && !r[2]) o.push({ label: '二壘跑者盜三壘', moves: [1] });
+            else if (r[0] && r[1] && !r[2]) { o.push({ label: '二壘跑者盜三壘（一壘留守）', moves: [1] }); o.push({ label: '雙盜壘（兩人同時進壘）', moves: [0, 1] }); }
+            else if (r[0] && !r[1] && r[2]) { o.push({ label: '一壘跑者盜二壘（三壘留守）', moves: [0] }); o.push({ label: '雙盜壘（三壘跑者衝本壘）', moves: [0, 2] }); }
+            else if (r[2]) o.push({ label: '三壘跑者盜本壘（高風險）', moves: [2] });
+            return o;
+        }
+        function canSteal() { return playerBatting() && stealOptions().length > 0; }
+
         function attemptSteal() {
             if (!playerBatting() || G.phase !== PH.WAIT_PITCH) return;
-            let from = -1;
-            if (G.runners[1]) from = 1;
-            else if (G.runners[0]) from = 0;
-            if (from === -1) return;
+            const opts = stealOptions(); if (!opts.length) return;
+            if (opts.length === 1) startSteal(opts[0]);
+            else { G.stealOpts = opts; G.phase = PH.STEAL_MENU; }       // let the player choose
+        }
 
-            const bat = G.half;
-            const batterSpd = getBatter().spd;
-            const successChance = clamp(0.25 + (batterSpd - 50) / 100, 0.20, 0.72);
-            const success = Math.random() < successChance;
-
-            if (success) {
-                if (from === 1) { G.runners[2] = true; G.runners[1] = false; }
-                else { G.runners[1] = true; G.runners[0] = false; }
-                SFX.steal_ok();
-                showRes('盜壘成功！', 'STOLEN BASE', '#FFD700', false);
-                G._continueAtBat = true;
-            } else {
-                G.outs++;
-                const endHalf = G.outs >= 3;
-                if (from === 1) G.runners[1] = false;
-                else G.runners[0] = false;
-                SFX.steal_fail();
-                showRes('盜壘失敗', 'CAUGHT STEALING', '#FF4444', endHalf);
+        function startSteal(opt) {
+            const bat = G.half, roster = batTeamInfo().roster.batters;
+            const spdAvg = G.lineups[bat].reduce((a, i) => a + roster[i].spd, 0) / 9;
+            const dm = [0.10, 0, -0.08][G.difficulty];
+            // chance a runner beats the throw: 2nd is easiest, 3rd harder, home very hard
+            const pOf = k => clamp([0.7, 0.46, 0.14][k] + (spdAvg - 60) / 220 + dm, 0.05, 0.88);
+            const moves = opt.moves.map(k => ({ k, res: 'out' })); let leadK;
+            if (moves.length === 1) { leadK = moves[0].k; moves[0].res = Math.random() < pOf(leadK) ? 'safe' : 'out'; }
+            else if (opt.moves[1] === 1) {                                  // 1st + 2nd: the throw goes to 3rd
+                leadK = 1; moves[1].res = Math.random() < pOf(1) ? 'safe' : 'out'; moves[0].res = 'safe';
+            } else {                                                        // 1st + 3rd: the throw goes to 2nd, the runner on 3rd may score
+                leadK = 0; moves[0].res = Math.random() < pOf(0) ? 'safe' : 'out'; moves[1].res = Math.random() < 0.8 ? 'safe' : 'stay';
             }
+            const leadSafe = moves.find(m => m.k === leadK).res === 'safe', R = 72;
+            G.steal = { moves, leadK, t0: G.frame, R, ballArrive: leadSafe ? R + rndI(6, 12) : R - rndI(10, 18), cover: Math.random() < 0.5 ? 'SS' : '2B', end: 0 };
+            G.steal.end = Math.max(R, G.steal.ballArrive) + 34;
+            // the pitcher still delivers (a pitch-out wide of the zone) while the runners go
+            G.ballActive = true; G.ballFrame = G.frame + 2; G.ballDur = 24; G.ballSX = W / 2; G.ballSY = 230;
+            G.ballEX = SZcx + 135; G.ballEY = SZcy - 25; G.ballCX = 0; G.ballCY = 0; G._actualAimX = 2.4; G._actualAimY = -0.4;
+            G.batSwingFrame = -999; G.hitEffectFrame = -999;
+            SFX.pitch(); G.phase = PH.STEAL;
+        }
+
+        function applySteal() {
+            const st = G.steal, bat = G.half, nr = [...G.runners]; let outs = 0, runs = 0;
+            st.moves.forEach(m => { if (m.res !== 'stay') nr[m.k] = false; });
+            st.moves.forEach(m => {
+                if (m.res === 'safe') { if (m.k === 2) runs++; else nr[m.k + 1] = true; }
+                else if (m.res === 'out') outs++;
+                else nr[m.k] = true;                                     // held up
+            });
+            G.runners = nr; G.outs += outs; G.score[bat] += runs; if (runs) G.scoreFlash[bat] = 35;
+            const n = st.moves.length, safeN = st.moves.filter(m => m.res === 'safe').length;
+            let text, sub, col;
+            if (outs === 0) {
+                text = n === 2 ? '雙盜壘成功！' : (st.moves[0].k === 2 ? '盜本壘成功！得分' : '盜壘成功！'); sub = n === 2 ? 'DOUBLE STEAL' : 'STOLEN BASE'; col = '#FFD700'; SFX.steal_ok();
+                if (runs && n === 2) text = '雙盜壘成功！三壘跑者得分';
+            } else { text = safeN ? '盜壘失敗，另一人進壘' : '盜壘失敗'; sub = 'CAUGHT STEALING'; col = '#FF4444'; SFX.steal_fail(); }
+            G._continueAtBat = true;
+            showRes(text, sub, col, G.outs >= 3);
+        }
+
+        function getStealMenuLayout() {
+            const opts = G.stealOpts || [], pw = 440, rowH = 54, ph = 78 + opts.length * rowH + 58, px = W / 2 - pw / 2, py = H / 2 - ph / 2;
+            return { pw, ph, px, py, rows: opts.map((o, i) => ({ x: px + 24, y: py + 62 + i * rowH, w: pw - 48, h: 44, o })), cancel: { x: px + pw / 2 - 70, y: py + ph - 50, w: 140, h: 36 } };
         }
 
         function resolveNoSwing() {
@@ -1280,6 +1335,20 @@
                 SFX.ball();
                 if (G.balls >= 4) { applyPlay('BB'); } else { showRes('壞球', 'BALL', '#4488FF', false); G._continueAtBat = true; }
             }
+        }
+
+        // shared base-advancement rules (used by real at-bats and by the auto-simulated half inning)
+        function advanceHit(r, type) {
+            const nr = type === '2B' ? [false, true, false] : [true, false, false]; let runs = 0;
+            if (type === '2B') {            // double: 2nd/3rd score; 1st scores ~55% else holds at 3rd
+                runs = (r[2] ? 1 : 0) + (r[1] ? 1 : 0);
+                if (r[0]) { if (Math.random() < 0.55) runs++; else nr[2] = true; }
+            } else {                         // single: 3rd scores; 2nd scores ~70% else to 3rd; 1st -> 2nd (sometimes 3rd)
+                runs = r[2] ? 1 : 0;
+                if (r[1]) { if (Math.random() < 0.7) runs++; else nr[2] = true; }
+                if (r[0]) { if (!nr[2] && Math.random() < 0.3) nr[2] = true; else nr[1] = true; }
+            }
+            return { nr, runs };
         }
 
         function applyPlay(type) {
@@ -1303,22 +1372,12 @@
                 G.hrRunFrame = G.frame;
                 G.phase = PH.HR_RUN;
                 return; // skip showRes – fired later when animation ends
-            } else if (type === '2B') {
-                // double: runners on 2nd/3rd score; runner on 1st scores ~55% of the time, otherwise holds at 3rd
-                const r = [...G.runners], nr = [false, true, false]; let runs = (r[2] ? 1 : 0) + (r[1] ? 1 : 0);
-                if (r[0]) { if (Math.random() < 0.55) runs++; else nr[2] = true; }
+            } else if (type === '2B' || type === '1B') {
+                const { nr, runs } = advanceHit(G.runners, type);
                 G.score[bat] += runs; if (runs > 0) G.scoreFlash[bat] = 35;
-                G.runners = nr; text = runs > 0 ? `二壘安打！${runs} 分` : '二壘安打！'; sub = '2 BASE HIT'; col = '#44FF88';
-                SFX.crack();
-                st.ab++; st.h++; st.rbi += runs;
-            } else if (type === '1B') {
-                // single: 3rd scores; 2nd scores ~70% (else to 3rd); 1st goes to 2nd (sometimes 3rd)
-                const r = [...G.runners], nr = [true, false, false]; let runs = r[2] ? 1 : 0;
-                if (r[1]) { if (Math.random() < 0.7) runs++; else nr[2] = true; }
-                if (r[0]) { if (!nr[2] && Math.random() < 0.3) nr[2] = true; else nr[1] = true; }
-                G.score[bat] += runs; if (runs > 0) G.scoreFlash[bat] = 35;
-                G.runners = nr; text = runs > 0 ? `安打！${runs} 分` : '安打！'; sub = 'HIT'; col = '#44FF88';
-                SFX.crack();
+                G.runners = nr; col = '#44FF88'; SFX.crack();
+                if (type === '2B') { text = runs > 0 ? `二壘安打！${runs} 分` : '二壘安打！'; sub = '2 BASE HIT'; }
+                else { text = runs > 0 ? `安打！${runs} 分` : '安打！'; sub = 'HIT'; }
                 st.ab++; st.h++; st.rbi += runs;
             } else if (type === 'BB') {
                 const rbi = (G.runners[0] && G.runners[1] && G.runners[2]) ? 1 : 0;
@@ -1329,10 +1388,16 @@
                 SFX.ball();
                 st.bb++; st.rbi += rbi;
             } else if (type === 'OUT') {
+                const outsBefore = G.outs;
                 G.outs++; text = '出局！'; sub = 'OUT'; col = '#FF6644'; if (G.outs >= 3) endHalf = true;
                 SFX.out();
-                let runs = 0;
-                if (G.outs < 3) {
+                let runs = 0, dp = false;
+                // ground ball with a runner on 1st and fewer than 2 out: turn two (45%)
+                if (G.outKind === 'ground' && G.runners[0] && outsBefore < 2 && Math.random() < 0.45) {
+                    dp = true; G.runners[0] = false; G.outs++; text = '雙殺打！'; col = '#FF4444'; if (G.outs >= 3) endHalf = true;
+                    if (G.runners[1] && G.outs < 3 && Math.random() < 0.7) { G.runners[1] = false; G.runners[2] = G.runners[2] || true; }
+                }
+                if (!dp && G.outs < 3) {
                     if (G.outKind === 'fly') {            // sacrifice fly: runner tags up from 3rd
                         if (G.runners[2] && Math.random() < 0.75) { G.runners[2] = false; runs = 1; text = '犧牲飛球，得分！'; }
                         else if (G.runners[1] && !G.runners[2] && Math.random() < 0.3) { G.runners[1] = false; G.runners[2] = true; }
@@ -1344,6 +1409,7 @@
                     }
                 }
                 if (runs) { G.score[bat] += runs; G.scoreFlash[bat] = 35; st.rbi += runs; col = '#FFD24A'; }
+                if (dp) { st.ab++; }
                 if (!(runs && G.outKind === 'fly')) st.ab++;
             } else if (type === 'K') {
                 G.outs++; text = '三振出局！'; sub = 'STRIKEOUT'; col = '#FF4444'; if (G.outs >= 3) endHalf = true;
@@ -1359,16 +1425,25 @@
             G.resTimer = 95; G.resEndHalf = endHalf;
         }
 
+        // returns true when the game is decided at this point
+        function gameDecided() {
+            const [aw, hm] = G.score;
+            if (G.inning >= 9 && G.half === 0 && hm > aw) return true;      // home already ahead after the top half: no bottom half
+            if (G.inning >= 9 && G.half === 1 && aw !== hm) return true;   // after the bottom half of 9th+ with a winner
+            return false;
+        }
+        function walkOff() { return G.inning >= 9 && G.half === 1 && G.score[1] > G.score[0]; }   // home takes the lead in the bottom half
+
         function endHalf() {
             const p0 = G.innScores[0].reduce((a, b) => a + b, 0), p1 = G.innScores[1].reduce((a, b) => a + b, 0);
             if (G.half === 0) G.innScores[0].push(G.score[0] - p0); else G.innScores[1].push(G.score[1] - p1);
-            if (G.inning >= 9 && G.half === 1 && G.score[1] > G.score[0]) { G.scr = SCR.OVER; return; }
+            if (gameDecided() || (G.inning >= 12 && G.half === 1)) { G.scr = SCR.OVER; return; }
             G.scr = SCR.HALF_END; G.halfEndTimer = 0;
         }
 
         function _doNextHalf() {
             G.half++; if (G.half > 1) { G.half = 0; G.inning++; }
-            if (G.inning > 9) { G.scr = SCR.OVER; return; }
+            if (G.inning > 12) { G.scr = SCR.OVER; return; }
             G.runners = [false, false, false]; G.outs = 0; G.balls = 0; G.strikes = 0;
             G.scr = SCR.GAME; G.phase = PH.INNING_START; G.phaseTimer = 100;
         }
@@ -1395,15 +1470,26 @@
         function simulateHalf() {
             const pitcher = getPitcher();
             let outs = G.outs, runners = [...G.runners], score = 0, atBats = 0;
+            const bat = G.half;
             while (outs < 3 && atBats < 27) {
-                const batIdx = (G.batOrder[G.half] + atBats) % 9;
-                const result = simAtBat(batTeamInfo().roster.batters[G.lineups[G.half][batIdx]], pitcher);
-                const st = G.batStats[G.half][batIdx];
+                const batIdx = (G.batOrder[bat] + atBats) % 9;
+                const result = simAtBat(batTeamInfo().roster.batters[G.lineups[bat][batIdx]], pitcher);
+                const st = G.batStats[bat][batIdx];
                 atBats++;
                 if (result === 'K') {
                     outs++; st.ab++; st.k++;
                 } else if (result === 'OUT') {
+                    const fly = Math.random() < 0.55, before = outs;
                     outs++; st.ab++;
+                    if (!fly && runners[0] && before < 2 && Math.random() < 0.45) { outs++; runners[0] = false; }        // double play
+                    else if (outs < 3) {
+                        if (fly) { if (runners[2] && Math.random() < 0.75) { runners[2] = false; score++; st.rbi++; st.ab--; } }
+                        else {
+                            if (runners[2] && Math.random() < 0.4) { runners[2] = false; score++; st.rbi++; }
+                            if (runners[1] && !runners[2] && Math.random() < 0.5) { runners[1] = false; runners[2] = true; }
+                            if (runners[0] && !runners[1] && Math.random() < 0.5) { runners[0] = false; runners[1] = true; }
+                        }
+                    }
                 } else if (result === 'BB') {
                     const rbi = (runners[0] && runners[1] && runners[2]) ? 1 : 0;
                     if (runners[0] && runners[1] && runners[2]) score++;
@@ -1411,29 +1497,24 @@
                     if (runners[0]) runners[1] = true;
                     runners[0] = true;
                     st.bb++; st.rbi += rbi;
-                } else if (result === '1B') {
-                    const rbi = runners[2] ? 1 : 0;
-                    if (runners[2]) score++;
-                    const r2 = runners[1] && Math.random() < 0.5; const r1 = runners[0];
-                    runners = [true, r1, r2];
-                    st.ab++; st.h++; st.rbi += rbi;
-                } else if (result === '2B') {
-                    const rbi = (runners[2] ? 1 : 0) + (runners[1] ? 1 : 0);
-                    if (runners[2]) score++; if (runners[1]) score++;
-                    runners = [false, true, runners[0] && Math.random() < 0.5];
-                    st.ab++; st.h++; st.rbi += rbi;
+                } else if (result === '1B' || result === '2B') {
+                    const { nr, runs } = advanceHit(runners, result);
+                    score += runs; runners = nr;
+                    st.ab++; st.h++; st.rbi += runs;
                 } else if (result === 'HR') {
                     const runs = 1 + runners.filter(r => r).length;
                     score += runs; runners = [false, false, false];
                     st.ab++; st.h++; st.hr++; st.rbi += runs;
                 }
+                // walk-off: the home team takes the lead in the bottom of the 9th or later
+                if (bat === 1 && G.inning >= 9 && G.score[1] + score > G.score[0]) break;
             }
-            G.score[G.half] += score;
+            G.score[bat] += score;
             G.runners = runners;
             G.outs = 3;
-            G.batOrder[G.half] = (G.batOrder[G.half] + atBats) % 9;
+            G.batOrder[bat] = (G.batOrder[bat] + atBats) % 9;
             const scoreText = score > 0 ? `得 ${score} 分！` : '零封！';
-            showRes(`自動模擬 ${G.inning}局${G.half === 0 ? '上' : '下'}`, scoreText, score > 0 ? '#44FF88' : '#AAAAAA', true);
+            showRes(`自動模擬 ${G.inning}局${bat === 0 ? '上' : '下'}`, scoreText, score > 0 ? '#44FF88' : '#AAAAAA', true);
         }
 
         function update() {
@@ -1583,6 +1664,22 @@
                     if (G.gaugePos <= 0) { G.gaugePos = 0; G.gaugeDir = 1; }
                     if (actionTrigger()) { G.gaugePower = G.gaugePos; throwBall(G.gaugePower); }
                     break;
+                case PH.STEAL_MENU: {
+                    const L = getStealMenuLayout();
+                    if (J('Escape')) { G.phase = PH.WAIT_PITCH; break; }
+                    if (J('Digit1') && L.rows[0]) { startSteal(L.rows[0].o); break; }
+                    if (J('Digit2') && L.rows[1]) { startSteal(L.rows[1].o); break; }
+                    if (isMouseJustPressed) {
+                        const hit = r => mouseX >= r.x && mouseX <= r.x + r.w && mouseY >= r.y && mouseY <= r.y + r.h;
+                        const row = L.rows.find(hit);
+                        if (row) startSteal(row.o); else if (hit(L.cancel)) G.phase = PH.WAIT_PITCH;
+                    }
+                    break;
+                }
+                case PH.STEAL: {
+                    if (G.frame - G.steal.t0 >= G.steal.end) applySteal();
+                    break;
+                }
                 case PH.WAIT_PITCH: {
                     if (isMobile && !mpRemoteTurn()) {
                         if (G.isDraggingBat) { const sens = 0.008; G.curX = clamp(G.baseCurX + (mouseX - G.dragStartX) * sens, -1.5, 1.5); G.curY = clamp(G.baseCurY + (mouseY - G.dragStartY) * sens, -1.5, 1.5); }
@@ -1590,12 +1687,12 @@
                         G.curX = clamp((mouseX - SZcx) / (SZw / 2), -1.5, 1.5); G.curY = clamp((mouseY - SZcy) / (SZh / 2), -1.5, 1.5);
                     }
                     G.readyPulse = (G.readyPulse + 0.08) % (Math.PI * 2);
-                    if (playerBatting() && J('KeyS') && (G.runners[0] || G.runners[1])) { attemptSteal(); break; }
+                    if (playerBatting() && J('KeyS') && canSteal()) { attemptSteal(); break; }
                     if (playerBatting() && isMouseJustPressed) {
                         const bbx = W - 130, bby = H - 50;
                         if (mouseX >= bbx && mouseX <= bbx + 120 && mouseY >= bby && mouseY <= bby + 38) { G.subType = 'B'; G.prevPhase = G.phase; G.phase = PH.SUB_MENU; break; }
                         const stx = W - 130, sty = H - 100;
-                        if ((G.runners[0] || G.runners[1]) && mouseX >= stx && mouseX <= stx + 120 && mouseY >= sty && mouseY <= sty + 38) { attemptSteal(); break; }
+                        if (canSteal() && mouseX >= stx && mouseX <= stx + 120 && mouseY >= sty && mouseY <= sty + 38) { attemptSteal(); break; }
                     }
                     if (mouseY < H - 80 || !playerBatting()) { G.phaseTimer--; }
                     if (G.phaseTimer <= 0) {
@@ -1634,7 +1731,7 @@
                 }
                 case PH.RESULT:
                     G.resTimer--;
-                    if (G.resTimer <= 0) { if (G.resEndHalf) endHalf(); else if (G._continueAtBat) { G._continueAtBat = false; startAtBat(true); } else startAtBat(); }
+                    if (G.resTimer <= 0) { if (G.resEndHalf || walkOff()) endHalf(); else if (G._continueAtBat) { G._continueAtBat = false; startAtBat(true); } else startAtBat(); }
                     break;
             }
             clearInput();
@@ -2972,7 +3069,25 @@
             }
         }
 
+        function renderStealMenu() {
+            const L = getStealMenuLayout();
+            ctx.fillStyle = 'rgba(0,0,0,0.55)'; ctx.fillRect(0, 0, W, H);
+            hudPanel(L.px, L.py, L.pw, L.ph, 14, '#ffb300');
+            hudText('選擇盜壘方式', W / 2, L.py + 36, 20, '#fff', 'center');
+            L.rows.forEach((r, i) => {
+                const hov = mouseX >= r.x && mouseX <= r.x + r.w && mouseY >= r.y && mouseY <= r.y + r.h;
+                ctx.fillStyle = hov ? 'rgba(255,200,60,0.28)' : 'rgba(255,255,255,0.08)'; drawRoundRect(ctx, r.x, r.y, r.w, r.h, 10); ctx.fill();
+                ctx.strokeStyle = hov ? '#ffcc33' : 'rgba(255,255,255,0.22)'; ctx.lineWidth = 1.5; drawRoundRect(ctx, r.x, r.y, r.w, r.h, 10); ctx.stroke();
+                hudText(`${i + 1}`, r.x + 22, r.y + 29, 18, '#ffcc33', 'center');
+                hudText(r.o.label, r.x + 44, r.y + 28, 17, '#fff');
+            });
+            const c = L.cancel, hv = mouseX >= c.x && mouseX <= c.x + c.w && mouseY >= c.y && mouseY <= c.y + c.h;
+            ctx.fillStyle = hv ? 'rgba(255,255,255,0.18)' : 'rgba(255,255,255,0.08)'; drawRoundRect(ctx, c.x, c.y, c.w, c.h, 18); ctx.fill();
+            hudText('取消 (Esc)', c.x + c.w / 2, c.y + 24, 14, '#cfd8ea', 'center');
+        }
+
         function renderPhaseUI() {
+            if (G.phase === PH.STEAL_MENU) { renderStealMenu(); return; }
             if (G.phase === PH.INNING_START) {
                 const elapsed = 100 - G.phaseTimer; // 0→100 as banner lives
                 // slide in from right over 18 frames, hold, fade out last 20 frames
@@ -3062,7 +3177,7 @@
 
             if (G.phase === PH.WAIT_PITCH && playerBatting()) {
                 const bbx = W - 130, bby = H - 50; const bHover = mouseX >= bbx && mouseX <= bbx + 120 && mouseY >= bby && mouseY <= bby + 38; drawGlossyPill(bbx, bby, 120, 38, bHover, '🔄 換代打', '#004422', '#007733', bHover ? '#FFD700' : '#FFF');
-                if (G.runners[0] || G.runners[1]) { const stx = W - 130, sty = H - 100; const stHover = mouseX >= stx && mouseX <= stx + 120 && mouseY >= sty && mouseY <= sty + 38; drawGlossyPill(stx, sty, 120, 38, stHover, '🏃 盜壘', '#883300', '#CC5500', stHover ? '#FFD700' : '#FFF'); }
+                if (canSteal()) { const stx = W - 130, sty = H - 100; const stHover = mouseX >= stx && mouseX <= stx + 120 && mouseY >= sty && mouseY <= sty + 38; drawGlossyPill(stx, sty, 120, 38, stHover, '🏃 盜壘', '#883300', '#CC5500', stHover ? '#FFD700' : '#FFF'); }
                 if (mouseY >= H - 80) txt('－ 投球暫停中 (思考戰術) －', W / 2, H - 20, 16, '#00FFFF', 'center', '', false);
             }
 
@@ -3430,7 +3545,7 @@
             } else if (isMobile && G.scr === SCR.GAME) {
                 if (playerBatting() && (G.phase === PH.WAIT_PITCH || G.phase === PH.BATTING)) {
                     btnS.classList.add('show'); btnC.classList.add('show'); btnA.classList.remove('show');
-                    if (G.runners[0] || G.runners[1]) btnSt.classList.add('show'); else btnSt.classList.remove('show');
+                    if (canSteal()) btnSt.classList.add('show'); else btnSt.classList.remove('show');
                 } else if (!playerBatting() && G.phase === PH.PITCH_SELECT) {
                     btnS.classList.remove('show'); btnC.classList.add('show'); btnA.classList.add('show'); btnSt.classList.remove('show');
                 } else { btnS.classList.remove('show'); btnC.classList.remove('show'); btnA.classList.remove('show'); btnSt.classList.remove('show'); }
