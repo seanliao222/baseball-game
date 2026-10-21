@@ -242,7 +242,7 @@
         </div>
     </div>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-    <script src="stadium3d.js"></script>
+    <script src="stadium3d.js?v=20261021d"></script>
     <script src="https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.js"></script>
     <script>
@@ -292,6 +292,10 @@
             8: { name: '伸卡球', mph: 93, bx: 8, by: 8, col: '#FF88AA', dir: Math.PI * 0.2 },
         };
 
+        // How each pitch travels: `late` = how late the break happens (higher = more last-moment), `hump` = floats up before dropping.
+        const PITCH_FLIGHT = { 0: { late: 1.0, hump: 0 }, 1: { late: 1.7, hump: 0 }, 2: { late: 2.3, hump: 0 }, 3: { late: 2.1, hump: 0 }, 4: { late: 2.6, hump: 0.45 }, 5: { late: 2.3, hump: 0.16 }, 6: { late: 3.0, hump: 0.12 }, 7: { late: 2.5, hump: 0 }, 8: { late: 1.8, hump: 0 } };
+        const BREAK_SCALE = 0.8;
+        function breakPx(po) { const pd = PITCH_DICT[po.id]; return { cx: pd.bx * po.lv * BREAK_SCALE, cy: pd.by * po.lv * BREAK_SCALE }; }
         const isMobile = ('ontouchstart' in window || navigator.maxTouchPoints > 0);
         const ROSTERS = {
             'LAD': {
@@ -717,7 +721,7 @@
                 phase: PH.INNING_START, phaseTimer: 0,
                 pitchChoice: 0, hoveredPitchChoice: -1, aimX: 0, aimY: 0, gaugePos: 0, gaugeDir: 1, gaugePower: 0,
                 ballActive: false, ballFrame: 0, ballDur: 0,
-                ballSX: 0, ballSY: 0, ballEX: 0, ballEY: 0, ballCX: 0, ballCY: 0,
+                ballSX: 0, ballSY: 0, ballEX: 0, ballEY: 0, ballCX: 0, ballCY: 0, ballAX: 0, ballAY: 0, ballLate: 1, ballHump: 0, lastPitchId: 0, lastPitchCol: '#fff',
                 aiSwing: false, aiSwingFrame: 0, aiCX: 0, aiCY: 0,
                 curX: 0, curY: 0, phPos: 0, phSpeed: 0.022, phPressed: false, phValue: 0, phDone: false,
                 dragStartX: 0, dragStartY: 0, baseCurX: 0, baseCurY: 0, isDraggingBat: false, aimState: 0,
@@ -1176,13 +1180,21 @@
             G.lastPitchKmh = Math.round(baseMph * 1.60934);
             G.lastPitchName = pDef.name;
             G.speedGunTimer = 90;
-            G.ballDur = Math.round((50 - (baseMph - 80) * 0.3) / speedMult);
+            // flight time scales with real speed: a 98 mph fastball vs a 79 mph curve is ~35% longer in the air
+            G.ballDur = Math.max(20, Math.round(46 * Math.pow(98 / baseMph, 1.5) / speedMult));
+            G.lastPitchId = pitchObj.id; G.lastPitchCol = pDef.col;
 
             G.ballSX = W / 2; G.ballSY = 230;
-            G.ballEX = SZcx + G.aimX * (SZw / 2) + devX; G.ballEY = SZcy + G.aimY * (SZh / 2) + devY;
-
-            const breakMult = pitchObj.lv * 0.45;
-            G.ballCX = pDef.bx * breakMult; G.ballCY = pDef.by * breakMult;
+            const brk = breakPx(pitchObj), fl = PITCH_FLIGHT[pitchObj.id] || { late: 1, hump: 0 };
+            G.ballCX = brk.cx; G.ballCY = brk.cy; G.ballLate = fl.late; G.ballHump = fl.hump;
+            const tgtX = SZcx + G.aimX * (SZw / 2) + devX, tgtY = SZcy + G.aimY * (SZh / 2) + devY;
+            if (!MP.active && playerBatting()) {
+                // computer pitcher: the chosen spot is where the ball should END, so aim before the break
+                G.ballEX = tgtX; G.ballEY = tgtY; G.ballAX = tgtX - brk.cx; G.ballAY = tgtY - brk.cy;
+            } else {
+                // human pitcher: the crosshair is where the ball enters, the break moves it to the landing spot (matches the preview)
+                G.ballAX = tgtX; G.ballAY = tgtY; G.ballEX = tgtX + brk.cx; G.ballEY = tgtY + brk.cy;
+            }
 
             G._actualAimX = (G.ballEX - SZcx) / (SZw / 2);
             G._actualAimY = (G.ballEY - SZcy) / (SZh / 2);
@@ -1295,7 +1307,7 @@
             G.steal.end = Math.max(R, G.steal.ballArrive) + 34;
             // the pitcher still delivers (a pitch-out wide of the zone) while the runners go
             G.ballActive = true; G.ballFrame = G.frame + 2; G.ballDur = 24; G.ballSX = W / 2; G.ballSY = 230;
-            G.ballEX = SZcx + 135; G.ballEY = SZcy - 25; G.ballCX = 0; G.ballCY = 0; G._actualAimX = 2.4; G._actualAimY = -0.4;
+            G.ballEX = SZcx + 135; G.ballEY = SZcy - 25; G.ballAX = G.ballEX; G.ballAY = G.ballEY; G.ballCX = 0; G.ballCY = 0; G.ballLate = 1; G.ballHump = 0; G._actualAimX = 2.4; G._actualAimY = -0.4;
             G.batSwingFrame = -999; G.hitEffectFrame = -999;
             SFX.pitch(); G.phase = PH.STEAL;
         }
@@ -2325,7 +2337,7 @@
             else if ((G.phase === PH.AIM && G.aimState === 1) || G.phase === PH.POWER_GAUGE) { idx = G.pitchChoice; ex = SZcx + G.aimX * (SZw / 2); ey = SZcy + G.aimY * (SZh / 2); }
             if (idx < 0) return;
             const po = getPitcher().pitches[idx]; if (!po) return;
-            const pd = PITCH_DICT[po.id], bm = po.lv * 0.45, cx = pd.bx * bm, cy = pd.by * bm;
+            const pd = PITCH_DICT[po.id], { cx, cy } = breakPx(po);
             const col = pd.col, ox = ex, oy = ey, tx = ex + cx, ty = ey + cy, brk = Math.hypot(cx, cy);
             ctx.save();
             // like Pawapuro: the zone lights up while choosing so the movement reads clearly
@@ -3050,15 +3062,16 @@
 
         function renderBall() {
             const t = ballProgress(); if (t <= 0 || t > 1.05) return;
-            const x = lerp(G.ballSX, G.ballEX + G.ballCX * t, t), y = lerp(G.ballSY, G.ballEY + G.ballCY * t, t); const sz = lerp(2, 14, t);
+            const ft = Math.pow(t, G.ballLate || 1), x = lerp(G.ballSX, G.ballAX, t) + (G.ballEX - G.ballAX) * ft, y = lerp(G.ballSY, G.ballAY, t) + (G.ballEY - G.ballAY) * ft - Math.sin(t * Math.PI) * (G.ballHump || 0) * 40; const sz = lerp(2, 14, t);
 
             // Motion trail
             ctx.save();
             for (let i = 1; i <= 6; i++) {
                 const tt = clamp(t - i * 0.055, 0, 1);
                 if (tt <= 0) continue;
-                const tx = lerp(G.ballSX, G.ballEX + G.ballCX * tt, tt);
-                const ty = lerp(G.ballSY, G.ballEY + G.ballCY * tt, tt);
+                const tf = Math.pow(tt, G.ballLate || 1);
+                const tx = lerp(G.ballSX, G.ballAX, tt) + (G.ballEX - G.ballAX) * tf;
+                const ty = lerp(G.ballSY, G.ballAY, tt) + (G.ballEY - G.ballAY) * tf - Math.sin(tt * Math.PI) * (G.ballHump || 0) * 40;
                 const tsz = lerp(2, 14, tt);
                 ctx.globalAlpha = (0.22 - i * 0.032);
                 ctx.fillStyle = i <= 2 ? '#FFFFCC' : '#AAAAFF';

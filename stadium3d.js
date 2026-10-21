@@ -734,7 +734,7 @@ const Stadium3D = (function () {
         { k: '1B', x: 17.5, z: -21 }, { k: '2B', x: 9.8, z: -33 }, { k: 'SS', x: -9.8, z: -33 }, { k: '3B', x: -17.5, z: -21 },
         { k: 'LF', x: -37, z: -74 }, { k: 'CF', x: 0, z: -90 }, { k: 'RF', x: 37, z: -74 }
     ];
-    let ball, hitBall, ballShadow, trail = [], flashSprite, glowTex, mitt, mittT = 0;
+    let ball, hitBall, ballShadow, trail = [], flashSprite, glowTex, mitt, mittT = 0, ballGlow;
     let particles = [];
 
     function ballTexture() {
@@ -768,7 +768,7 @@ const Stadium3D = (function () {
 
         // ball
         const bm = new THREE.MeshStandardMaterial({ map: ballTexture(), roughness: 0.55, emissive: 0x333330, emissiveIntensity: 0.55 });
-        ball = new THREE.Mesh(geo.ball, bm); ball.scale.setScalar(0.052); ball.castShadow = true; ball.visible = false; scene.add(ball);
+        ball = new THREE.Mesh(geo.ball, bm); ball.scale.setScalar(0.062); ball.castShadow = true; ball.visible = false; scene.add(ball);
         hitBall = new THREE.Mesh(geo.ball, bm); hitBall.scale.setScalar(0.06); hitBall.castShadow = true; hitBall.visible = false; scene.add(hitBall);
         for (let i = 0; i < 8; i++) {
             const t = new THREE.Mesh(geo.ball, new THREE.MeshBasicMaterial({ color: 0xfff6d8, transparent: true, opacity: 0.2, depthWrite: false }));
@@ -789,6 +789,8 @@ const Stadium3D = (function () {
         mitt.traverse(o => { if (o.isMesh) o.castShadow = false; });
         mitt.visible = false; scene.add(mitt);
         glowTex = glowTexture();
+        ballGlow = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTex, blending: THREE.AdditiveBlending, depthWrite: false, transparent: true, opacity: 0.0, fog: false }));
+        ballGlow.visible = false; scene.add(ballGlow);
         flashSprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTex, blending: THREE.AdditiveBlending, depthWrite: false, transparent: true, opacity: 0 }));
         flashSprite.scale.set(1.4, 1.4, 1); scene.add(flashSprite);
     }
@@ -913,14 +915,14 @@ const Stadium3D = (function () {
 
     // ── pitch ball ───────────────────────────────────────
     const REL = new THREE.Vector3(-0.28, 1.92, MOUND_Z + 1.4);
+    // pitch path: straight line release -> (pre-break) aim point, plus the break that arrives late, plus a float for loopy pitches
+    const _pa = new THREE.Vector3(), _pl = new THREE.Vector3();
     function pitchWorld(G, t, out) {
-        pxToPlane(G.ballEX, G.ballEY, out);
-        out.x += (G.ballCX / K) * t;
-        out.y += -(G.ballCY / K) * t;
-        out.z = 0;
-        const end = out.clone();
-        out.copy(REL).lerp(end, t);
-        out.y += Math.sin(t * Math.PI) * 0.06;
+        pxToPlane(G.ballAX, G.ballAY, _pa); pxToPlane(G.ballEX, G.ballEY, _pl);
+        const f = Math.pow(t, G.ballLate || 1);
+        out.copy(REL).lerp(_pa.set(_pa.x, _pa.y, 0), t);
+        out.x += (_pl.x - _pa.x) * f; out.y += (_pl.y - _pa.y) * f; out.z = 0 + (REL.z * (1 - t));
+        out.y += Math.sin(t * Math.PI) * ((G.ballHump || 0) * 0.55 + 0.04);     // curveballs float up before they fall
         return out;
     }
 
@@ -934,19 +936,27 @@ const Stadium3D = (function () {
             if (G.frame - G.ballFrame < 0) show = false;
             if (show) {
                 pitchWorld(G, t, ball.position);
-                ball.rotation.x -= 0.5 * df; ball.rotation.z += 0.12 * df;
+                const near = 1 - t;                                                    // far from the camera = bigger, so the ball stays readable
+                ball.scale.setScalar(0.062 * (1 + 1.9 * near));
+                ballGlow.visible = true; ballGlow.position.copy(ball.position); ballGlow.scale.setScalar(0.28 * (1 + 2.2 * near)); ballGlow.material.opacity = 0.55; if (G.lastPitchCol) ballGlow.material.color.set(G.lastPitchCol);
+                const pid = G.lastPitchId;
+                if (pid === 0) ball.rotation.x -= 0.55 * df;                                   // 4-seam: backspin
+                else if (pid === 4 || pid === 6) ball.rotation.x += 0.45 * df;                // curve / fork: topspin
+                else if (pid === 2 || pid === 3 || pid === 7) { ball.rotation.y += 0.55 * df; ball.rotation.x -= 0.1 * df; }   // slider family: sidespin
+                else if (pid === 5) ball.rotation.x -= 0.18 * df;                              // changeup: slow spin
+                else { ball.rotation.x -= 0.4 * df; ball.rotation.z += 0.2 * df; }
                 ball.visible = true;
                 // trail
                 for (let i = 0; i < trail.length; i++) {
-                    const tt = t - (i + 1) * 0.04;
+                    const tt = t - (i + 1) * 0.035;
                     if (tt <= 0 || t >= 1) { trail[i].visible = false; continue; }
                     pitchWorld(G, tt, trail[i].position); trail[i].visible = true;
-                    trail[i].scale.setScalar(0.05 * (1 - i * 0.08)); trail[i].material.opacity = 0.16 * (1 - i / trail.length);
+                    trail[i].scale.setScalar(0.056 * (1 - i * 0.07) * (1 + 1.5 * (1 - tt))); trail[i].material.opacity = 0.34 * (1 - i / trail.length); if (G.lastPitchCol) trail[i].material.color.set(G.lastPitchCol);
                 }
-                if (t >= 1) { for (const tr of trail) tr.visible = false; }
+                if (t >= 1) { for (const tr of trail) tr.visible = false; ballGlow.visible = false; }
             }
         }
-        if (!show) { ball.visible = false; if (!S.flight) for (const tr of trail) tr.visible = false; }
+        if (!show) { ball.visible = false; if (ballGlow) ballGlow.visible = false; if (!S.flight) for (const tr of trail) tr.visible = false; }
         // overlay catcher-mitt contact
         if (show && info.ballProgress >= 1) { ball.position.z = 0.22; }
     }
@@ -1325,8 +1335,8 @@ const Stadium3D = (function () {
     const WIDE = { pos: new THREE.Vector3(0, 13, 22), look: new THREE.Vector3(0, 2, -42), fov: 50, shift: 0 };
     const HRCAM = { pos: new THREE.Vector3(-26, 12, 16), look: new THREE.Vector3(0, 0, -22), fov: 52, shift: 0 };
     const _look = new THREE.Vector3();
-    // brief cut to the umpire while he signals the call (only calls made from the batter camera)
-    function umpGestureCut(G, PH) { const g = umpGesture(G, PH); return !!g && g.e < 52 && !(S.flight && S.flight.type !== 'FOUL' && hitBall.visible); }
+    // brief cut to the umpire for the big calls only: strikeouts and foul balls (other calls are visible on the video board)
+    function umpGestureCut(G, PH) { const g = umpGesture(G, PH); return !!g && (g.kind === 'strike3' || g.kind === 'foul') && g.e < 52 && !(S.flight && S.flight.type !== 'FOUL' && hitBall.visible); }
     function cameraTarget(G, info) {
         const PH = info.PH; let tgt;
         const fl = S.flight;
@@ -1337,7 +1347,7 @@ const Stadium3D = (function () {
         } else if (flying && G.phase === PH.RESULT) tgt = followCam(fl, G);
         else if (G.phase === PH.RESULT && (G.resSub === 'HIT' || G.resSub === '2 BASE HIT' || G.resSub === 'OUT' || G.resSub === 'WALK')) tgt = flying ? followCam(fl, G) : (G.resSub === 'WALK' ? BAT_CAM : WIDE);
         else if (G.phase === PH.STEAL) tgt = stealCam(G);
-        else if (umpGestureCut(G, PH)) { UMP_CAM.pos.x = S.batLeft ? -4.2 : 4.2; UMP_CAM.look.x = S.batLeft ? 0.1 : -0.1; tgt = UMP_CAM; }
+        else if (umpGestureCut(G, PH)) { UMP_CAM.pos.x = S.batLeft ? -4.2 : 4.2; UMP_CAM.look.x = S.batLeft ? 0.1 : -0.1; UMP_CAM.look.y = 2.7; tgt = UMP_CAM; }
         else if (G.phase === PH.INNING_START) tgt = WIDE;
         else tgt = BAT_CAM;
         return tgt;
@@ -1400,7 +1410,7 @@ const Stadium3D = (function () {
         if (r) { ikArm(u.armR, r, _hintDown.set(-0.6, -0.5, -0.3)); _hintDown.set(0, -1, 0); }
         if (l) { ikArm(u.armL, l, _hintDown.set(0.5, -0.6, -0.2)); _hintDown.set(0, -1, 0); }
     }
-    const UMP_CAM = { pos: new THREE.Vector3(4.2, 2.0, -6.0), look: new THREE.Vector3(-0.1, 1.55, 2.0), fov: 22, shift: 0 };
+    const UMP_CAM = { pos: new THREE.Vector3(4.2, 2.0, -6.0), look: new THREE.Vector3(-0.1, 2.7, 2.0), fov: 22, shift: 0 };
 
     const FOLLOW = { pos: new THREE.Vector3(), look: new THREE.Vector3(), fov: 38, shift: 0 };
     function followCam(fl, G) {
@@ -1453,6 +1463,7 @@ const Stadium3D = (function () {
         return api.ok;
     };
     api.debugCam = function (pos, look, fov) { S.dbgCam = pos ? { pos: new THREE.Vector3(...pos), look: new THREE.Vector3(...look), fov: fov || 30, shift: 0 } : null; };
+    api.pitchPoint = (G, t) => { const o = new THREE.Vector3(); pitchWorld(G, t, o); return [+o.x.toFixed(2), +o.y.toFixed(2), +o.z.toFixed(2)]; };
     api.resize = resize;
     api.pxToPlane = pxToPlane;
     // project a world point to game px using the (settled) batter camera
