@@ -65,7 +65,7 @@ const Stadium3D = (function () {
         t.anisotropy = maxAniso;
         return t;
     }
-    const std = (color, o = {}) => new THREE.MeshStandardMaterial(Object.assign({ color, roughness: 0.85, metalness: 0 }, o));
+    const std = (color, o = {}) => new THREE.MeshStandardMaterial(Object.assign({ color, roughness: 0.85, metalness: 0, envMapIntensity: 0.55 }, o));
 
     // ───────────────────────── field textures ─────────────────────────
     function buildFieldTexture() {
@@ -235,10 +235,15 @@ const Stadium3D = (function () {
     }
 
     function buildStadium() {
-        scene.background = texOf(buildSkyTexture());
+        const skyCanvas = buildSkyTexture();
+        scene.background = texOf(skyCanvas);
+        try {
+            const eq = new THREE.CanvasTexture(skyCanvas); eq.mapping = THREE.EquirectangularReflectionMapping;
+            const pm = new THREE.PMREMGenerator(renderer); scene.environment = pm.fromEquirectangular(eq).texture; pm.dispose();
+        } catch (e) { console.warn('env map skipped', e); }
         scene.fog = new THREE.FogExp2(0xb9d6ee, 0.0017);
 
-        scene.add(new THREE.HemisphereLight(0xcfe2ff, 0x6f7f4c, 0.5));
+        scene.add(new THREE.HemisphereLight(0xcfe2ff, 0x6f7f4c, 0.4));
         sun.position.set(-38, 72, 40);
         sun.castShadow = true;
         sun.shadow.mapSize.set(2048, 2048);
@@ -250,11 +255,11 @@ const Stadium3D = (function () {
         // ground
         const fieldTex = texOf(buildFieldTexture());
         const ground = new THREE.Mesh(new THREE.PlaneGeometry(260, 260), new THREE.MeshStandardMaterial({ map: fieldTex, roughness: 1 }));
-        ground.rotation.x = -Math.PI / 2; ground.position.set(0, 0, -70); ground.receiveShadow = true;
+        ground.rotation.x = -Math.PI / 2; ground.position.set(0, 0, -70); ground.receiveShadow = true; ground.material.envMapIntensity = 0.08;
         scene.add(ground);
 
         const plate = new THREE.Mesh(new THREE.PlaneGeometry(14, 14), new THREE.MeshStandardMaterial({ map: texOf(buildPlateDirtTexture()), transparent: true, roughness: 1, polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -1 }));
-        plate.rotation.x = -Math.PI / 2; plate.position.set(0, 0.004, 0); plate.receiveShadow = true;
+        plate.rotation.x = -Math.PI / 2; plate.position.set(0, 0.004, 0); plate.receiveShadow = true; plate.material.envMapIntensity = 0.08;
         scene.add(plate);
 
         // chalk
@@ -283,7 +288,7 @@ const Stadium3D = (function () {
 
         // mound + rubber
         const mound = new THREE.Mesh(new THREE.CylinderGeometry(2.6, 4.2, 0.26, 40), new THREE.MeshStandardMaterial({ color: 0xa6764a, roughness: 1 }));
-        mound.position.set(0, 0.13, MOUND_Z); mound.receiveShadow = true; mound.castShadow = false; scene.add(mound);
+        mound.position.set(0, 0.13, MOUND_Z); mound.receiveShadow = true; mound.material.envMapIntensity = 0.08; mound.castShadow = false; scene.add(mound);
         const rubber = new THREE.Mesh(new THREE.BoxGeometry(0.61, 0.04, 0.15), chalk);
         rubber.position.set(0, 0.28, MOUND_Z); scene.add(rubber);
 
@@ -459,17 +464,43 @@ const Stadium3D = (function () {
         geo.bat = new THREE.LatheGeometry(prof, 12);
     }
 
+    // grayscale bump texture: fine weave + soft wrinkle streaks (cached per kind, shared between people)
+    const bumpCache = {};
+    function fabricBump(w, h, kind) {
+        if (bumpCache[kind]) return bumpCache[kind];
+        const c = canvasOf(w, h), g = c.getContext('2d'), R = seeded(hash(kind));
+        g.fillStyle = '#808080'; g.fillRect(0, 0, w, h);
+        const n = kind === 'jersey' ? 7 : 4;
+        for (let i = 0; i < n; i++) {   // wrinkles: soft light/dark pairs of streaks
+            const x = R() * w, y = R() * h, len = (kind === 'pants' ? 0.35 : 0.22) * h, ang = kind === 'pants' ? Math.PI / 2 + (R() - 0.5) * 0.6 : (R() - 0.5) * 1.2;
+            const gr = g.createLinearGradient(x, y, x + Math.cos(ang + Math.PI / 2) * 6, y + Math.sin(ang + Math.PI / 2) * 6);
+            gr.addColorStop(0, 'rgba(0,0,0,0)'); gr.addColorStop(0.35, 'rgba(0,0,0,0.22)'); gr.addColorStop(0.65, 'rgba(255,255,255,0.22)'); gr.addColorStop(1, 'rgba(255,255,255,0)');
+            g.strokeStyle = gr; g.lineWidth = 9; g.lineCap = 'round'; g.beginPath(); g.moveTo(x, y); g.lineTo(x + Math.cos(ang) * len, y + Math.sin(ang) * len); g.stroke();
+        }
+        const t = new THREE.CanvasTexture(c); t.wrapS = t.wrapT = THREE.RepeatWrapping; t.anisotropy = maxAniso; bumpCache[kind] = t; return t;
+    }
+
+    // soft contact shadow disc: grounds every player
+    let aoTex = null;
+    function contactAO() {
+        if (!aoTex) { const c = canvasOf(64, 64), g = c.getContext('2d'), gr = g.createRadialGradient(32, 32, 2, 32, 32, 32); gr.addColorStop(0, 'rgba(0,0,0,0.6)'); gr.addColorStop(0.55, 'rgba(0,0,0,0.28)'); gr.addColorStop(1, 'rgba(0,0,0,0)'); g.fillStyle = gr; g.fillRect(0, 0, 64, 64); aoTex = new THREE.CanvasTexture(c); }
+        const m = new THREE.Mesh(new THREE.PlaneGeometry(1.05, 0.8), new THREE.MeshBasicMaterial({ map: aoTex, transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 }));
+        m.rotation.x = -Math.PI / 2; m.position.y = 0.016; m.renderOrder = 1; return m;
+    }
+
     function makePerson(kind) {
         const m = {
             jersey: std(0xffffff), accent: std(0xcccccc), pants: std(0xeeeeee), sock: std(0xcccccc), skin: std(0xe0ac84, { roughness: 0.7 }),
-            cap: std(0x222222, { roughness: 0.6 }), shoe: std(0x15151a, { roughness: 0.5 }), glove: std(0x6b3b1a, { roughness: 0.7 }),
-            dark: std(0x101014), gear: std(0x1a2238, { roughness: 0.6 }), bat: std(0xc99a5c, { roughness: 0.5 }),
-            hand: std(0xe0ac84, { roughness: 0.7 }), sleeve: std(0xffffff), band: std(0xffffff, { roughness: 0.6 }), hair: std(0x17120e, { roughness: 0.9 }), sole: std(0xe6e6ea, { roughness: 0.6 })
+            cap: std(0x222222, { roughness: 0.6 }), shoe: std(0x15151a, { roughness: 0.5 }), glove: std(0x6b3b1a, { roughness: 0.45, envMapIntensity: 0.9 }),
+            dark: std(0x101014), gear: std(0x1a2238, { roughness: 0.6 }), bat: std(0xffffff, { roughness: 0.32, envMapIntensity: 1.0 }),
+            hand: std(0xe0ac84, { roughness: 0.7 }), forearm: std(0xe0ac84, { roughness: 0.65 }), sleeve: std(0xffffff), band: std(0xffffff, { roughness: 0.6 }), hair: std(0x17120e, { roughness: 0.9 }), sole: std(0xe6e6ea, { roughness: 0.6 })
         };
         const jerseyC = canvasOf(256, 256), jerseyT = new THREE.CanvasTexture(jerseyC);
         jerseyT.wrapS = THREE.RepeatWrapping; jerseyT.offset.x = 0.5; jerseyT.anisotropy = maxAniso; m.jersey.map = jerseyT;
         const pantsC = canvasOf(64, 128), pantsT = new THREE.CanvasTexture(pantsC); pantsT.anisotropy = maxAniso; m.pants.map = pantsT;
-        const root = new THREE.Group();
+        m.jersey.bumpMap = fabricBump(256, 256, 'jersey'); m.jersey.bumpMap.wrapS = THREE.RepeatWrapping; m.jersey.bumpMap.offset.x = 0.5; m.jersey.bumpScale = 0.6;
+
+        const root = new THREE.Group(); root.add(contactAO());
         const part = (g, mat, parent, shadow = true) => { const me = new THREE.Mesh(g, mat); me.castShadow = shadow; parent.add(me); return me; };
         const blob = (mat, parent, sx, sy, sz, x = 0, y = 0, z = 0) => { const me = new THREE.Mesh(geo.ball, mat); me.scale.set(sx, sy, sz); me.position.set(x, y, z); me.castShadow = true; parent.add(me); return me; };
         const hips = new THREE.Group(); hips.position.y = HIP_Y; root.add(hips);
@@ -504,7 +535,7 @@ const Stadium3D = (function () {
             const sh = new THREE.Group(); sh.position.set(0.235 * s, 0.5, 0); torso.add(sh);
             part(geo.upperArm, m.sleeve, sh).scale.set(1.22, 1, 1.22);
             const el = new THREE.Group(); el.position.y = -0.29; sh.add(el);
-            part(geo.foreArm, m.accent, el).scale.set(1.2, 1, 1.2);
+            part(geo.foreArm, m.hand === undefined ? m.skin : m.forearm, el).scale.set(1.2, 1, 1.2);
             const hand = new THREE.Group(); hand.position.y = -0.285; el.add(hand);
             blob(m.hand, hand, 0.046, 0.058, 0.042, 0, -0.012, 0);
             const wb = part(new THREE.CylinderGeometry(0.041, 0.039, 0.05, 12).translate(0, -0.235, 0), m.band, el, false);
@@ -531,6 +562,13 @@ const Stadium3D = (function () {
         const gm2 = part(geo.ball, m.glove, gloveG); gm2.scale.set(0.06, 0.1, 0.045); gm2.position.set(0.03, 0.03, 0.04);
         gloveG.visible = false;
         const holder = new THREE.Group(); torso.add(holder);
+        const batC = canvasOf(64, 256), bg = batC.getContext('2d'), br = seeded(5);
+        const wood = bg.createLinearGradient(0, 0, 64, 0); wood.addColorStop(0, '#b8844a'); wood.addColorStop(0.5, '#d4a468'); wood.addColorStop(1, '#b17b43'); bg.fillStyle = wood; bg.fillRect(0, 0, 64, 256);
+        for (let i = 0; i < 90; i++) { bg.strokeStyle = 'rgba(90,50,15,' + (0.08 + br() * 0.14) + ')'; bg.lineWidth = 0.6 + br(); bg.beginPath(); const x = br() * 64; bg.moveTo(x, 0); bg.bezierCurveTo(x + 5 * (br() - 0.5), 80, x - 5 * (br() - 0.5), 170, x + 4 * (br() - 0.5), 256); bg.stroke(); }
+        bg.fillStyle = '#16161a'; bg.fillRect(0, 196, 64, 60);                      // tape (handle end = bottom of the canvas)
+        for (let y = 198; y < 256; y += 5) { bg.fillStyle = 'rgba(255,255,255,0.07)'; bg.fillRect(0, y, 64, 1.5); }
+        bg.fillStyle = '#6b1d1d'; bg.fillRect(0, 150, 64, 8);                        // brand band
+        m.bat.map = new THREE.CanvasTexture(batC);
         const bat = part(geo.bat, m.bat, holder); holder.visible = false;
         const chest = part(new THREE.BoxGeometry(0.44, 0.5, 0.26), m.gear, torso); chest.position.set(0, 0.3, 0.02); chest.visible = false;
         const shinGuardL = part(new THREE.BoxGeometry(0.1, 0.34, 0.09), m.gear, legL.kn, false); shinGuardL.position.set(0, -0.22, 0.07); shinGuardL.visible = false;
@@ -582,11 +620,11 @@ const Stadium3D = (function () {
             for (let i = 0; i < 200; i++) { q.fillStyle = Math.random() < 0.5 ? 'rgba(0,0,0,0.04)' : 'rgba(255,255,255,0.05)'; q.fillRect(Math.random() * 64, Math.random() * 128, 2, 3); }
             p.pantsT.needsUpdate = true;
         }
-        p.gloves = !!opts.helmet; p.mats.hand.color.set(p.gloves ? 0xf4f4f6 : (p.skinColor || 0xe0ac84));
+        p.gloves = !!opts.helmet; p.mats.hand.color.set(p.gloves ? 0xf4f4f6 : (p.skinColor || 0xe0ac84)); p.mats.forearm.color.set(p.skinColor || 0xe0ac84);
         p.mats.sock.color.set(c2);
         p.mats.cap.color.set(team.c1);
         p.flap.visible = !!opts.helmet;
-        p.mats.cap.roughness = opts.helmet ? 0.22 : 0.7; p.mats.cap.metalness = opts.helmet ? 0.15 : 0;
+        p.mats.cap.roughness = opts.helmet ? 0.18 : 0.75; p.mats.cap.metalness = opts.helmet ? 0.25 : 0; p.mats.cap.envMapIntensity = opts.helmet ? 1.6 : 0.5;
         // cap logo
         const g = p.logoC.getContext('2d'); g.clearRect(0, 0, 64, 64);
         const hc = lum(team.c1) > 0.5 ? '#111' : '#fff';
@@ -602,7 +640,7 @@ const Stadium3D = (function () {
 
     function setSkin(p, name) {
         const tones = [0xf1c9a3, 0xe0ac84, 0xc98f63, 0xa8704a, 0x8a5a3a];
-        const k = hash(name || '') % tones.length; p.skinKey = k; p.skinColor = tones[k]; p.mats.skin.color.set(tones[k]); p.mats.hand.color.set(p.gloves ? 0xf4f4f6 : tones[k]);
+        const k = hash(name || '') % tones.length; p.skinKey = k; p.skinColor = tones[k]; p.mats.skin.color.set(tones[k]); p.mats.forearm.color.set(tones[k]); p.mats.hand.color.set(p.gloves ? 0xf4f4f6 : tones[k]);
     }
 
     // ───────────── poses ─────────────
