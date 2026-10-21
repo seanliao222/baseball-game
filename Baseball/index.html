@@ -875,7 +875,30 @@
         // ==========================================
         const MUSIC = (() => {
             let enabled = true; try { enabled = localStorage.getItem('bb_music') !== 'off'; } catch (e) { }
-            const MAXV = 0.45;
+            const MAXV = 0.45, MAXV_YT = 0.7;
+            // Official team songs, streamed through YouTube's own embedded player (nothing is downloaded or stored).
+            // key = music file key (see music/README.md); a local music/<key>.mp3 still takes priority when present.
+            const YT_TRACKS = {
+                Brothers: 'g8aB9j6GieU',        // 中信兄弟〈奪還〉2026 年度歌曲 (官方頻道)
+                Lions: '8MLDmpZRHzo',           // 統一獅〈鬥陣起行〉2026 年度主題曲
+                Monkeys: '2FDhxBlS2K8',         // 樂天桃猿〈做伙〉2026 年度歌曲
+                Guardians: '1ygsE7hnK_E',       // 富邦悍將〈藍色力量〉2026 年度主題曲
+                Dragons: 'Y1miGzVWVvs',         // 味全龍〈Run & Roar〉2026 年度主題曲
+                Hawks: 'gYTXsthwNPs',           // 台鋼雄鷹〈做伙拚〉2026 年度形象影片
+                Dodgers: 'KcADqxnQA_4',         // Randy Newman — I Love L.A.
+                Yankees: 'le1QF3uoQNg',         // Frank Sinatra — Theme From New York, New York
+                Chinese_Taipei: 'kPXAiorEHTY',  // 緯來體育台 經典賽〈今天的我〉MV
+                South_Korea: 'AB5qVY4dlyc',     // 신한은행 야구 국가대표팀 응원가〈너를 위해 부른다〉
+                Australia: 'XfR9iY5y94s',       // Men At Work — Down Under
+                USA: 'EPhWR4d3FJQ'              // Bruce Springsteen — Born in the U.S.A.
+            };
+            let ytLoading = false; const ytQueue = [];
+            function loadYT(cb) {
+                if (window.YT && window.YT.Player) return cb();
+                ytQueue.push(cb); if (ytLoading) return; ytLoading = true;
+                window.onYouTubeIframeAPIReady = () => ytQueue.splice(0).forEach(f => f());
+                const sc = document.createElement('script'); sc.src = 'https://www.youtube.com/iframe_api'; sc.onerror = () => ytQueue.splice(0).forEach(f => f(true)); document.head.appendChild(sc);
+            }
             let cur = null, vol = 0, want = null, actx = null, master = null, timer = null, step = 0, nextT = 0;
             const fileState = {};                          // fileKey -> 'yes' | 'no'
             const fileKey = t => t.name.replace(/[^A-Za-z0-9]+/g, '_').replace(/^_|_$/g, '');
@@ -909,21 +932,51 @@
                     f.type = hp ? 'highpass' : 'bandpass'; f.frequency.value = hp ? 6000 : 1800; src.buffer = buf; gn.gain.value = g;
                     src.connect(f); f.connect(gn); gn.connect(master); src.start(t);
                 };
+                const lp = actx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 900; lp.connect(master);
+                const horn = (f, t, d, g) => {
+                    [1, 1.5].forEach((m2, k) => {
+                        const os = actx.createOscillator(), gn = actx.createGain(); os.type = 'sawtooth'; os.frequency.value = f * m2; os.detune.value = k ? 4 : -4;
+                        os.connect(gn); gn.connect(lp);
+                        gn.gain.setValueAtTime(0, t); gn.gain.linearRampToValueAtTime(g, t + 0.05); gn.gain.linearRampToValueAtTime(g * 0.6, t + d * 0.6); gn.gain.exponentialRampToValueAtTime(0.0001, t + d);
+                        os.start(t); os.stop(t + d + 0.05);
+                    });
+                };
                 timer = setInterval(() => {
                     while (nextT < actx.currentTime + 0.25) {
-                        const i = step % 16, t = nextT, n = pat[i];
-                        if (n !== null) { note(root * 2 * Math.pow(2, n / 12), t, spb * 0.9, 'square', 0.07); note(root * 4 * Math.pow(2, n / 12), t, spb * 0.5, 'triangle', 0.04); }
-                        if (i % 4 === 0) note(70, t, 0.16, 'sine', 0.35);          // kick
-                        if (i % 8 === 4) noise(t, 0.12, 0.25, false);               // snare clap
-                        if (i % 2 === 1) noise(t, 0.04, 0.08, true);                // hat
-                        if (i % 16 === 0) note(root, t, spb * 3, 'sawtooth', 0.05); // bass
+                        const i = step % 16, t = nextT;
+                        if (i % 4 === 0 || i % 4 === 1) note(62, t, 0.2, 'sine', 0.42);         // stomp stomp
+                        if (i % 4 === 2) { noise(t, 0.09, 0.2, false); note(180, t, 0.08, 'triangle', 0.08); }   // clap
+                        if (i === 0 || i === 8) horn(root, t, spb * 3.2, 0.028);                 // soft brass swell
+                        if (i === 12) horn(root * Math.pow(2, scale[2] / 12), t, spb * 3.2, 0.024);
                         nextT += spb; step++;
                     }
                 }, 50);
                 return o;
             }
+            function ytStart(team, id) {
+                const key = fileKey(team), holder = document.createElement('div'), inner = document.createElement('div');
+                holder.style.cssText = 'position:fixed;left:-9999px;top:0;width:220px;height:220px;pointer-events:none;opacity:0'; holder.appendChild(inner); document.body.appendChild(holder);
+                const o = { type: 'yt', key, ready: false, lastV: -1, player: null, stop() { try { o.player && o.player.destroy(); } catch (e) { } holder.remove(); } };
+                const fail = () => { if (cur === o) { o.stop(); cur = synthStart(team); } };
+                loadYT(err => {
+                    if (err || !window.YT) return fail();
+                    try {
+                        o.player = new YT.Player(inner, {
+                            width: 220, height: 220, videoId: id,
+                            playerVars: { autoplay: 1, controls: 0, loop: 1, playlist: id, playsinline: 1, rel: 0, modestbranding: 1, disablekb: 1, fs: 0 },
+                            events: {
+                                onReady: e => { o.ready = true; e.target.setVolume(0); e.target.playVideo(); },
+                                onError: fail,
+                                onStateChange: e => { if (e.data === 0) e.target.playVideo(); }
+                            }
+                        });
+                    } catch (e) { fail(); }
+                });
+                return o;
+            }
             function fileStart(team) {
                 const key = fileKey(team);
+                if (fileState[key] !== 'yes' && YT_TRACKS[key]) return ytStart(team, YT_TRACKS[key]);
                 if (fileState[key] === 'no') return synthStart(team);
                 const el = new Audio('music/' + key + '.mp3'); el.loop = true; el.volume = 0;
                 const o = { type: 'file', key, el, stop() { el.pause(); el.src = ''; } };
@@ -935,12 +988,13 @@
             function apply() {
                 if (!cur) return;
                 const v = vol * MAXV * (enabled ? 1 : 0);
-                if (cur.type === 'file') { try { cur.el.volume = clamp(v, 0, 1); } catch (e) { } }
+                if (cur.type === 'yt') { const pv = Math.round(clamp(vol * MAXV_YT * (enabled ? 1 : 0), 0, 1) * 100); if (cur.ready && pv !== cur.lastV) { cur.lastV = pv; try { cur.player.setVolume(pv); } catch (e) { } } }
+                else if (cur.type === 'file') { try { cur.el.volume = clamp(v, 0, 1); } catch (e) { } }
                 else if (master) master.gain.value = v;
             }
             return {
                 get enabled() { return enabled; },
-                get active() { return cur ? cur.type + ':' + cur.key + '@' + vol.toFixed(2) : ''; },
+                get active() { return cur ? cur.type + ':' + cur.key + '@' + vol.toFixed(2) + (cur.type === 'yt' && cur.ready ? ' st=' + (cur.player.getPlayerState ? cur.player.getPlayerState() : '?') + ' v=' + cur.lastV : '') : ''; },
                 toggle() { enabled = !enabled; try { localStorage.setItem('bb_music', enabled ? 'on' : 'off'); } catch (e) { } },
                 unlock() { if (actx && actx.state === 'suspended') actx.resume().catch(() => { }); },
                 // call once per frame; team = batting team while a game is on screen, otherwise null
