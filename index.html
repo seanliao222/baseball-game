@@ -867,6 +867,104 @@
             };
         })();
 
+
+        // ==========================================
+        // TEAM OFFENSE MUSIC
+        // Plays the batting team's song on a loop. If music/<TeamName>.mp3 exists it is used (put your own files there);
+        // otherwise an original synthesized chant is generated, slightly different per team.
+        // ==========================================
+        const MUSIC = (() => {
+            let enabled = true; try { enabled = localStorage.getItem('bb_music') !== 'off'; } catch (e) { }
+            const MAXV = 0.45;
+            let cur = null, vol = 0, want = null, actx = null, master = null, timer = null, step = 0, nextT = 0;
+            const fileState = {};                          // fileKey -> 'yes' | 'no'
+            const fileKey = t => t.name.replace(/[^A-Za-z0-9]+/g, '_').replace(/^_|_$/g, '');
+            const hash = str => { let h = 0; for (let i = 0; i < str.length; i++) h = (h * 31 + str.charCodeAt(i)) | 0; return Math.abs(h); };
+
+            function ensureCtx() {
+                if (!actx) { try { actx = new (window.AudioContext || window.webkitAudioContext)(); master = actx.createGain(); master.gain.value = 0; master.connect(actx.destination); } catch (e) { } }
+                if (actx && actx.state === 'suspended') actx.resume().catch(() => { });
+                return !!actx;
+            }
+            // ---- synthesized chant: 16-step loop, per-team root / tempo / rhythm ----
+            function synthStart(team) {
+                if (!ensureCtx()) return null;
+                const h = hash(team.name), root = [196, 220, 233, 247, 262, 294][h % 6], bpm = 128 + (h % 5) * 6;
+                const scale = [0, 2, 4, 7, 9, 12, 14], pat = [];
+                for (let i = 0; i < 16; i++) pat.push(((h >> (i % 11)) + i * 7) % 9 < 5 ? scale[(h + i * 3) % scale.length] : null);
+                [0, 4, 8, 12].forEach(i => { if (pat[i] === null) pat[i] = 0; });   // anchor the downbeats
+                const spb = 60 / bpm / 2;                                          // 8th-note length
+                const o = { type: 'synth', key: fileKey(team), stop() { clearInterval(timer); timer = null; } };
+                step = 0; nextT = actx.currentTime + 0.1;
+                const note = (f, t, d, type, g) => {
+                    const os = actx.createOscillator(), gn = actx.createGain();
+                    os.type = type; os.frequency.value = f; os.connect(gn); gn.connect(master);
+                    gn.gain.setValueAtTime(0, t); gn.gain.linearRampToValueAtTime(g, t + 0.01); gn.gain.exponentialRampToValueAtTime(0.0001, t + d);
+                    os.start(t); os.stop(t + d + 0.02);
+                };
+                const noise = (t, d, g, hp) => {
+                    const buf = actx.createBuffer(1, actx.sampleRate * d, actx.sampleRate), ch = buf.getChannelData(0);
+                    for (let i = 0; i < ch.length; i++) ch[i] = (Math.random() * 2 - 1) * (1 - i / ch.length);
+                    const src = actx.createBufferSource(), f = actx.createBiquadFilter(), gn = actx.createGain();
+                    f.type = hp ? 'highpass' : 'bandpass'; f.frequency.value = hp ? 6000 : 1800; src.buffer = buf; gn.gain.value = g;
+                    src.connect(f); f.connect(gn); gn.connect(master); src.start(t);
+                };
+                timer = setInterval(() => {
+                    while (nextT < actx.currentTime + 0.25) {
+                        const i = step % 16, t = nextT, n = pat[i];
+                        if (n !== null) { note(root * 2 * Math.pow(2, n / 12), t, spb * 0.9, 'square', 0.07); note(root * 4 * Math.pow(2, n / 12), t, spb * 0.5, 'triangle', 0.04); }
+                        if (i % 4 === 0) note(70, t, 0.16, 'sine', 0.35);          // kick
+                        if (i % 8 === 4) noise(t, 0.12, 0.25, false);               // snare clap
+                        if (i % 2 === 1) noise(t, 0.04, 0.08, true);                // hat
+                        if (i % 16 === 0) note(root, t, spb * 3, 'sawtooth', 0.05); // bass
+                        nextT += spb; step++;
+                    }
+                }, 50);
+                return o;
+            }
+            function fileStart(team) {
+                const key = fileKey(team);
+                if (fileState[key] === 'no') return synthStart(team);
+                const el = new Audio('music/' + key + '.mp3'); el.loop = true; el.volume = 0;
+                const o = { type: 'file', key, el, stop() { el.pause(); el.src = ''; } };
+                el.addEventListener('canplay', () => { fileState[key] = 'yes'; }, { once: true });
+                el.addEventListener('error', () => { fileState[key] = 'no'; if (cur === o) { o.stop(); cur = synthStart(team); } }, { once: true });
+                el.play().catch(() => { });
+                return o;
+            }
+            function apply() {
+                if (!cur) return;
+                const v = vol * MAXV * (enabled ? 1 : 0);
+                if (cur.type === 'file') { try { cur.el.volume = clamp(v, 0, 1); } catch (e) { } }
+                else if (master) master.gain.value = v;
+            }
+            return {
+                get enabled() { return enabled; },
+                get active() { return cur ? cur.type + ':' + cur.key + '@' + vol.toFixed(2) : ''; },
+                toggle() { enabled = !enabled; try { localStorage.setItem('bb_music', enabled ? 'on' : 'off'); } catch (e) { } },
+                unlock() { if (actx && actx.state === 'suspended') actx.resume().catch(() => { }); },
+                // call once per frame; team = batting team while a game is on screen, otherwise null
+                tick(team) {
+                    want = (enabled && team) ? team : null;
+                    const wantKey = want ? fileKey(want) : '';
+                    if (cur && cur.key !== wantKey) { vol = Math.max(0, vol - 0.05); if (vol <= 0) { cur.stop(); cur = null; } }
+                    else if (cur) vol = Math.min(1, vol + 0.03);
+                    if (!cur && want && vol <= 0.02) { cur = fileStart(want); vol = 0.01; }
+                    apply();
+                },
+                drawButton(mx, my) {
+                    const x = W - 163, y = 15, w = 40, h = 40, hov = mx >= x && mx <= x + w && my >= y && my <= y + h;
+                    ctx.save(); ctx.fillStyle = hov ? 'rgba(40,60,90,0.95)' : 'rgba(14,20,34,0.88)'; drawRoundRect(ctx, x, y, w, h, 20); ctx.fill();
+                    ctx.strokeStyle = 'rgba(255,255,255,0.35)'; ctx.lineWidth = 1.5; drawRoundRect(ctx, x, y, w, h, 20); ctx.stroke();
+                    ctx.font = 'bold 20px Arial'; ctx.textAlign = 'center'; ctx.fillStyle = enabled ? '#7dffb0' : '#8896aa'; ctx.fillText('♪', x + w / 2, y + 27);
+                    if (!enabled) { ctx.strokeStyle = '#ff6a5a'; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.moveTo(x + 10, y + 30); ctx.lineTo(x + 30, y + 10); ctx.stroke(); }
+                    ctx.restore();
+                },
+                hit(mx, my) { const x = W - 163, y = 15; return mx >= x && mx <= x + 40 && my >= y && my <= y + 40; }
+            };
+        })();
+        document.addEventListener('pointerdown', () => MUSIC.unlock());
+
         const keys = {}, jp = {};
         let mouseX = W / 2, mouseY = H / 2, isMouseJustPressed = false, isMouseJustReleased = false;
 
@@ -1036,7 +1134,7 @@
             } else {
                 G.phase = PH.BATTING; G.phPos = 0; G.phPressed = false; G.phDone = false; G.phValue = 0;
                 const phMult = [0.55, 0.80, 1.20][G.difficulty];
-                G.phSpeed = (0.008 + speedMult * 0.005) * phMult;
+                G.phSpeed = (0.008 + speedMult * 0.005) * phMult; G.phW = [0.7, 1.0, 1.4][G.difficulty];
             }
         }
 
@@ -1325,6 +1423,7 @@
                 clearInput(); return;
             }
 
+            if (isMouseJustPressed && G.scr === SCR.GAME && MUSIC.hit(mouseX, mouseY)) { MUSIC.toggle(); isMouseJustPressed = false; }
             if (isMouseJustPressed && G.scr === SCR.GAME) {
                 const qx = W - 115, qy = 15, qw = 100, qh = 40;
                 if (mouseX >= qx && mouseX <= qx + qw && mouseY >= qy && mouseY <= qy + qh) {
@@ -1433,8 +1532,11 @@
                     if (isMobile && !mpRemoteTurn()) {
                         if (G.isDraggingBat) { const sens = 0.008; G.curX = clamp(G.baseCurX + (mouseX - G.dragStartX) * sens, -1.5, 1.5); G.curY = clamp(G.baseCurY + (mouseY - G.dragStartY) * sens, -1.5, 1.5); }
                     } else { G.curX = clamp((mouseX - SZcx) / (SZw / 2), -1.5, 1.5); G.curY = clamp((mouseY - SZcy) / (SZh / 2), -1.5, 1.5); }
-                    const prog = ballProgress();
-                    if (prog > 0.15 && !G.phDone) { G.phPos += G.phSpeed; if (G.phPos >= 1) { G.phPos = 1; G.phDone = true; } }
+                    // timing cursor is tied to the ball: the SWEET spot (phPos 0.5) is exactly when the ball crosses the plate.
+                    // phW = how fast the bar sweeps per pitch-flight (easy 0.7 / normal 1.0 / hard 1.4)
+                    const flightT = (G.frame - G.ballFrame) / G.ballDur, phW = G.phW || 1;
+                    G.phPos = clamp(0.5 + (flightT - 1) * phW, 0, 1);
+                    if (flightT >= 1 + 0.16 / phW) G.phDone = true;   // pitch is already in the catcher's mitt
                     if (actionTrigger() && !G.phPressed) { G.phPressed = true; G.phValue = G.phPos; resolveSwing(G.phValue, G.curX, G.curY); }
                     else if (G.phDone && !G.phPressed) resolveNoSwing();
                     break;
@@ -1462,6 +1564,7 @@
         function render() {
             ctx.setTransform(uiScale, 0, 0, uiScale, 0, 0);
             ctx.clearRect(0, 0, W, H);
+            MUSIC.tick(G.scr === SCR.GAME ? batTeamInfo() : null);
             const want3D = S3D.ok && (G.scr === SCR.GAME || G.scr === SCR.TITLE);
             if (want3D !== S3D.visible) { S3D.show(want3D); canvas.style.boxShadow = want3D ? 'none' : ''; }
             if (want3D && G.scr === SCR.TITLE) S3D.renderTitle();
@@ -2065,6 +2168,7 @@
             if (G.phase === PH.SUB_MENU) renderSubMenu();
             renderResult();
             renderSpeedGun3D();
+            MUSIC.drawButton(mouseX, mouseY);
             const qx = W - 115, qy = 15, qw = 100, qh = 40;
             const qHover = mouseX >= qx && mouseX <= qx + qw && mouseY >= qy && mouseY <= qy + qh;
             drawGlossyPill(qx, qy, qw, qh, qHover, '🚪 離開', '#660000', '#AA2222', qHover ? '#FFD700' : '#FFF');
@@ -3213,13 +3317,13 @@
         // Mobile Events
         document.getElementById('swing-btn').addEventListener('touchstart', e => {
             e.preventDefault();
-            if (G.scr === SCR.GAME && playerBatting() && G.phase === PH.BATTING && G.phDone && !G.phPressed) {
+            if (G.scr === SCR.GAME && playerBatting() && G.phase === PH.BATTING && !G.phDone && !G.phPressed) {
                 G.phPressed = true; G.phValue = G.phPos; resolveSwing(G.phValue, G.curX, G.curY);
             }
         }, { passive: false });
         document.getElementById('swing-btn').addEventListener('mousedown', e => {
             e.preventDefault();
-            if (G.scr === SCR.GAME && playerBatting() && G.phase === PH.BATTING && G.phDone && !G.phPressed) {
+            if (G.scr === SCR.GAME && playerBatting() && G.phase === PH.BATTING && !G.phDone && !G.phPressed) {
                 G.phPressed = true; G.phValue = G.phPos; resolveSwing(G.phValue, G.curX, G.curY);
             }
         });
