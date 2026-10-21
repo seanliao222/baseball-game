@@ -898,10 +898,9 @@ const Stadium3D = (function () {
         else if (type === '1B') {
             if (R() < 0.5) { kind = 'grounder'; dist = 42; apex = 0.9; dur = 52; roll = 30; rollDist = 18; }
             else { kind = 'fly'; dist = 36 + R() * 14; apex = 9; dur = 40; roll = 28; rollDist = 14; }
-        } else { // OUT
-            const r = R();
-            if (r < 0.42) { kind = 'fly'; dist = 55 + R() * 28; apex = 30; dur = 84; }
-            else if (r < 0.75) { kind = 'grounder'; dist = 26 + R() * 8; apex = 0.7; dur = 30; }
+        } else { // OUT: kind follows the rules decision (fly = sac-fly candidate, ground = grounder)
+            if (G.outKind === 'ground') { kind = 'grounder'; dist = 26 + R() * 8; apex = 0.7; dur = 30; }
+            else if (R() < 0.75) { kind = 'fly'; dist = 55 + R() * 28; apex = 30; dur = 84; }
             else { kind = 'fly'; dist = 13 + R() * 6; apex = 26; dur = 68; }
         }
         const end = start.clone().addScaledVector(dir, dist); end.y = 0;
@@ -1099,12 +1098,19 @@ const Stadium3D = (function () {
                         else newObjs[j] = spawn(0, j);
                     }
                 }
+                const leavers = [];
                 for (let k = 0; k < 3; k++) {
                     const o = S.runnerObjs[k];
                     if (!o) continue;
                     if (used[k]) { if (now[k] && !newObjs[k]) newObjs[k] = spawn(0, k); continue; }
-                    if (now[k]) { if (!newObjs[k]) newObjs[k] = o; } else { releaseRunner(o); }
+                    if (now[k]) { if (!newObjs[k]) newObjs[k] = o; } else leavers.push([k, o]);
                 }
+                // runners who left their base: the most advanced ones score (run home), the rest were put out
+                let runs = Math.max(0, G.score[G.half] - (S.prevScore ? S.prevScore[G.half] : 0));
+                leavers.sort((x, y) => y[0] - x[0]).forEach(([k, o]) => {
+                    if (runs > 0) { runs--; o.path = []; for (let b = k + 2; b <= 4; b++) o.path.push(BASES[b % 4]); o.arrived = false; o.leaving = true; }
+                    else releaseRunner(o);
+                });
                 for (let k = 0; k < 3; k++) if (now[k] && !newObjs[k]) newObjs[k] = spawn(0, k);
                 S.runnerObjs = newObjs;
             }
@@ -1260,6 +1266,7 @@ const Stadium3D = (function () {
         updateBatter(G, info, dt, df);
         updateFielders(G, info, dt, df);
         updateRunners(G, info, dt, df);
+        S.prevScore = G.score.slice();
         updateBall(G, info, dt, df);
         updateParticles(dt);
         updateCamera(G, info, dt);

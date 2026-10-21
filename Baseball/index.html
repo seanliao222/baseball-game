@@ -722,7 +722,7 @@
                 curX: 0, curY: 0, phPos: 0, phSpeed: 0.022, phPressed: false, phValue: 0, phDone: false,
                 dragStartX: 0, dragStartY: 0, baseCurX: 0, baseCurY: 0, isDraggingBat: false, aimState: 0,
                 resText: '', resSub: '', resCol: '#fff', resTimer: 0, resEndHalf: false, _continueAtBat: false,
-                frame: 0, readyPulse: 0, batSwingFrame: -999, hitEffectFrame: -999, hitType: '', hitFlyDir: 0,
+                frame: 0, readyPulse: 0, batSwingFrame: -999, hitEffectFrame: -999, hitType: '', hitFlyDir: 0, outKind: 'fly',
                 pitchCounts: [0, 0], lastPitchKmh: 0, lastPitchName: '', speedGunTimer: 0,
                 batStats: [
                     Array.from({ length: 9 }, () => ({ ab: 0, h: 0, bb: 0, hr: 0, rbi: 0, k: 0 })),
@@ -1165,6 +1165,7 @@
                 type = 'K';
             }
 
+            if (type === 'OUT') G.outKind = Math.random() < 0.55 ? 'fly' : 'ground';
             if (type === 'HR' || type === '1B' || type === '2B' || type === 'OUT') {
                 G.hitEffectFrame = G.frame;
                 G.hitType = type;
@@ -1237,19 +1238,22 @@
                 G.phase = PH.HR_RUN;
                 return; // skip showRes – fired later when animation ends
             } else if (type === '2B') {
-                const rbi = (G.runners[2] ? 1 : 0) + (G.runners[1] ? 1 : 0);
-                if (G.runners[2]) G.score[bat]++; if (G.runners[1]) G.score[bat]++;
-                if (rbi > 0) G.scoreFlash[bat] = 35;
-                G.runners = [false, true, G.runners[0] && Math.random() < 0.5]; text = '二壘安打！'; sub = '2 BASE HIT'; col = '#44FF88';
+                // double: runners on 2nd/3rd score; runner on 1st scores ~55% of the time, otherwise holds at 3rd
+                const r = [...G.runners], nr = [false, true, false]; let runs = (r[2] ? 1 : 0) + (r[1] ? 1 : 0);
+                if (r[0]) { if (Math.random() < 0.55) runs++; else nr[2] = true; }
+                G.score[bat] += runs; if (runs > 0) G.scoreFlash[bat] = 35;
+                G.runners = nr; text = runs > 0 ? `二壘安打！${runs} 分` : '二壘安打！'; sub = '2 BASE HIT'; col = '#44FF88';
                 SFX.crack();
-                st.ab++; st.h++; st.rbi += rbi;
+                st.ab++; st.h++; st.rbi += runs;
             } else if (type === '1B') {
-                const rbi = G.runners[2] ? 1 : 0;
-                if (G.runners[2]) { G.score[bat]++; G.scoreFlash[bat] = 35; }
-                const r2 = G.runners[1] && Math.random() < 0.5; const r1 = G.runners[0];
-                G.runners = [true, r1, r2]; text = '安打！'; sub = 'HIT'; col = '#44FF88';
+                // single: 3rd scores; 2nd scores ~70% (else to 3rd); 1st goes to 2nd (sometimes 3rd)
+                const r = [...G.runners], nr = [true, false, false]; let runs = r[2] ? 1 : 0;
+                if (r[1]) { if (Math.random() < 0.7) runs++; else nr[2] = true; }
+                if (r[0]) { if (!nr[2] && Math.random() < 0.3) nr[2] = true; else nr[1] = true; }
+                G.score[bat] += runs; if (runs > 0) G.scoreFlash[bat] = 35;
+                G.runners = nr; text = runs > 0 ? `安打！${runs} 分` : '安打！'; sub = 'HIT'; col = '#44FF88';
                 SFX.crack();
-                st.ab++; st.h++; st.rbi += rbi;
+                st.ab++; st.h++; st.rbi += runs;
             } else if (type === 'BB') {
                 const rbi = (G.runners[0] && G.runners[1] && G.runners[2]) ? 1 : 0;
                 if (G.runners[0] && G.runners[1] && G.runners[2]) G.score[bat]++;
@@ -1261,7 +1265,20 @@
             } else if (type === 'OUT') {
                 G.outs++; text = '出局！'; sub = 'OUT'; col = '#FF6644'; if (G.outs >= 3) endHalf = true;
                 SFX.out();
-                st.ab++;
+                let runs = 0;
+                if (G.outs < 3) {
+                    if (G.outKind === 'fly') {            // sacrifice fly: runner tags up from 3rd
+                        if (G.runners[2] && Math.random() < 0.75) { G.runners[2] = false; runs = 1; text = '犧牲飛球，得分！'; }
+                        else if (G.runners[1] && !G.runners[2] && Math.random() < 0.3) { G.runners[1] = false; G.runners[2] = true; }
+                    } else {                                // ground out: runners may advance
+                        if (G.runners[2] && Math.random() < 0.4) { G.runners[2] = false; runs++; }
+                        if (G.runners[1] && !G.runners[2] && Math.random() < 0.5) { G.runners[1] = false; G.runners[2] = true; }
+                        if (G.runners[0] && !G.runners[1] && Math.random() < 0.5) { G.runners[0] = false; G.runners[1] = true; }
+                        if (runs) text = '滾地球出局，得分！';
+                    }
+                }
+                if (runs) { G.score[bat] += runs; G.scoreFlash[bat] = 35; st.rbi += runs; col = '#FFD24A'; }
+                if (!(runs && G.outKind === 'fly')) st.ab++;
             } else if (type === 'K') {
                 G.outs++; text = '三振出局！'; sub = 'STRIKEOUT'; col = '#FF4444'; if (G.outs >= 3) endHalf = true;
                 SFX.out();
