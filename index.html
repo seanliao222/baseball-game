@@ -953,21 +953,33 @@
                 }, 50);
                 return o;
             }
+            // Songs start at their "highlight" (~28% in, usually the first chorus) and resume where they left off,
+            // so every offense half doesn't restart from the intro.
+            const ytResume = {};
             function ytStart(team, id) {
                 const key = fileKey(team), holder = document.createElement('div'), inner = document.createElement('div');
                 holder.style.cssText = 'position:fixed;left:-9999px;top:0;width:220px;height:220px;pointer-events:none;opacity:0'; holder.appendChild(inner); document.body.appendChild(holder);
-                const o = { type: 'yt', key, ready: false, lastV: -1, player: null, stop() { try { o.player && o.player.destroy(); } catch (e) { } holder.remove(); } };
+                const o = {
+                    type: 'yt', key, ready: false, lastV: -1, player: null, hl: 0,
+                    stop() { try { if (o.ready && o.player.getCurrentTime) ytResume[key] = o.player.getCurrentTime(); o.player && o.player.destroy(); } catch (e) { } holder.remove(); }
+                };
                 const fail = () => { if (cur === o) { o.stop(); cur = synthStart(team); } };
                 loadYT(err => {
                     if (err || !window.YT) return fail();
                     try {
                         o.player = new YT.Player(inner, {
                             width: 220, height: 220, videoId: id,
-                            playerVars: { autoplay: 1, controls: 0, loop: 1, playlist: id, playsinline: 1, rel: 0, modestbranding: 1, disablekb: 1, fs: 0 },
+                            playerVars: { autoplay: 1, controls: 0, playsinline: 1, rel: 0, modestbranding: 1, disablekb: 1, fs: 0 },
                             events: {
-                                onReady: e => { o.ready = true; e.target.setVolume(0); e.target.playVideo(); },
+                                onReady: e => {
+                                    const dur = e.target.getDuration() || 180;
+                                    o.hl = Math.max(15, dur * 0.28);                                  // highlight start
+                                    let pos = ytResume[key];
+                                    if (pos == null || pos < o.hl - 1 || pos > dur - 10) pos = o.hl;  // first time / near the end -> highlight
+                                    o.ready = true; e.target.setVolume(0); e.target.seekTo(pos, true); e.target.playVideo();
+                                },
                                 onError: fail,
-                                onStateChange: e => { if (e.data === 0) e.target.playVideo(); }
+                                onStateChange: e => { if (e.data === 0) { e.target.seekTo(o.hl, true); e.target.playVideo(); } }   // ended -> loop the highlight
                             }
                         });
                     } catch (e) { fail(); }
@@ -994,7 +1006,7 @@
             }
             return {
                 get enabled() { return enabled; },
-                get active() { return cur ? cur.type + ':' + cur.key + '@' + vol.toFixed(2) + (cur.type === 'yt' && cur.ready ? ' st=' + (cur.player.getPlayerState ? cur.player.getPlayerState() : '?') + ' v=' + cur.lastV : '') : ''; },
+                get active() { return cur ? cur.type + ':' + cur.key + '@' + vol.toFixed(2) + (cur.type === 'yt' && cur.ready ? ' st=' + (cur.player.getPlayerState ? cur.player.getPlayerState() : '?') + ' v=' + cur.lastV + ' t=' + Math.round(cur.player.getCurrentTime ? cur.player.getCurrentTime() : -1) + ' hl=' + Math.round(cur.hl) : '') : ''; },
                 toggle() { enabled = !enabled; try { localStorage.setItem('bb_music', enabled ? 'on' : 'off'); } catch (e) { } },
                 unlock() { if (actx && actx.state === 'suspended') actx.resume().catch(() => { }); },
                 // call once per frame; team = batting team while a game is on screen, otherwise null
