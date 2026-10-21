@@ -2218,6 +2218,48 @@
             ctx.restore();
         }
 
+
+        // Shows where the selected pitch will cross the plate: release point -> path -> landing, plus how far it breaks.
+        function renderPitchPreview() {
+            if (!(MP.active || !playerBatting())) return;
+            let idx = -1, ex = SZcx, ey = SZcy;
+            if (G.phase === PH.PITCH_SELECT && G.hoveredPitchChoice >= 0) idx = G.hoveredPitchChoice;
+            else if ((G.phase === PH.AIM && G.aimState === 1) || G.phase === PH.POWER_GAUGE) { idx = G.pitchChoice; ex = SZcx + G.aimX * (SZw / 2); ey = SZcy + G.aimY * (SZh / 2); }
+            if (idx < 0) return;
+            const po = getPitcher().pitches[idx]; if (!po) return;
+            const pd = PITCH_DICT[po.id], bm = po.lv * 0.45, cx = pd.bx * bm, cy = pd.by * bm;
+            let pts;
+            if (S3D.ok && S3D.visible && S3D.isBatCam()) pts = S3D.previewPath(ex, ey, cx, cy, 26);
+            else { pts = []; for (let i = 0; i <= 26; i++) { const k = i / 26; pts.push({ x: lerp(W / 2, ex + cx * k, k), y: lerp(230, ey + cy * k, k) }); } }
+            const end = pts[pts.length - 1], col = pd.col;
+            ctx.save();
+            // dotted path, brighter toward the plate
+            for (let i = 1; i < pts.length; i++) {
+                const a = 0.18 + 0.8 * (i / pts.length);
+                ctx.fillStyle = col; ctx.globalAlpha = a; ctx.shadowColor = 'rgba(0,0,0,0.6)'; ctx.shadowBlur = 4;
+                ctx.beginPath(); ctx.arc(pts[i].x, pts[i].y, 1.5 + 2.6 * (i / pts.length), 0, Math.PI * 2); ctx.fill();
+            }
+            ctx.globalAlpha = 1; ctx.shadowBlur = 0;
+            // aim point (hollow) -> landing point (filled), with the break drawn as an arrow
+            const brk = Math.hypot(cx, cy);
+            if (brk > 3) {
+                ctx.strokeStyle = col; ctx.lineWidth = 2; ctx.setLineDash([5, 4]); ctx.beginPath(); ctx.moveTo(ex, ey); ctx.lineTo(end.x, end.y); ctx.stroke(); ctx.setLineDash([]);
+                const ang = Math.atan2(end.y - ey, end.x - ex);
+                ctx.fillStyle = col; ctx.beginPath(); ctx.moveTo(end.x, end.y); ctx.lineTo(end.x - 9 * Math.cos(ang - 0.45), end.y - 9 * Math.sin(ang - 0.45)); ctx.lineTo(end.x - 9 * Math.cos(ang + 0.45), end.y - 9 * Math.sin(ang + 0.45)); ctx.closePath(); ctx.fill();
+            }
+            ctx.strokeStyle = '#fff'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(ex, ey, 6, 0, Math.PI * 2); ctx.stroke();
+            ctx.fillStyle = col; ctx.strokeStyle = '#fff'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(end.x, end.y, 8, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+            // label: pitch name + horizontal / vertical movement in cm (batter's view)
+            const hcm = Math.round(Math.abs(cx) / 180 * 100), vcm = Math.round(Math.abs(cy) / 180 * 100);
+            const parts = [pd.name]; if (hcm >= 2) parts.push((cx < 0 ? '←左 ' : '右→ ') + hcm + 'cm'); if (vcm >= 2) parts.push((cy > 0 ? '↓下沉 ' : '↑上飄 ') + vcm + 'cm');
+            if (brk <= 3) parts.push('直線進壘');
+            const label = parts.join('  ');
+            ctx.font = `bold 13px ${HUD_FONT}`; const tw = ctx.measureText(label).width + 20, lx = clamp(end.x - tw / 2, 10, W - tw - 10), ly = Math.min(end.y + 24, H - 130);
+            ctx.fillStyle = 'rgba(8,12,22,0.88)'; drawRoundRect(ctx, lx, ly, tw, 26, 13); ctx.fill(); ctx.strokeStyle = col; ctx.lineWidth = 1.5; drawRoundRect(ctx, lx, ly, tw, 26, 13); ctx.stroke();
+            ctx.textAlign = 'center'; ctx.fillStyle = '#fff'; ctx.fillText(label, lx + tw / 2, ly + 18);
+            ctx.restore();
+        }
+
         function renderZone3D() {
             if (!S3D.isBatCam()) return;
             const fielding = (G.phase === PH.PITCH_SELECT || G.phase === PH.AIM || G.phase === PH.POWER_GAUGE || G.phase === PH.BALL_FLIGHT);
@@ -2243,7 +2285,7 @@
 
         function renderGame3D() {
             S3D.frame(G, stage3DInfo());
-            if (G.phase !== PH.HR_RUN) renderZone3D();
+            if (G.phase !== PH.HR_RUN) { renderZone3D(); renderPitchPreview(); }
             if (S3D.isBatCam() && (MP.active || playerBatting()) && (G.phase === PH.WAIT_PITCH || G.phase === PH.BATTING)) renderBatCursor();
             renderHitFlash();
             renderBroadcastHUD();
@@ -2274,7 +2316,7 @@
 
             if (G.phase !== PH.HR_RUN) {
                 const fieldingPhase = (G.phase === PH.PITCH_SELECT || G.phase === PH.AIM || G.phase === PH.POWER_GAUGE || G.phase === PH.BALL_FLIGHT);
-                if (fieldingPhase) renderPitchingZone(); else renderBattingZone();
+                if (fieldingPhase) { renderPitchingZone(); renderPitchPreview(); } else renderBattingZone();
             }
             if (G.ballActive) renderBall();
             if ((MP.active || playerBatting()) && (G.phase === PH.WAIT_PITCH || G.phase === PH.BATTING)) renderBatCursor();

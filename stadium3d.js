@@ -1287,6 +1287,24 @@ const Stadium3D = (function () {
     api.debugCam = function (pos, look, fov) { S.dbgCam = pos ? { pos: new THREE.Vector3(...pos), look: new THREE.Vector3(...look), fov: fov || 30, shift: 0 } : null; };
     api.resize = resize;
     api.pxToPlane = pxToPlane;
+    // project a world point to game px using the (settled) batter camera
+    const _pv = new THREE.Vector3();
+    function worldToPx(x, y, z) {
+        _pv.set(x, y, z).project(zoneCam);
+        const cx = (_pv.x * 0.5 + 0.5) * cw, cy = (-_pv.y * 0.5 + 0.5) * ch;
+        return { x: (cx - rect.x) / rect.w * GW, y: (cy - rect.y) / rect.h * GH };
+    }
+    // predicted pitch path (release -> plate, with break) as game-px points; same maths as pitchWorld()
+    api.previewPath = function (ex, ey, cxPx, cyPx, n) {
+        const E = pxToPlane(ex, ey, new THREE.Vector3()), pts = [], p = new THREE.Vector3();
+        for (let i = 0; i <= n; i++) {
+            const k = i / n;
+            p.copy(REL).lerp(new THREE.Vector3(E.x + (cxPx / K) * k, E.y - (cyPx / K) * k, 0), k);
+            p.y += Math.sin(k * Math.PI) * 0.06;
+            pts.push(worldToPx(p.x, p.y, p.z));
+        }
+        return pts;
+    };
     api.isBatCam = function () { return !!S.nearBat; };
     api.show = function (v) { if (!api.ok) return; api.visible = v; canvas3d.style.display = v ? 'block' : 'none'; };
 
