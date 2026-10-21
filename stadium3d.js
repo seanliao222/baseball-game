@@ -48,7 +48,7 @@ const Stadium3D = (function () {
 
     const sun = new THREE.DirectionalLight(0xfff2dc, 1.15);
     let scoreboardCtx = null, scoreboardTex = null, scoreboardKey = '';
-    let flashPts = null;
+    let flashPts = null, vidRT = null, vidCam = null, videoPlane = null, vidTick = 0;
     const flags = [];
     function waveFlags(t) {
         flags.forEach((f, i) => {
@@ -304,8 +304,8 @@ const Stadium3D = (function () {
         scene.add(wall);
 
         // batter's eye (dark green panel behind CF)
-        const eye = new THREE.Mesh(new THREE.PlaneGeometry(34, 8), new THREE.MeshStandardMaterial({ color: 0x0b2316, roughness: 1 }));
-        eye.position.set(0, 7, -wallR(0) - 1.0); scene.add(eye);
+        const eye = new THREE.Mesh(new THREE.PlaneGeometry(34, 7), new THREE.MeshStandardMaterial({ color: 0x0b2316, roughness: 1 }));
+        eye.position.set(0, 6.5, -wallR(0) - 1.0); scene.add(eye);
 
         // foul poles
         [-1, 1].forEach(s => {
@@ -339,8 +339,13 @@ const Stadium3D = (function () {
         // scoreboard
         const sb = canvasOf(1024, 400); scoreboardCtx = sb.getContext('2d'); scoreboardTex = texOf(sb);
         const board = new THREE.Mesh(new THREE.PlaneGeometry(36, 14), new THREE.MeshBasicMaterial({ map: scoreboardTex }));
-        board.position.set(0, 14, -bowlR(0) - 14); scene.add(board);
+        board.position.set(0, 18.4, -bowlR(0) - 14); scene.add(board);
         drawScoreboard(null);
+        // live "pitcher's-eye view of the batter" shown on the video board (rendered to a texture every other frame)
+        vidRT = new THREE.WebGLRenderTarget(384, 288, { minFilter: THREE.LinearFilter, magFilter: THREE.LinearFilter });
+        vidCam = new THREE.PerspectiveCamera(6.8, 384 / 288, 0.5, 90);
+        videoPlane = new THREE.Mesh(new THREE.PlaneGeometry(14.5, 10.9), new THREE.MeshBasicMaterial({ map: vidRT.texture }));
+        videoPlane.position.set(board.position.x + 10.17, board.position.y + 1.5, board.position.z + 0.06); scene.add(videoPlane);
 
         // light towers
         const glow = glowTexture();
@@ -399,30 +404,36 @@ const Stadium3D = (function () {
 
     function drawScoreboard(G, info) {
         if (!scoreboardCtx) return;
-        const key = G ? [G.inning, G.half, G.score[0], G.score[1], G.balls, G.strikes, G.outs, info.awayAbbr, info.homeAbbr].join('|') : 'idle';
+        const key = G ? [G.inning, G.half, G.score[0], G.score[1], G.balls, G.strikes, G.outs, info.awayAbbr, info.homeAbbr, info.batter.name, info.batter.avg].join('|') : 'idle';
         if (key === scoreboardKey) return;
         scoreboardKey = key;
         const g = scoreboardCtx, W_ = 1024, H_ = 400;
         g.fillStyle = '#050608'; g.fillRect(0, 0, W_, H_);
         g.strokeStyle = '#2a3042'; g.lineWidth = 8; g.strokeRect(4, 4, W_ - 8, H_ - 8);
         g.textBaseline = 'middle';
-        if (!G) { g.fillStyle = '#ffcc33'; g.font = 'bold 120px Arial'; g.textAlign = 'center'; g.fillText('PLAY BALL', W_ / 2, H_ / 2); scoreboardTex.needsUpdate = true; return; }
-        g.font = 'bold 84px "PingFang TC","Microsoft JhengHei",Arial';
+        // right panel frame (the live "pitcher-view" video plane sits over x 596..1008, y 6..314)
+        g.fillStyle = '#0b0e16'; g.fillRect(590, 0, 434, H_);
+        g.strokeStyle = '#3a4560'; g.lineWidth = 4; g.strokeRect(594, 4, 416, 312);
+        if (!G) { g.fillStyle = '#ffcc33'; g.font = 'bold 100px Arial'; g.textAlign = 'center'; g.fillText('PLAY BALL', 300, H_ / 2); scoreboardTex.needsUpdate = true; return; }
+        // caption under the video: batter name + average
+        g.fillStyle = '#ffffff'; g.textAlign = 'left'; g.font = 'bold 40px "PingFang TC","Microsoft JhengHei",Arial'; g.fillText(info.batter.name, 612, 346);
+        g.fillStyle = '#9fb0cc'; g.font = 'bold 28px Arial'; g.fillText('AVG ' + info.batter.avg + '   HR ' + info.batter.hr, 612, 380);
+        g.fillStyle = '#ff3b30'; g.beginPath(); g.arc(990, 346, 9, 0, Math.PI * 2); g.fill(); g.fillStyle = '#ffb3ae'; g.font = 'bold 20px Arial'; g.textAlign = 'right'; g.fillText('LIVE', 972, 347);
+        // score rows
         const row = (y, abbr, score, col, act) => {
-            g.fillStyle = col; g.fillRect(40, y - 44, 16, 88);
-            g.fillStyle = act ? '#ffffff' : '#9aa3b8'; g.textAlign = 'left'; g.fillText(abbr, 78, y);
-            g.fillStyle = '#ffcc33'; g.textAlign = 'right'; g.font = 'bold 120px Arial'; g.fillText(String(score), 520, y);
-            g.font = 'bold 84px "PingFang TC","Microsoft JhengHei",Arial';
+            g.fillStyle = col; g.fillRect(34, y - 40, 14, 80);
+            g.fillStyle = act ? '#ffffff' : '#9aa3b8'; g.textAlign = 'left'; g.font = 'bold 76px "PingFang TC","Microsoft JhengHei",Arial'; g.fillText(abbr, 66, y);
+            g.fillStyle = '#ffcc33'; g.textAlign = 'right'; g.font = 'bold 110px Arial'; g.fillText(String(score), 370, y);
         };
-        row(110, info.awayAbbr, G.score[0], info.awayCol, G.half === 0);
-        row(260, info.homeAbbr, G.score[1], info.homeCol, G.half === 1);
-        g.fillStyle = '#33ff88'; g.font = 'bold 90px Arial'; g.textAlign = 'center';
-        g.fillText((G.half === 0 ? '▲ ' : '▼ ') + G.inning, 760, 110);
+        row(100, info.awayAbbr, G.score[0], info.awayCol, G.half === 0);
+        row(240, info.homeAbbr, G.score[1], info.homeCol, G.half === 1);
+        g.fillStyle = '#33ff88'; g.font = 'bold 78px Arial'; g.textAlign = 'center';
+        g.fillText((G.half === 0 ? '▲ ' : '▼ ') + G.inning, 480, 100);
         const dots = (label, y, n, max, col) => {
-            g.fillStyle = '#aab'; g.font = 'bold 48px Arial'; g.textAlign = 'left'; g.fillText(label, 640, y);
-            for (let i = 0; i < max; i++) { g.beginPath(); g.arc(720 + i * 56, y, 20, 0, Math.PI * 2); g.fillStyle = i < n ? col : '#1c2130'; g.fill(); }
+            g.fillStyle = '#aab'; g.font = 'bold 40px Arial'; g.textAlign = 'left'; g.fillText(label, 412, y);
+            for (let i = 0; i < max; i++) { g.beginPath(); g.arc(462 + i * 40, y, 14, 0, Math.PI * 2); g.fillStyle = i < n ? col : '#1c2130'; g.fill(); }
         };
-        dots('B', 205, G.balls, 3, '#35e07a'); dots('S', 275, G.strikes, 2, '#ffd23a'); dots('O', 345, G.outs, 2, '#ff4d3a');
+        dots('B', 190, G.balls, 3, '#35e07a'); dots('S', 245, G.strikes, 2, '#ffd23a'); dots('O', 300, G.outs, 2, '#ff4d3a');
         scoreboardTex.needsUpdate = true;
     }
 
@@ -450,6 +461,7 @@ const Stadium3D = (function () {
         const pr = [[0, -0.03], [0.15, -0.03], [0.162, 0.03], [0.152, 0.13], [0.17, 0.27], [0.2, 0.42], [0.208, 0.5], [0.185, 0.575], [0.1, 0.625], [0, 0.635]].map(([r, y]) => new THREE.Vector2(r, y));
         geo.torso = new THREE.LatheGeometry(pr, 18);
         geo.upperArm = limbGeo([[0.06, 0], [0.066, -0.07], [0.066, -0.15], [0.054, -0.24], [0.047, -0.29]], 12);
+        geo.sleeve = limbGeo([[0.062, 0], [0.068, -0.06], [0.068, -0.12], [0.064, -0.185]], 14);
         geo.foreArm = limbGeo([[0.047, 0], [0.05, -0.05], [0.047, -0.11], [0.036, -0.22], [0.033, -0.27]], 12);
         geo.thigh = limbGeo([[0.102, 0], [0.104, -0.08], [0.094, -0.26], [0.078, -0.42], [0.072, -0.46]], 14);
         geo.shin = limbGeo([[0.072, 0], [0.078, -0.1], [0.076, -0.2], [0.058, -0.36], [0.05, -0.44]], 14);
@@ -530,11 +542,16 @@ const Stadium3D = (function () {
         // face mask for catcher / umpire
         const mask = part(new THREE.TorusGeometry(0.1, 0.012, 6, 16), m.dark, head, false); mask.position.set(0, -0.005, 0.105); mask.visible = false;
 
+        const guards = [];
         const mkArm = side => {
             const s = side === 'L' ? 1 : -1;
             const sh = new THREE.Group(); sh.position.set(0.235 * s, 0.5, 0); torso.add(sh);
-            part(geo.upperArm, m.sleeve, sh).scale.set(1.22, 1, 1.22);
+            part(geo.upperArm, m.forearm, sh).scale.set(1.15, 1, 1.15);                  // bare upper arm
+            part(geo.sleeve, m.sleeve, sh).scale.set(1.2, 1, 1.2);                          // short sleeve
+            const cuff = part(new THREE.TorusGeometry(0.078, 0.01, 8, 18), m.accent, sh, false); cuff.rotation.x = Math.PI / 2; cuff.position.y = -0.18;
+            blob(m.sleeve, sh, 0.085, 0.08, 0.085, 0, 0.0, 0);                              // deltoid
             const el = new THREE.Group(); el.position.y = -0.29; sh.add(el);
+            const guard = blob(m.dark, el, 0.062, 0.07, 0.062, 0, 0.0, 0); guard.visible = false; guards.push(guard);
             part(geo.foreArm, m.hand === undefined ? m.skin : m.forearm, el).scale.set(1.2, 1, 1.2);
             const hand = new THREE.Group(); hand.position.y = -0.285; el.add(hand);
             blob(m.hand, hand, 0.046, 0.058, 0.042, 0, -0.012, 0);
@@ -558,8 +575,9 @@ const Stadium3D = (function () {
 
         // glove (left hand) + bat holder + catcher gear
         const gloveG = new THREE.Group(); armL.hand.add(gloveG);
-        const gm = part(geo.ball, m.glove, gloveG); gm.scale.set(0.095, 0.115, 0.06); gm.position.set(0, -0.03, 0.04);
-        const gm2 = part(geo.ball, m.glove, gloveG); gm2.scale.set(0.06, 0.1, 0.045); gm2.position.set(0.03, 0.03, 0.04);
+        const gm = part(geo.ball, m.glove, gloveG); gm.scale.set(0.115, 0.14, 0.075); gm.position.set(0, -0.035, 0.05);
+        const gm2 = part(geo.ball, m.glove, gloveG); gm2.scale.set(0.075, 0.12, 0.055); gm2.position.set(0.035, 0.05, 0.05);
+        const gm3 = part(geo.ball, m.glove, gloveG); gm3.scale.set(0.05, 0.09, 0.045); gm3.position.set(-0.04, 0.045, 0.05);
         gloveG.visible = false;
         const holder = new THREE.Group(); torso.add(holder);
         const batC = canvasOf(64, 256), bg = batC.getContext('2d'), br = seeded(5);
@@ -578,7 +596,7 @@ const Stadium3D = (function () {
         const num = new THREE.Mesh(new THREE.PlaneGeometry(0.3, 0.3), new THREE.MeshBasicMaterial({ map: numT, transparent: true }));
         num.position.set(0, 0.33, -0.178); num.rotation.y = Math.PI; torso.add(num); num.visible = false;
 
-        const p = { kind, root, hips, torso, head, armL, armR, legL, legR, mats: m, jerseyC, jerseyT, pantsC, pantsT, capG, flap, mask, logoC, logoT, numC, numT, num, gloveG, holder, bat, chest, shinGuardL, shinGuardR, brim, belt, fade: 1, teamKey: '' };
+        const p = { kind, root, hips, torso, head, armL, armR, guards, legL, legR, mats: m, jerseyC, jerseyT, pantsC, pantsT, capG, flap, mask, logoC, logoT, numC, numT, num, gloveG, holder, bat, chest, shinGuardL, shinGuardR, brim, belt, fade: 1, teamKey: '' };
         p.allMats = Object.values(m);
         root.traverse(o => { if (o.isMesh) o.frustumCulled = true; });
         scene.add(root);
@@ -1094,6 +1112,7 @@ const Stadium3D = (function () {
             hold.rz *= -1; hold.ry *= -1; hold.px *= -1;
         }
         applyPose(p, P);
+        p.guards.forEach(gd => gd.visible = false); p.guards[left ? 1 : 0].visible = true;   // lead elbow: left arm for righties, right arm for lefties
         p.holder.position.set(hold.px, hold.py, hold.pz); p.holder.rotation.set(hold.rx, hold.ry, hold.rz);
         p.root.updateMatrixWorld(true);
         // hands grip the handle: bottom hand = the one on the pitcher side
@@ -1318,8 +1337,21 @@ const Stadium3D = (function () {
             mitt.position.set(S.mitt.x, S.mitt.y, 0.3); mitt.scale.setScalar(1 + pop * 0.12);
             mitt.rotation.set(0.1, 0, Math.sin(G.frame * 0.05) * 0.04);
         }
+        renderVideoBoard(info);
         renderer.render(scene, camera);
     };
+
+    // second camera on the mound looking at the batter, drawn into the video board texture
+    function renderVideoBoard(info) {
+        if (!vidRT || (vidTick++ & 1)) return;
+        const bp = actors.batter.root.getWorldPosition(v1);
+        vidCam.position.set(0.35, 1.62, MOUND_Z + 1.2);
+        vidCam.lookAt(bp.x * 0.85, 1.05, 0); vidCam.updateMatrixWorld(true);
+        const hid = [actors.catcher.root, actors.umpire.root], was = hid.map(o => o.visible);
+        hid.forEach(o => o.visible = true); actors.pitcher.root.visible = false; mitt.visible = false; videoPlane.visible = false;
+        renderer.setRenderTarget(vidRT); renderer.render(scene, vidCam); renderer.setRenderTarget(null);
+        hid.forEach((o, i) => o.visible = was[i]); actors.pitcher.root.visible = true; videoPlane.visible = true; mitt.visible = was[0] === false;
+    }
 
     return api;
 })();
