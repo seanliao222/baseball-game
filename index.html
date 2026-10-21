@@ -3427,7 +3427,11 @@
             } else if (data.t === 'start') {
                 MP.active = true; mpCloseOverlay();
             } else if (data.t === 'state') {
-                if (!MP.isHost) G = data.g;
+                if (!MP.isHost) {
+                    G = data.g;
+                    // never depend on the one-shot 'start' message: once match screens arrive, switch to versus mode
+                    if (!MP.active && G.scr !== SCR.TITLE && G.scr !== SCR.SELECT) { MP.active = true; MP.mySide = 1 - G.playerSide; mpCloseOverlay(); }
+                }
             }
         }
 
@@ -3478,6 +3482,7 @@
             MP.active = true;
             mpSend({ t: 'assign', hostSide: hostSide });
             mpSend({ t: 'start' });
+            [300, 1000, 2500].forEach(ms => setTimeout(() => { mpSend({ t: 'assign', hostSide: hostSide }); mpSend({ t: 'start' }); }, ms));
             mpCloseOverlay();
         }
 
@@ -3501,7 +3506,7 @@
             document.getElementById('mp-guest-status').textContent = '連線中...';
             MP.peer = new Peer();
             MP.peer.on('open', () => {
-                const conn = MP.peer.connect(room);
+                const conn = MP.peer.connect(room, { reliable: true });
                 mpWireConn(conn);
                 conn.on('open', () => { document.getElementById('mp-guest-status').textContent = '已連線，等待房主選擇隊伍...'; });
             });
@@ -3530,7 +3535,8 @@
         });
         canvas.addEventListener('touchstart', e => {
             if (!MP.active || MP.isHost || e.touches.length === 0) return;
-            const p = mpCanvasXY(e.touches[0].clientX, e.touches[0].clientY); mpSend({ t: 'ptr', x: p.x, y: p.y }); mpSend({ t: 'down' });
+            const p = mpCanvasXY(e.touches[0].clientX, e.touches[0].clientY); mpSend({ t: 'ptr', x: p.x, y: p.y });
+            if (!(isMobile && G.phase === PH.BATTING)) mpSend({ t: 'down' });
         });
         canvas.addEventListener('mouseup', () => { if (MP.active && !MP.isHost) mpSend({ t: 'up' }); });
         canvas.addEventListener('touchend', () => { if (MP.active && !MP.isHost) mpSend({ t: 'up' }); });
@@ -3548,7 +3554,9 @@
             }
             const btnS = document.getElementById('swing-btn'); const btnC = document.getElementById('change-btn'); const btnA = document.getElementById('sim-btn'); const btnSt = document.getElementById('steal-btn');
             if (MP.active && !MP.isHost) {
-                btnS.classList.remove('show'); btnC.classList.remove('show'); btnA.classList.remove('show'); btnSt.classList.remove('show');
+                // guest on a phone: a swing button while it is their turn to bat (aim by dragging, then press swing)
+                if (isMobile && G.scr === SCR.GAME && mpRemoteTurn() && G.phase === PH.BATTING) btnS.classList.add('show'); else btnS.classList.remove('show');
+                btnC.classList.remove('show'); btnA.classList.remove('show'); btnSt.classList.remove('show');
             } else if (isMobile && G.scr === SCR.GAME) {
                 if (playerBatting() && (G.phase === PH.WAIT_PITCH || G.phase === PH.BATTING)) {
                     btnS.classList.add('show'); btnC.classList.add('show'); btnA.classList.remove('show');
@@ -3564,12 +3572,14 @@
         // Mobile Events
         document.getElementById('swing-btn').addEventListener('touchstart', e => {
             e.preventDefault();
+            if (MP.active && !MP.isHost) { if (G.phase === PH.BATTING) mpSend({ t: 'down' }); return; }
             if (G.scr === SCR.GAME && playerBatting() && G.phase === PH.BATTING && !G.phDone && !G.phPressed) {
                 G.phPressed = true; G.phValue = G.phPos; resolveSwing(G.phValue, G.curX, G.curY);
             }
         }, { passive: false });
         document.getElementById('swing-btn').addEventListener('mousedown', e => {
             e.preventDefault();
+            if (MP.active && !MP.isHost) { if (G.phase === PH.BATTING) mpSend({ t: 'down' }); return; }
             if (G.scr === SCR.GAME && playerBatting() && G.phase === PH.BATTING && !G.phDone && !G.phPressed) {
                 G.phPressed = true; G.phValue = G.phPos; resolveSwing(G.phValue, G.curX, G.curY);
             }

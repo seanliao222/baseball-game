@@ -610,6 +610,11 @@ const Stadium3D = (function () {
         p.allMats.forEach(mt => { mt.transparent = t; mt.opacity = a; mt.depthWrite = !t; mt.needsUpdate = true; });
     }
 
+    // team-specific uniform looks; anything not listed falls back to the generic colour-based style
+    const UNI = {
+        Dodgers: { noPiping: true, trim: '#005A9C', front: h => h ? 'Dodgers' : 'Los Angeles', frontCol: '#005A9C', sock: '#005A9C', accent: '#005A9C', frontSize: 40 },
+        Yankees: { noPiping: true, pinstripe: '#0c2340', trim: '#0c2340', front: h => h ? '' : 'NEW YORK', frontCol: '#0c2340', sock: '#0c2340', accent: '#0c2340', frontSize: 34 }
+    };
     function dressTeam(p, team, isHome, opts = {}) {
         const key = [team.abbr, isHome, opts.helmet, opts.number, p.skinKey].join('|');
         if (p.teamKey === key) return; p.teamKey = key;
@@ -619,27 +624,32 @@ const Stadium3D = (function () {
         p.mats.jersey.color.set(0xffffff); p.mats.pants.color.set(0xffffff); p.mats.sleeve.color.set(jersey);
         p.mats.accent.color.set(isHome ? (jl > 0.6 ? '#f1f1f4' : c2) : c2);
         p.mats.band.color.set(c2);
-        const pantsHex = isHome ? '#f3f3f6' : '#c9ced8';
+        const pantsHex = isHome ? '#f3f3f6' : '#c9ced8', U = UNI[team.name] || null;
+        if (U) { p.mats.accent.color.set(U.accent); p.mats.band.color.set(U.accent); }
         // jersey texture: front lettering, side piping, subtle fabric noise
         {
-            const g = p.jerseyC.getContext('2d'), w = 256, h = 256, pipe = lum(c2) > 0.85 ? team.c1 : c2;
+            const g = p.jerseyC.getContext('2d'), w = 256, h = 256, pipe = U ? U.trim : (lum(c2) > 0.85 ? team.c1 : c2);
             g.fillStyle = jersey; g.fillRect(0, 0, w, h);
             for (let i = 0; i < 700; i++) { g.fillStyle = Math.random() < 0.5 ? 'rgba(0,0,0,0.035)' : 'rgba(255,255,255,0.035)'; g.fillRect(Math.random() * w, Math.random() * h, 3, 2); }
-            g.fillStyle = pipe; [0.25, 0.75].forEach(f => g.fillRect(f * w - 2.5, 0, 5, h));
+            if (!(U && U.noPiping)) { g.fillStyle = pipe; [0.25, 0.75].forEach(f => g.fillRect(f * w - 2.5, 0, 5, h)); }
+            if (U && U.pinstripe && isHome) { g.fillStyle = U.pinstripe; g.globalAlpha = 0.85; for (let x = 4; x < w; x += 9) g.fillRect(x, 0, 1.6, h); g.globalAlpha = 1; }   // home pinstripes
             g.fillStyle = 'rgba(0,0,0,0.18)'; g.fillRect(0, h - 10, w, 10);
-            const lt = (team.abbr || '').length;
-            g.font = 'bold ' + (lt <= 2 ? 58 : lt === 3 ? 46 : 36) + 'px "PingFang TC","Microsoft JhengHei",Arial'; g.textAlign = 'center'; g.textBaseline = 'middle';
-            g.lineWidth = 6; g.strokeStyle = pipe; g.lineJoin = 'round'; g.strokeText(team.abbr || '', w / 2, 112);
-            g.fillStyle = lum(jersey) > 0.6 ? team.c1 : '#ffffff'; g.fillText(team.abbr || '', w / 2, 112);
+            const front = U ? U.front(isHome) : (team.abbr || ''), lt = front.length;
+            if (front) {
+                g.font = (U ? 'italic bold ' + (U.frontSize || 40) : 'bold ' + (lt <= 2 ? 58 : lt === 3 ? 46 : 36)) + 'px "PingFang TC","Microsoft JhengHei",Arial'; g.textAlign = 'center'; g.textBaseline = 'middle';
+                if (!U) { g.lineWidth = 6; g.strokeStyle = pipe; g.lineJoin = 'round'; g.strokeText(front, w / 2, 112); }
+                g.fillStyle = U ? U.frontCol : (lum(jersey) > 0.6 ? team.c1 : '#ffffff'); g.fillText(front, w / 2, 112);
+            }
             g.strokeStyle = pipe; g.lineWidth = 4; g.beginPath(); g.moveTo(w / 2 - 22, 12); g.lineTo(w / 2, 36); g.lineTo(w / 2 + 22, 12); g.stroke();   // collar V
             p.jerseyT.needsUpdate = true;
             const q = p.pantsC.getContext('2d'); q.fillStyle = pantsHex; q.fillRect(0, 0, 64, 128);
-            q.fillStyle = pipe; [16, 48].forEach(x => q.fillRect(x - 2, 0, 4, 128));
+            if (U && U.pinstripe && isHome) { q.fillStyle = U.pinstripe; q.globalAlpha = 0.85; for (let x = 3; x < 64; x += 6) q.fillRect(x, 0, 1.2, 128); q.globalAlpha = 1; }
+            else if (!(U && U.noPiping)) { q.fillStyle = pipe; [16, 48].forEach(x => q.fillRect(x - 2, 0, 4, 128)); }
             for (let i = 0; i < 200; i++) { q.fillStyle = Math.random() < 0.5 ? 'rgba(0,0,0,0.04)' : 'rgba(255,255,255,0.05)'; q.fillRect(Math.random() * 64, Math.random() * 128, 2, 3); }
             p.pantsT.needsUpdate = true;
         }
         p.gloves = !!opts.helmet; p.mats.hand.color.set(p.gloves ? 0xf4f4f6 : (p.skinColor || 0xe0ac84)); p.mats.forearm.color.set(p.skinColor || 0xe0ac84);
-        p.mats.sock.color.set(c2);
+        p.mats.sock.color.set(U ? U.sock : c2);
         p.mats.cap.color.set(team.c1);
         p.flap.visible = !!opts.helmet;
         p.mats.cap.roughness = opts.helmet ? 0.18 : 0.75; p.mats.cap.metalness = opts.helmet ? 0.25 : 0; p.mats.cap.envMapIntensity = opts.helmet ? 1.6 : 0.5;
@@ -1085,7 +1095,7 @@ const Stadium3D = (function () {
     // ── batter ──────────────────────────────────────────
     function updateBatter(G, info, dt, df) {
         const p = actors.batter, wrap = actors.batterWrap;
-        const left = info.batter.bats === 'L', mr = left ? -1 : 1;   // mr mirrors the right-handed pose for lefties
+        const left = info.batter.bats === 'L', mr = left ? -1 : 1; S.batLeft = left;   // mr mirrors the right-handed pose for lefties
         wrap.scale.x = 1;
         p.root.position.x = -0.95 * mr; p.root.rotation.y = mr * Math.PI / 2;
         // swing progress
@@ -1315,6 +1325,8 @@ const Stadium3D = (function () {
     const WIDE = { pos: new THREE.Vector3(0, 13, 22), look: new THREE.Vector3(0, 2, -42), fov: 50, shift: 0 };
     const HRCAM = { pos: new THREE.Vector3(-26, 12, 16), look: new THREE.Vector3(0, 0, -22), fov: 52, shift: 0 };
     const _look = new THREE.Vector3();
+    // brief cut to the umpire while he signals the call (only calls made from the batter camera)
+    function umpGestureCut(G, PH) { const g = umpGesture(G, PH); return !!g && g.e < 52 && !(S.flight && S.flight.type !== 'FOUL' && hitBall.visible); }
     function cameraTarget(G, info) {
         const PH = info.PH; let tgt;
         const fl = S.flight;
@@ -1325,6 +1337,7 @@ const Stadium3D = (function () {
         } else if (flying && G.phase === PH.RESULT) tgt = followCam(fl, G);
         else if (G.phase === PH.RESULT && (G.resSub === 'HIT' || G.resSub === '2 BASE HIT' || G.resSub === 'OUT' || G.resSub === 'WALK')) tgt = flying ? followCam(fl, G) : (G.resSub === 'WALK' ? BAT_CAM : WIDE);
         else if (G.phase === PH.STEAL) tgt = stealCam(G);
+        else if (umpGestureCut(G, PH)) { UMP_CAM.pos.x = S.batLeft ? -4.2 : 4.2; UMP_CAM.look.x = S.batLeft ? 0.1 : -0.1; tgt = UMP_CAM; }
         else if (G.phase === PH.INNING_START) tgt = WIDE;
         else tgt = BAT_CAM;
         return tgt;
@@ -1341,6 +1354,54 @@ const Stadium3D = (function () {
         STEAL_CAM.pos.set(STEAL_CAM.look.x + side * 15, 6.5, STEAL_CAM.look.z + 17);
         return STEAL_CAM;
     }
+
+    // ── home-plate umpire: strike / ball / foul / walk signals ──────────────────────────
+    function umpGesture(G, PH) {
+        if (G.phase !== PH.RESULT) return null;
+        const e = 95 - G.resTimer;
+        switch (G.resSub) {
+            case 'STRIKE': case 'SWINGING STRIKE': return { kind: 'strike', e };
+            case 'STRIKEOUT': return { kind: 'strike3', e };
+            case 'BALL': return { kind: 'ball', e };
+            case 'FOUL BALL': return { kind: 'foul', e };
+            case 'WALK': return { kind: 'walk', e };
+        }
+        return null;
+    }
+    function updateUmpire(G, info) {
+        const u = actors.umpire, g = umpGesture(G, info.PH);
+        const P = Object.assign({}, P_UMP);
+        let r = null, l = null, headY = 0;
+        const at = (x, y, z) => u.root.localToWorld(v2.set(x, y, z)).clone();
+        if (g) {
+            const e = g.e, ease_ = x => clamp(x, 0, 1);
+            Object.assign(P, { crouch: 0.03, torsoX: 0.12, hipL: 0.1, hipR: 0.1, kneeL: 0.12, kneeR: 0.12 });   // stand up to make the call
+            if (g.kind === 'strike' || g.kind === 'strike3') {
+                // raise the right fist beside the head, then punch it forward (3 quick punches on a strikeout)
+                const up = ease_(e / 8), hits = g.kind === 'strike3' ? 3 : 1, ph = (e - 8) / 9;
+                const punch = e > 8 ? Math.max(0, Math.sin(Math.min(ph, hits) * Math.PI * 2)) : 0;
+                r = at(-0.3, lerp(1.35, 1.82, up) - 0.1 * punch, 0.12 + 0.55 * punch);
+                if (g.kind === 'strike3') headY = 0;
+            } else if (g.kind === 'ball') {
+                // no big signal for a ball: a small outward wave of the open left hand + a shake of the head
+                const w = Math.sin(e * 0.5) * 0.1, up = ease_(e / 6);
+                l = at(0.5 + w, lerp(1.25, 1.5, up), 0.35); headY = Math.sin(e * 0.45) * 0.35 * up;
+            } else if (g.kind === 'foul') {
+                const up = ease_(e / 7), w = Math.sin(e * 0.55) * 0.08;
+                r = at(-0.25 + w, lerp(1.3, 2.3, up), 0.1); l = at(0.25 - w, lerp(1.3, 2.3, up), 0.1);       // both arms overhead
+            } else if (g.kind === 'walk') {
+                const up = ease_(e / 8);                                                                       // point toward first base
+                r = at(-0.7 * up - 0.1, 1.55, -0.05 + 0.15 * up); headY = -0.4 * up;
+            }
+        }
+        applyPose(u, P);
+        u.head.rotation.y = headY;
+        u.root.updateMatrixWorld(true);
+        if (r) { ikArm(u.armR, r, _hintDown.set(-0.6, -0.5, -0.3)); _hintDown.set(0, -1, 0); }
+        if (l) { ikArm(u.armL, l, _hintDown.set(0.5, -0.6, -0.2)); _hintDown.set(0, -1, 0); }
+    }
+    const UMP_CAM = { pos: new THREE.Vector3(4.2, 2.0, -6.0), look: new THREE.Vector3(-0.1, 1.55, 2.0), fov: 22, shift: 0 };
+
     const FOLLOW = { pos: new THREE.Vector3(), look: new THREE.Vector3(), fov: 38, shift: 0 };
     function followCam(fl, G) {
         const b = hitBall.position, far = Math.hypot(b.x, b.z);
@@ -1353,7 +1414,7 @@ const Stadium3D = (function () {
     function updateCamera(G, info, dt) {
         if (S.dbgCam) { applyCamera(camera, S.dbgCam); S.nearBat = false; return; }
         const tgt = cameraTarget(G, info);
-        const k = tgt === BAT_CAM ? 5.5 : (tgt === FOLLOW ? 7 : (tgt === STEAL_CAM ? 5 : 3.2));
+        const k = tgt === BAT_CAM ? 5.5 : (tgt === FOLLOW ? 7 : (tgt === STEAL_CAM ? 5 : (tgt === UMP_CAM ? 11 : 3.2)));
         camS.pos.x = damp(camS.pos.x, tgt.pos.x, k, dt); camS.pos.y = damp(camS.pos.y, tgt.pos.y, k, dt); camS.pos.z = damp(camS.pos.z, tgt.pos.z, k, dt);
         camS.look.x = damp(camS.look.x, tgt.look.x, k * 1.2, dt); camS.look.y = damp(camS.look.y, tgt.look.y, k * 1.2, dt); camS.look.z = damp(camS.look.z, tgt.look.z, k * 1.2, dt);
         camS.fov = damp(camS.fov, tgt.fov, k, dt); camS.shift = damp(camS.shift, tgt.shift, k, dt);
@@ -1444,7 +1505,7 @@ const Stadium3D = (function () {
         updateFlight(G, info, dt);
         updatePitcher(G, info, df);
         updateCatcher(G, info, dt);
-        applyPose(actors.umpire, P_UMP); actors.umpire.root.updateMatrixWorld(true);
+        updateUmpire(G, info);
         updateBatter(G, info, dt, df);
         updateFielders(G, info, dt, df);
         updateRunners(G, info, dt, df);
