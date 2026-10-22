@@ -21,6 +21,7 @@ const Stadium3D = (function () {
     const SZX = 400, SZY = 400;    // strike-zone centre in game px
     const K = 180;                 // game px per metre on the plate plane
     const ZONE_Y = 0.80;           // zone centre height (m)
+    const ZHW = 55 / K, ZHH = 55 / K;   // half-size of the (game) strike zone on the plate plane, metres
     const MOUND_Z = -18.44;
     const BASE = 19.4;             // 1B/3B offset along each axis (27.43 m / sqrt 2)
     const HIP_Y = 0.995;
@@ -42,12 +43,29 @@ const Stadium3D = (function () {
     const bowlR = th => { const a = Math.abs(th), w = wallR(th); return a <= Math.PI / 4 ? w : lerp(100, 58, clamp((a - Math.PI / 4) / (Math.PI * 0.36), 0, 1)); };
 
     // ───────────────────────── renderer / scene ─────────────────────────
-    let renderer, scene, camera, zoneCam, canvas3d, maxAniso = 4;
+    let renderer, scene, camera, zoneCam, pitchZoneCam, canvas3d, maxAniso = 4;
     let cw = 800, ch = 600;                       // canvas px (CSS px; DPR handled by setPixelRatio)
     let rect = { x: 0, y: 0, w: 800, h: 600 };    // game rect inside the canvas
 
     const sun = new THREE.DirectionalLight(0xfff2dc, 1.15);
     let scoreboardCtx = null, scoreboardTex = null, scoreboardKey = '';
+    // stadium flags show the HOME team's flag (team colours + cap logo); neutral until a game starts
+    let flagCv = null, flagTexRef = null, flagKey = '';
+    function setFlagTeam(team) {
+        const key = team ? team.abbr : '-'; if (key === flagKey || !flagCv) return; flagKey = key;
+        const g = flagCv.getContext('2d'), w = 256, h = 140;
+        const c1 = team ? team.c1 : '#1d3b78', c2 = team && team.c2 && team.c2.toLowerCase() !== '#ffffff' ? team.c2 : (team ? '#ffffff' : '#e8eef9');
+        const base = team && lum(c1) < 0.06 ? c2 : c1;                       // very dark base colour -> use the second colour as the field
+        const stripe = base === c1 ? c2 : '#ffffff';
+        g.fillStyle = base; g.fillRect(0, 0, w, h);
+        g.fillStyle = stripe; g.fillRect(0, 0, w, 16); g.fillRect(0, h - 16, w, 16);
+        g.fillStyle = 'rgba(0,0,0,0.12)'; for (let x = 0; x < w; x += 32) g.fillRect(x, 16, 16, h - 32);
+        const fg = lum(base) > 0.55 ? '#111111' : '#ffffff', logo = team ? (team.hatLogo || team.abbr) : '⚾';
+        g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillStyle = fg;
+        g.font = 'bold ' + (logo.length > 1 ? 66 : 84) + 'px "PingFang TC","Microsoft JhengHei",Arial'; g.fillText(logo, w / 2, h / 2 - 6);
+        if (team) { g.font = 'bold 22px "PingFang TC","Microsoft JhengHei",Arial'; g.fillText(team.abbr, w / 2, h - 30); }
+        if (flagTexRef) flagTexRef.needsUpdate = true;
+    }
     let flashPts = null, vidRT = null, vidCam = null, videoPlane = null, vidTick = 0;
     const flags = [];
     function waveFlags(t) {
@@ -258,6 +276,8 @@ const Stadium3D = (function () {
         ground.rotation.x = -Math.PI / 2; ground.position.set(0, 0, -70); ground.receiveShadow = true; ground.material.envMapIntensity = 0.08;
         scene.add(ground);
 
+        const skirt = new THREE.Mesh(new THREE.PlaneGeometry(700, 700), new THREE.MeshStandardMaterial({ color: 0x1f5a28, roughness: 1 }));
+        skirt.rotation.x = -Math.PI / 2; skirt.position.set(0, -0.04, 0); scene.add(skirt);
         const plate = new THREE.Mesh(new THREE.PlaneGeometry(14, 14), new THREE.MeshStandardMaterial({ map: texOf(buildPlateDirtTexture()), transparent: true, roughness: 1, polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -1 }));
         plate.rotation.x = -Math.PI / 2; plate.position.set(0, 0.004, 0); plate.receiveShadow = true; plate.material.envMapIntensity = 0.08;
         scene.add(plate);
@@ -294,13 +314,13 @@ const Stadium3D = (function () {
 
         // outfield wall
         const wallTex = texOf(buildWallTexture(), { wrap: true });
-        const wallRows = [], N = 220;
+        const wallRows = [], N = 360;
         for (let i = 0; i <= N; i++) {
-            const th = lerp(-Math.PI * 0.62, Math.PI * 0.62, i / N), r = bowlR(th);
+            const th = lerp(-Math.PI, Math.PI, i / N), r = bowlR(th);
             const x = r * Math.sin(th), z = -r * Math.cos(th);
             wallRows.push([[x, 0, z], [x, 3.0, z]]);
         }
-        const wall = stripMesh(wallRows, 1 / 64, 1 / 3.0, new THREE.MeshStandardMaterial({ map: wallTex, roughness: 0.7, side: THREE.DoubleSide, emissive: 0x112211, emissiveIntensity: 0.15 }));
+        const wall = stripMesh(wallRows.filter((r, i) => Math.abs(lerp(-Math.PI, Math.PI, i / N)) < Math.PI * 0.64), 1 / 64, 1 / 3.0, new THREE.MeshStandardMaterial({ map: wallTex, roughness: 0.7, side: THREE.DoubleSide, emissive: 0x112211, emissiveIntensity: 0.15 }));
         scene.add(wall);
 
         // batter's eye (dark green panel behind CF)
@@ -319,7 +339,7 @@ const Stadium3D = (function () {
         const crowdB = texOf(buildCrowdTexture(9, ['#0b3d91', '#d8d8d8']), { wrap: true });
         const mkCrowdMat = t => new THREE.MeshBasicMaterial({ map: t, side: THREE.DoubleSide, color: 0xe4e8f2 });
         const arc = (fnIn, yIn, fnOut, yOut, th0, th1, mat, su, sv) => {
-            const rows = [], n = 200;
+            const rows = [], n = 360;
             for (let i = 0; i <= n; i++) {
                 const th = lerp(th0, th1, i / n), s = Math.sin(th), c = -Math.cos(th);
                 const ri = fnIn(th), ro = fnOut(th);
@@ -327,7 +347,7 @@ const Stadium3D = (function () {
             }
             const m = stripMesh(rows, su, sv, mat); scene.add(m); return m;
         };
-        const T0 = -Math.PI * 0.62, T1 = Math.PI * 0.62;
+        const T0 = -Math.PI, T1 = Math.PI;
         arc(th => bowlR(th) + 3, 3.2, th => bowlR(th) + 26, 10.5, T0, T1, mkCrowdMat(crowdA), 1 / 40, 1 / 20);
         arc(th => bowlR(th) + 26, 10.5, th => bowlR(th) + 29, 10.5, T0, T1, new THREE.MeshBasicMaterial({ color: 0x8a93a6, side: THREE.DoubleSide }), 1, 1);
         arc(th => bowlR(th) + 29, 10.5, th => bowlR(th) + 31, 15, T0, T1, new THREE.MeshBasicMaterial({ color: 0x9aa3b6, side: THREE.DoubleSide }), 1, 1);
@@ -335,6 +355,18 @@ const Stadium3D = (function () {
         arc(th => bowlR(th) + 58, 28, th => bowlR(th) + 58, 32, T0, T1, new THREE.MeshBasicMaterial({ color: 0x6c7488, side: THREE.DoubleSide }), 1, 1);
         arc(th => bowlR(th) + 58, 32, th => bowlR(th) + 24, 32, T0, T1, new THREE.MeshBasicMaterial({ color: 0x5a6174, side: THREE.DoubleSide }), 1, 1);
         arc(th => bowlR(th) + 3, 3.2, th => bowlR(th) + 3, 0, T0, T1, new THREE.MeshBasicMaterial({ color: 0x7b869c, side: THREE.DoubleSide }), 1, 1);
+
+        // close-in ad boards + front-row crowd behind home plate: this is what the long-lens pitcher camera sees
+        {
+            const adT = texOf(buildWallTexture(), { wrap: true, rx: 1.3, ry: 1 });
+            const ad = new THREE.Mesh(new THREE.PlaneGeometry(84, 3.4), new THREE.MeshStandardMaterial({ map: adT, roughness: 0.7, emissive: 0x161616, emissiveIntensity: 0.6 }));
+            ad.position.set(0, 1.7, 30); ad.rotation.y = Math.PI; scene.add(ad);
+            const cT = texOf(buildCrowdTexture(17, ['#c8102e', '#0b3d91', '#e0e0e0']), { wrap: true, rx: 4, ry: 0.9 });
+            const crowd = new THREE.Mesh(new THREE.PlaneGeometry(84, 9), new THREE.MeshBasicMaterial({ map: cT, color: 0xd4d8e6 }));
+            crowd.position.set(0, 7.9, 31.5); crowd.rotation.set(-0.25, Math.PI, 0); scene.add(crowd);
+            const rail = new THREE.Mesh(new THREE.BoxGeometry(84, 0.35, 0.5), new THREE.MeshStandardMaterial({ color: 0x16203a }));
+            rail.position.set(0, 3.5, 30.1); scene.add(rail);
+        }
 
         // scoreboard
         const sb = canvasOf(1024, 400); scoreboardCtx = sb.getContext('2d'); scoreboardTex = texOf(sb);
@@ -366,11 +398,8 @@ const Stadium3D = (function () {
         });
 
         // flags along the top of the upper deck
-        const fc = canvasOf(256, 140), fg0 = fc.getContext('2d');
-        for (let i = 0; i < 13; i++) { fg0.fillStyle = i % 2 ? '#ffffff' : '#c8202f'; fg0.fillRect(0, i * 140 / 13, 256, 140 / 13 + 1); }
-        fg0.fillStyle = '#2a3f8f'; fg0.fillRect(0, 0, 110, 76);
-        fg0.fillStyle = '#fff'; for (let y = 8; y < 74; y += 14) for (let x = 8; x < 108; x += 16) fg0.fillRect(x + ((y / 14) % 2 ? 8 : 0) - 2, y, 4, 4);
-        const flagTex = texOf(fc);
+        const fc = canvasOf(256, 140), flagTex = texOf(fc);
+        flagCv = fc; flagTexRef = flagTex; setFlagTeam(null);
         [[-42, 0.9], [0, 1.1], [42, 0.9]].forEach(([fx, sc2]) => {
             const th = Math.atan2(fx, 150), r = bowlR(th) + 56;
             const x = r * Math.sin(th), z = -r * Math.cos(th);
@@ -505,7 +534,7 @@ const Stadium3D = (function () {
             jersey: std(0xffffff), accent: std(0xcccccc), pants: std(0xeeeeee), sock: std(0xcccccc), skin: std(0xe0ac84, { roughness: 0.7 }),
             cap: std(0x222222, { roughness: 0.6 }), shoe: std(0x15151a, { roughness: 0.5 }), glove: std(0x6b3b1a, { roughness: 0.45, envMapIntensity: 0.9 }),
             dark: std(0x101014), gear: std(0x1a2238, { roughness: 0.6 }), bat: std(0xffffff, { roughness: 0.32, envMapIntensity: 1.0 }),
-            hand: std(0xe0ac84, { roughness: 0.7 }), forearm: std(0xe0ac84, { roughness: 0.65 }), sleeve: std(0xffffff), band: std(0xffffff, { roughness: 0.6 }), hair: std(0x17120e, { roughness: 0.9 }), sole: std(0xe6e6ea, { roughness: 0.6 })
+            hips: std(0xeeeeee), hand: std(0xe0ac84, { roughness: 0.7 }), forearm: std(0xe0ac84, { roughness: 0.65 }), sleeve: std(0xffffff), band: std(0xffffff, { roughness: 0.6 }), hair: std(0x17120e, { roughness: 0.9 }), sole: std(0xe6e6ea, { roughness: 0.6 })
         };
         const jerseyC = canvasOf(256, 256), jerseyT = new THREE.CanvasTexture(jerseyC);
         jerseyT.wrapS = THREE.RepeatWrapping; jerseyT.offset.x = 0.5; jerseyT.anisotropy = maxAniso; m.jersey.map = jerseyT;
@@ -516,7 +545,7 @@ const Stadium3D = (function () {
         const part = (g, mat, parent, shadow = true) => { const me = new THREE.Mesh(g, mat); me.castShadow = shadow; parent.add(me); return me; };
         const blob = (mat, parent, sx, sy, sz, x = 0, y = 0, z = 0) => { const me = new THREE.Mesh(geo.ball, mat); me.scale.set(sx, sy, sz); me.position.set(x, y, z); me.castShadow = true; parent.add(me); return me; };
         const hips = new THREE.Group(); hips.position.y = HIP_Y; root.add(hips);
-        blob(m.pants, hips, 0.19, 0.14, 0.14, 0, -0.04, 0);
+        blob(m.hips, hips, 0.19, 0.14, 0.14, 0, -0.04, 0);
         const torso = new THREE.Group(); torso.position.y = 0.03; hips.add(torso);
         const torsoMesh = part(geo.torso, m.jersey, torso); torsoMesh.scale.set(1.1, 1, 0.8);
         const belt = part(new THREE.CylinderGeometry(0.157, 0.157, 0.04, 18).translate(0, -0.02, 0), m.dark, torso, false); belt.scale.set(1.1, 1, 0.8);
@@ -621,7 +650,7 @@ const Stadium3D = (function () {
         const jl = lum(team.jersey || '#ffffff');
         const jersey = isHome ? (team.jersey || '#ffffff') : (jl > 0.8 ? '#c4c9d2' : (team.jersey || '#c4c9d2'));
         const c2 = team.c2 && team.c2.toLowerCase() !== '#ffffff' ? team.c2 : team.c1;
-        p.mats.jersey.color.set(0xffffff); p.mats.pants.color.set(0xffffff); p.mats.sleeve.color.set(jersey);
+        p.mats.jersey.color.set(0xffffff); p.mats.pants.color.set(0xffffff); p.mats.sleeve.color.set(jersey); p.mats.hips.color.set(isHome ? '#f3f3f6' : '#c9ced8');
         p.mats.accent.color.set(isHome ? (jl > 0.6 ? '#f1f1f4' : c2) : c2);
         p.mats.band.color.set(c2);
         const pantsHex = isHome ? '#f3f3f6' : '#c9ced8', U = UNI[team.name] || null;
@@ -797,6 +826,9 @@ const Stadium3D = (function () {
 
     // ───────────────────────── camera rig ─────────────────────────
     const camS = { pos: new THREE.Vector3(0, 1.6, 7.4), look: new THREE.Vector3(0, ZONE_Y, 0), fov: 25, shift: 100 };
+    // Pitcher camera: long lens from far behind the mound (so the pitcher, catcher, umpire and batter all read at TV-like sizes)
+    const PITCH_CAM = { pos: new THREE.Vector3(-6.0, 4.6, -100), look: new THREE.Vector3(0, ZONE_Y, 0), shift: 55 };
+    PITCH_CAM.fov = 2 * Math.atan(GH / (2 * PITCH_CAM.pos.distanceTo(PITCH_CAM.look) * (48 / ZHW))) * 180 / Math.PI;
     const BAT_CAM = { pos: new THREE.Vector3(0, 1.6, 7.4), look: new THREE.Vector3(0, ZONE_Y, 0), shift: 100 };
     BAT_CAM.fov = 2 * Math.atan(GH / (2 * BAT_CAM.pos.distanceTo(BAT_CAM.look) * K)) * 180 / Math.PI;
 
@@ -806,11 +838,17 @@ const Stadium3D = (function () {
         cam.setViewOffset(rect.w, rect.h, -rect.x, -rect.y - sh, cw, ch);
         cam.lookAt(st.look); cam.updateMatrixWorld(true);
     }
+    // The 2D aiming UI works in game px. `box` says where the strike zone sits on screen for the current aim camera:
+    // batter camera (behind the plate, looking out) or pitcher camera (behind the mound, looking in; screen-right = world -x).
+    const BOX = { bat: { cx: SZX, cy: SZY, hw: 55, hh: 55 }, pitch: { cx: SZX, cy: SZY, hw: 48, hh: 48 } };
+    let aimMode = 'bat';
     function pxToPlane(sx, sy, out) {
-        const nx = ((rect.x + sx / GW * rect.w) / cw) * 2 - 1, ny = -(((rect.y + sy / GH * rect.h) / ch) * 2 - 1);
-        _D.set(nx, ny, 0.5).unproject(zoneCam).sub(zoneCam.position).normalize();
-        const t = -zoneCam.position.z / _D.z;
-        return (out || new THREE.Vector3()).copy(zoneCam.position).addScaledVector(_D, t);
+        const b = BOX[aimMode], u = (sx - b.cx) / b.hw, v = (sy - b.cy) / b.hh;
+        return (out || new THREE.Vector3()).set((aimMode === 'pitch' ? -1 : 1) * u * ZHW, ZONE_Y - v * ZHH, 0);
+    }
+    function planeToPx(x, y) {
+        const b = BOX[aimMode], u = (aimMode === 'pitch' ? -1 : 1) * x / ZHW, v = (ZONE_Y - y) / ZHH;
+        return { x: b.cx + u * b.hw, y: b.cy + v * b.hh };
     }
 
     function resize(winW, winH, gameRect) {
@@ -820,6 +858,10 @@ const Stadium3D = (function () {
         renderer.setSize(cw, ch, false);
         canvas3d.style.width = cw + 'px'; canvas3d.style.height = ch + 'px';
         applyCamera(zoneCam, { pos: BAT_CAM.pos, look: BAT_CAM.look, fov: BAT_CAM.fov, shift: BAT_CAM.shift });
+        // where the zone lands on screen for the pitcher camera (computed from a frozen copy of that camera)
+        applyCamera(pitchZoneCam, { pos: PITCH_CAM.pos, look: PITCH_CAM.look, fov: PITCH_CAM.fov, shift: PITCH_CAM.shift });
+        const pc = [[-ZHW, ZONE_Y - ZHH], [ZHW, ZONE_Y + ZHH]].map(([x, y]) => { _pv.set(x, y, 0).project(pitchZoneCam); return { x: ((_pv.x * 0.5 + 0.5) * cw - rect.x) / rect.w * GW, y: ((-_pv.y * 0.5 + 0.5) * ch - rect.y) / rect.h * GH }; });
+        BOX.pitch = { cx: (pc[0].x + pc[1].x) / 2, cy: (pc[0].y + pc[1].y) / 2, hw: Math.abs(pc[1].x - pc[0].x) / 2, hh: Math.abs(pc[1].y - pc[0].y) / 2 };
         if (flashPts) flashPts.material.uniforms.scale.value = ch * 0.5;
     }
 
@@ -897,7 +939,7 @@ const Stadium3D = (function () {
         // mitt target: aim spot while a human pitches, ball landing spot once thrown
         let tgt = _tmpW.set(0, ZONE_Y, 0);
         if (info.humanPitching && (G.phase === info.PH.AIM || G.phase === info.PH.POWER_GAUGE) && G.aimState !== 0)
-            pxToPlane(SZX + G.aimX * 55, SZY + G.aimY * 55, tgt);
+            { const b = BOX[aimMode]; pxToPlane(b.cx + G.aimX * b.hw, b.cy + G.aimY * b.hh, tgt); }
         if (G.ballActive && G.frame - G.ballFrame < 200) {
             const t = clamp((G.frame - G.ballFrame) / G.ballDur, 0, 1);
             const bw = pitchWorld(G, 1, v3); tgt.copy(bw);
@@ -936,9 +978,10 @@ const Stadium3D = (function () {
             if (G.frame - G.ballFrame < 0) show = false;
             if (show) {
                 pitchWorld(G, t, ball.position);
-                const near = 1 - t;                                                    // far from the camera = bigger, so the ball stays readable
-                ball.scale.setScalar(0.062 * (1 + 1.9 * near));
-                ballGlow.visible = true; ballGlow.position.copy(ball.position); ballGlow.scale.setScalar(0.28 * (1 + 2.2 * near)); ballGlow.material.opacity = 0.55; if (G.lastPitchCol) ballGlow.material.color.set(G.lastPitchCol);
+                const near = aimMode === 'pitch' ? t : 1 - t;                         // far from the camera = bigger, so the ball stays readable
+                const grow = aimMode === 'pitch' ? 0.9 : 1.9;
+                ball.scale.setScalar(0.062 * (1 + grow * near));
+                ballGlow.visible = true; ballGlow.position.copy(ball.position); ballGlow.scale.setScalar((aimMode === 'pitch' ? 0.2 : 0.28) * (1 + (aimMode === 'pitch' ? 1.0 : 2.2) * near)); ballGlow.material.opacity = 0.55; if (G.lastPitchCol) ballGlow.material.color.set(G.lastPitchCol);
                 const pid = G.lastPitchId;
                 if (pid === 0) ball.rotation.x -= 0.55 * df;                                   // 4-seam: backspin
                 else if (pid === 4 || pid === 6) ball.rotation.x += 0.45 * df;                // curve / fork: topspin
@@ -951,7 +994,7 @@ const Stadium3D = (function () {
                     const tt = t - (i + 1) * 0.035;
                     if (tt <= 0 || t >= 1) { trail[i].visible = false; continue; }
                     pitchWorld(G, tt, trail[i].position); trail[i].visible = true;
-                    trail[i].scale.setScalar(0.056 * (1 - i * 0.07) * (1 + 1.5 * (1 - tt))); trail[i].material.opacity = 0.34 * (1 - i / trail.length); if (G.lastPitchCol) trail[i].material.color.set(G.lastPitchCol);
+                    trail[i].scale.setScalar(0.056 * (1 - i * 0.07) * (1 + 1.5 * (aimMode === 'pitch' ? tt : 1 - tt))); trail[i].material.opacity = 0.34 * (1 - i / trail.length); if (G.lastPitchCol) trail[i].material.color.set(G.lastPitchCol);
                 }
                 if (t >= 1) { for (const tr of trail) tr.visible = false; ballGlow.visible = false; }
             }
@@ -1349,7 +1392,7 @@ const Stadium3D = (function () {
         else if (G.phase === PH.STEAL) tgt = stealCam(G);
         else if (umpGestureCut(G, PH)) { UMP_CAM.pos.x = S.batLeft ? -4.2 : 4.2; UMP_CAM.look.x = S.batLeft ? 0.1 : -0.1; UMP_CAM.look.y = 2.7; tgt = UMP_CAM; }
         else if (G.phase === PH.INNING_START) tgt = WIDE;
-        else tgt = BAT_CAM;
+        else tgt = info.pitchView ? PITCH_CAM : BAT_CAM;
         return tgt;
     }
     const STEAL_CAM = { pos: new THREE.Vector3(), look: new THREE.Vector3(), fov: 38, shift: 0 };
@@ -1422,9 +1465,9 @@ const Stadium3D = (function () {
     }
 
     function updateCamera(G, info, dt) {
-        if (S.dbgCam) { applyCamera(camera, S.dbgCam); S.nearBat = false; return; }
+        if (S.dbgCam) { applyCamera(camera, S.dbgCam); S.nearBat = false; S.nearPitch = false; return; }
         const tgt = cameraTarget(G, info);
-        const k = tgt === BAT_CAM ? 5.5 : (tgt === FOLLOW ? 7 : (tgt === STEAL_CAM ? 5 : (tgt === UMP_CAM ? 11 : 3.2)));
+        const k = tgt === BAT_CAM ? 5.5 : (tgt === PITCH_CAM ? 4 : tgt === FOLLOW ? 7 : (tgt === STEAL_CAM ? 5 : (tgt === UMP_CAM ? 11 : 3.2)));
         camS.pos.x = damp(camS.pos.x, tgt.pos.x, k, dt); camS.pos.y = damp(camS.pos.y, tgt.pos.y, k, dt); camS.pos.z = damp(camS.pos.z, tgt.pos.z, k, dt);
         camS.look.x = damp(camS.look.x, tgt.look.x, k * 1.2, dt); camS.look.y = damp(camS.look.y, tgt.look.y, k * 1.2, dt); camS.look.z = damp(camS.look.z, tgt.look.z, k * 1.2, dt);
         camS.fov = damp(camS.fov, tgt.fov, k, dt); camS.shift = damp(camS.shift, tgt.shift, k, dt);
@@ -1434,7 +1477,11 @@ const Stadium3D = (function () {
         const st = { pos: camS.pos, look: camS.look, fov: camS.fov, shift: camS.shift };
         if (S.shake > 0) { S.shake = Math.max(0, S.shake - dt * 2.2); st.pos = camS.pos.clone().add(v3.set(rnd(-1, 1), rnd(-1, 1), rnd(-1, 1)).multiplyScalar(S.shake * 0.05)); }
         applyCamera(camera, st);
-        S.camMode = tgt === BAT_CAM ? 'bat' : 'wide';
+        if (tgt === PITCH_CAM) {      // snap once settled so the zone overlay is pixel-exact
+            if (camS.pos.distanceTo(PITCH_CAM.pos) < 0.25 && Math.abs(camS.fov - PITCH_CAM.fov) < 0.03 && Math.abs(camS.shift - PITCH_CAM.shift) < 0.3) { camS.pos.copy(PITCH_CAM.pos); camS.look.copy(PITCH_CAM.look); camS.fov = PITCH_CAM.fov; camS.shift = PITCH_CAM.shift; S.nearPitch = true; } else S.nearPitch = false;
+        } else S.nearPitch = false;
+        if (tgt === PITCH_CAM) aimMode = 'pitch'; else if (tgt === BAT_CAM) aimMode = 'bat';
+        S.camMode = tgt === BAT_CAM ? 'bat' : (tgt === PITCH_CAM ? 'pitch' : 'wide');
     }
 
     // ───────────────────────── title camera ─────────────────────────
@@ -1456,6 +1503,7 @@ const Stadium3D = (function () {
             scene = new THREE.Scene();
             camera = new THREE.PerspectiveCamera(30, 4 / 3, 0.2, 700);
             zoneCam = new THREE.PerspectiveCamera(30, 4 / 3, 0.2, 700);
+            pitchZoneCam = new THREE.PerspectiveCamera(5, 4 / 3, 0.2, 700);
             buildStadium(); buildActors();
             api.ok = true;
             api.debug = { scene, camera, renderer, S, actors };
@@ -1485,6 +1533,9 @@ const Stadium3D = (function () {
         return pts;
     };
     api.isBatCam = function () { return !!S.nearBat; };
+    api.isAimCam = function () { return !!(S.nearBat || S.nearPitch); };
+    api.aimBox = function () { return BOX[aimMode]; };
+    api.aimMode = function () { return aimMode; };
     api.show = function (v) { if (!api.ok) return; api.visible = v; canvas3d.style.display = v ? 'block' : 'none'; };
 
     api.renderTitle = function () {
@@ -1508,6 +1559,7 @@ const Stadium3D = (function () {
         actors.pitcher.root.visible = actors.catcher.root.visible = actors.umpire.root.visible = true;
 
         syncTeams(G, info);
+        setFlagTeam(info.homeTeam);
         drawScoreboard(G, info);
         // batter hides once he becomes a runner
         const hide = G.phase === info.PH.HR_RUN || (G.phase === info.PH.RESULT && ['OUT', 'HIT', '2 BASE HIT', 'WALK', 'HOMERUN'].includes(G.resSub));

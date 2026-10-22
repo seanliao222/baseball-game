@@ -242,7 +242,7 @@
         </div>
     </div>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-    <script src="stadium3d.js?v=20261023d"></script>
+    <script src="stadium3d.js?v=20261023n"></script>
     <script src="https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.js"></script>
     <script>
@@ -704,7 +704,7 @@
         const PH = { INNING_START: 0, PITCH_SELECT: 1, AIM: 2, POWER_GAUGE: 3, WAIT_PITCH: 4, BALL_FLIGHT: 5, BATTING: 6, RESULT: 7, SUB_MENU: 8, HR_RUN: 9, STEAL_MENU: 10, STEAL: 11 };
         let G = {};
 
-        const SZcx = W / 2, SZcy = 400, SZw = 110, SZh = 110;
+        let SZcx = W / 2, SZcy = 400, SZw = 110, SZh = 110;     // strike-zone rect in game px; follows the active aim camera (batter / pitcher view)
 
         function initState() {
             G = {
@@ -734,7 +734,7 @@
                 ],
                 halfEndTimer: 0,
                 runnerAnimPhase: 0, scoreFlash: [0, 0],
-                hrRunners: [], hrRunFrame: 0, pitchLog: [], _pitchPending: false
+                hrRunners: [], hrRunFrame: 0, pitchLog: [], _pitchPending: false, pitchGreat: false
             };
         }
         initState();
@@ -884,7 +884,7 @@
             // key = music file key (see music/README.md); a local music/<key>.mp3 still takes priority when present.
             const YT_TRACKS = {
                 Brothers: 'g8aB9j6GieU',        // 中信兄弟〈奪還〉2026 年度歌曲 (官方頻道)
-                Lions: '8MLDmpZRHzo',           // 統一獅〈鬥陣起行〉2026 年度主題曲
+                Lions: 'mUGCAgGY_oM',           // 統一獅應援歌曲〈制霸天下〉(官方頻道)
                 Monkeys: '2FDhxBlS2K8',         // 樂天桃猿〈做伙〉2026 年度歌曲
                 Guardians: '1ygsE7hnK_E',       // 富邦悍將〈藍色力量〉2026 年度主題曲
                 Dragons: 'Y1miGzVWVvs',         // 味全龍〈Run & Roar〉2026 年度主題曲
@@ -1159,20 +1159,23 @@
         // A pitch is a strike if ANY part of the ball touches the strike zone: the zone edge is widened by the ball's radius.
         // (units are strike-zone half-widths; ball radius ~3.7cm vs the game's ~30cm half-zone ≈ 0.12)
         const BALL_R = 0.12;
+        // power-bar zones (0..1, further right = faster): green normal, yellow good, white great, red wild
+        const PWR = { good: 0.58, great: 0.80, wild: 0.92 };
         function isStrikePos(x, y) { return Math.abs(x) <= 1 + BALL_R && Math.abs(y) <= 1 + BALL_R; }
         function pitchKmh(pitcher, po) { return Math.round((PITCH_DICT[po.id].mph + (pitcher.vel - 90) / 2) * 1.60934); }
 
-        // small label card for the pitch wheel: name + speed. anchor: 'l' (card to the left of x), 'r' (to the right), 'b' (centred below)
-        function wheelChip(x, y, name, kmh, hover, col, anchor) {
-            ctx.save(); ctx.font = `bold 11px ${HUD_FONT}`;
-            const w = Math.max(ctx.measureText(name).width, 46) + 14, h = 29;
-            const lx = anchor === 'l' ? x - w : anchor === 'r' ? x : x - w / 2, ly = anchor === 'b' ? y : y - h / 2;
-            ctx.fillStyle = hover ? 'rgba(60,50,0,0.92)' : 'rgba(8,14,32,0.82)'; drawRoundRect(ctx, lx, ly, w, h, 7); ctx.fill();
-            ctx.strokeStyle = hover ? '#FFD700' : 'rgba(150,180,255,0.55)'; ctx.lineWidth = hover ? 2 : 1; drawRoundRect(ctx, lx, ly, w, h, 7); ctx.stroke();
-            ctx.fillStyle = col; ctx.fillRect(lx + 4, ly + 5, 3, h - 10);
-            ctx.textAlign = 'center'; ctx.fillStyle = hover ? '#FFD700' : '#fff'; ctx.fillText(name, lx + w / 2 + 2, ly + 12);
-            ctx.font = `bold 10px ${HUD_FONT}`; ctx.fillStyle = hover ? '#FFE070' : 'rgba(255,225,120,0.95)'; ctx.fillText(kmh + ' km/h', lx + w / 2 + 2, ly + 24);
-            ctx.restore();
+        // Pitch-select wheel in the bottom-right corner (centre = the fastball, ring = the other pitches), so it never covers the pitcher.
+        function getPitchWheel(pitcher) {
+            const ci = pitcher.pitches.findIndex(p => PITCH_DICT[p.id].dir === 'center');
+            return { cx: W - 124, cy: H - 172, R: 106, r0: 40, ci, ring: pitcher.pitches.map((p, i) => i).filter(i => i !== ci) };
+        }
+        function wheelHover(pitcher, mx, my) {
+            const w = getPitchWheel(pitcher), dx = mx - w.cx, dy = my - w.cy, dist = Math.hypot(dx, dy);
+            if (dist > w.R + 4) return -1;
+            if (dist < w.r0) return w.ci;
+            if (!w.ring.length) return -1;
+            const n = w.ring.length, step = Math.PI * 2 / n, ang = ((Math.atan2(dy, dx) + Math.PI / 2) % (Math.PI * 2) + Math.PI * 2) % (Math.PI * 2);
+            return w.ring[Math.round(ang / step) % n];
         }
 
         function throwBall(controlPower) {
@@ -1184,8 +1187,9 @@
             const pitchObj = pitcher.pitches[G.pitchChoice];
             const pDef = PITCH_DICT[pitchObj.id];
             const speedMult = 0.7 + controlPower * 0.6;
-            const good = controlPower >= 0.60 && controlPower <= 0.90;
-            const over = controlPower > 0.90;
+            const good = controlPower >= PWR.good && controlPower <= PWR.wild;
+            const over = controlPower > PWR.wild;
+            G.pitchGreat = controlPower >= PWR.great && controlPower <= PWR.wild;       // 極佳: tight control and the batter struggles to square it up
 
             const fatigueMod = Math.max(0, (G.pitchCounts[pitcherSide] - pitcher.stm * 0.6) / (pitcher.stm * 0.4));
             const cMod = (100 - pitcher.ctrl) / 20 * (1 + fatigueMod * 0.8);
@@ -1246,7 +1250,7 @@
             const contactDist = Math.sqrt(Math.pow(cx - G._actualAimX, 2) + Math.pow(cy - G._actualAimY, 2));
             const contactScore = clamp(1 - contactDist / (1.3 + (batter.con / 100) * 0.9), 0, 1);
             const qualAdj = playerBatting() ? [0.20, 0, -0.20][G.difficulty] : [-0.20, 0, 0.20][G.difficulty];
-            const quality = clamp(timingScore * 0.55 + contactScore * 0.45 + qualAdj, 0, 1);
+            const quality = clamp(timingScore * 0.55 + contactScore * 0.45 + qualAdj - (G.pitchGreat ? 0.12 : 0), 0, 1);
 
             let type;
             if (quality > 0.78) {
@@ -1665,23 +1669,8 @@
                 case PH.INNING_START:
                     G.phaseTimer--; if (G.phaseTimer <= 0) startAtBat(); break;
                 case PH.PITCH_SELECT: {
-                    const pitcher = getPitcher(); const cx = W / 2, cy = 238;
-                    const dx = mouseX - cx, dy = mouseY - cy; const dist = Math.sqrt(dx * dx + dy * dy);
-                    let hovered = -1;
-                    if (dist < 120) {
-                        if (dist < 25) { hovered = pitcher.pitches.findIndex(p => PITCH_DICT[p.id].dir === 'center'); }
-                        else {
-                            let mouseAngle = Math.atan2(dy, dx); let minDist = 999;
-                            pitcher.pitches.forEach((p, i) => {
-                                const pd = PITCH_DICT[p.id];
-                                if (pd.dir !== 'center') {
-                                    let adist = Math.abs(mouseAngle - pd.dir);
-                                    if (adist > Math.PI) adist = Math.PI * 2 - adist;
-                                    if (adist < Math.PI / 4 && adist < minDist) { minDist = adist; hovered = i; }
-                                }
-                            });
-                        }
-                    }
+                    const pitcher = getPitcher();
+                    const hovered = wheelHover(pitcher, mouseX, mouseY);
                     G.hoveredPitchChoice = hovered;
                     if (isMouseJustPressed && (MP.active || !playerBatting())) {
                         const sbx = 14, sby = H - 132;
@@ -2248,8 +2237,9 @@
             return {
                 PH, batTeam: batTeamInfo(), pitTeam: pitTeamInfo(), batter: getBatter(), pitcher: getPitcher(),
                 humanPitching: MP.active || !playerBatting(), humanBatting: MP.active || playerBatting(),
+                pitchView: !MP.active && !playerBatting(),                 // single player: you pitch -> view from behind the mound
                 ballProgress: G.ballActive ? ballProgress() : 0,
-                awayAbbr: aw.abbr, homeAbbr: hw.abbr, awayCol: aw.c1, homeCol: hw.c1
+                awayAbbr: aw.abbr, homeAbbr: hw.abbr, awayCol: aw.c1, homeCol: hw.c1, homeTeam: hw
             };
         }
 
@@ -2284,7 +2274,7 @@
         // Compact pitch tracker attached to the batter name card (bottom-left): mini zone with numbered landing spots + the last 3 pitches.
         function renderPitchHistory() {
             const log = G.pitchLog; if (!log || !log.length) return;
-            if (G.phase === PH.STEAL_MENU || G.phase === PH.SUB_MENU || G.phase === PH.HR_RUN) return;
+            if (G.phase === PH.STEAL_MENU || G.phase === PH.SUB_MENU || G.phase === PH.HR_RUN || G.phase === PH.POWER_GAUGE) return;
             const x0 = 248, y0 = H - 84, w = 232, h = 70, rows = log.slice(-3);
             hudPanel(x0, y0, w, h, 12, '#6aa8ff');
             // mini zone (x,y in [-1.8,1.8]; the strike zone itself is [-1,1])
@@ -2429,6 +2419,7 @@
             [[-13, 0, -8, 0], [8, 0, 13, 0], [0, -13, 0, -8], [0, 8, 0, 13]].forEach(([a1, b1, c1, d1]) => { ctx.beginPath(); ctx.moveTo(ox + a1, oy + b1); ctx.lineTo(ox + c1, oy + d1); ctx.stroke(); });
             const inZone = isStrikePos((tx - SZcx) / (SZw / 2), (ty - SZcy) / (SZh / 2));
             // 球種 label under the zone (movement in cm as a second line)
+            if (G.phase === PH.POWER_GAUGE) { ctx.restore(); return; }          // the power bar is showing the pitch name
             const hcm = Math.round(Math.abs(cx) / 180 * 100), vcm = Math.round(Math.abs(cy) / 180 * 100);
             const mv = []; if (hcm >= 2) mv.push((cx < 0 ? '向左 ' : '向右 ') + hcm + 'cm'); if (vcm >= 2) mv.push((cy > 0 ? '下沉 ' : '上飄 ') + vcm + 'cm'); if (!mv.length) mv.push('直線進壘');
             const sub = mv.join('  ') + (G.phase === PH.PITCH_SELECT ? '' : (inZone ? '  ·  好球（碰到好球帶）' : '  ·  壞球位置'));
@@ -2442,7 +2433,7 @@
         }
 
         function renderZone3D() {
-            if (!S3D.isBatCam()) return;
+            if (!S3D.isAimCam()) return;
             const fielding = (G.phase === PH.PITCH_SELECT || G.phase === PH.AIM || G.phase === PH.POWER_GAUGE || G.phase === PH.BALL_FLIGHT);
             const x = SZcx - SZw / 2, y = SZcy - SZh / 2;
             ctx.save();
@@ -2466,6 +2457,7 @@
 
         function renderGame3D() {
             S3D.frame(G, stage3DInfo());
+            { const zb = S3D.aimBox(); SZcx = zb.cx; SZcy = zb.cy; SZw = zb.hw * 2; SZh = zb.hh * 2; }
             if (G.phase !== PH.HR_RUN) { renderZone3D(); renderPitchPreview(); }
             if (S3D.isBatCam() && (MP.active || playerBatting()) && (G.phase === PH.WAIT_PITCH || G.phase === PH.BATTING)) renderBatCursor();
             renderHitFlash();
@@ -2489,6 +2481,7 @@
 
         function renderGame() {
             if (S3D.ok && S3D.visible) { renderGame3D(); return; }
+            SZcx = W / 2; SZcy = 400; SZw = 110; SZh = 110;
             renderPowerProsField();
             drawFieldDefenders();
             drawFieldRunners();
@@ -3229,32 +3222,35 @@
             }
 
             if (G.phase === PH.PITCH_SELECT && (MP.active || !playerBatting())) {
-                const pitcher = getPitcher(); const cx = W / 2, cy = 238;
-                ctx.fillStyle = '#FFF'; ctx.beginPath(); ctx.arc(cx, cy, 22, 0, Math.PI * 2); ctx.fill();
-                ctx.strokeStyle = '#000'; ctx.lineWidth = 2; ctx.stroke();
-                ctx.strokeStyle = '#FF3333'; ctx.lineWidth = 1.5;
-                ctx.beginPath(); ctx.arc(cx - 13, cy, 10, -Math.PI / 3, Math.PI / 3); ctx.stroke();
-                ctx.beginPath(); ctx.arc(cx + 13, cy, 10, Math.PI - Math.PI / 3, Math.PI + Math.PI / 3); ctx.stroke();
-
-                pitcher.pitches.forEach((p, i) => {
-                    const pd = PITCH_DICT[p.id]; const isHover = (i === G.hoveredPitchChoice);
-                    if (pd.dir === 'center') {
-                        if (isHover) { ctx.fillStyle = 'rgba(255,255,0,0.5)'; ctx.beginPath(); ctx.arc(cx, cy, 22, 0, Math.PI * 2); ctx.fill(); }
-                        // Always show label for center pitch
-                        wheelChip(cx, cy - 66, pd.name, pitchKmh(pitcher, p), isHover, pd.col, 'b');
-                    } else {
-                        ctx.save(); ctx.translate(cx, cy); ctx.rotate(pd.dir);
-                        ctx.fillStyle = isHover ? '#FFFF00' : '#4488FF'; ctx.strokeStyle = '#FFF'; ctx.lineWidth = 2;
-                        const len = p.lv * 6; ctx.beginPath(); ctx.moveTo(26, -8); ctx.lineTo(26 + len, -8); ctx.lineTo(26 + len, -14); ctx.lineTo(26 + len + 15, 0); ctx.lineTo(26 + len, 14); ctx.lineTo(26 + len, 8); ctx.lineTo(26, 8); ctx.closePath(); ctx.fill(); ctx.stroke();
-                        ctx.translate(26 + len + 15, 0); ctx.rotate(-pd.dir); ctx.fillStyle = '#003388'; ctx.beginPath(); ctx.arc(0, 0, 11, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
-                        txt(p.lv, 0, 4, 13, '#FFF', 'center', 'Arial', false);
-                        ctx.restore();
-                        const rr = 26 + len + 15, bx = cx + Math.cos(pd.dir) * rr, by = cy + Math.sin(pd.dir) * rr;
-                        if (bx < cx - 6) wheelChip(bx - 15, by, pd.name, pitchKmh(pitcher, p), isHover, pd.col, 'l');
-                        else if (bx > cx + 6) wheelChip(bx + 15, by, pd.name, pitchKmh(pitcher, p), isHover, pd.col, 'r');
-                        else wheelChip(bx, by + 14, pd.name, pitchKmh(pitcher, p), isHover, pd.col, 'b');
-                    }
+                const pitcher = getPitcher(), WL = getPitchWheel(pitcher), n = WL.ring.length;
+                ctx.save();
+                // backdrop disc
+                ctx.fillStyle = 'rgba(6,12,28,0.55)'; ctx.beginPath(); ctx.arc(WL.cx, WL.cy, WL.R + 6, 0, Math.PI * 2); ctx.fill();
+                const drawLabel = (x, y, p, hov, col) => {
+                    const pd = PITCH_DICT[p.id];
+                    ctx.textAlign = 'center';
+                    ctx.font = `bold 12px ${HUD_FONT}`; ctx.fillStyle = hov ? '#FFD700' : '#fff'; ctx.fillText(pd.name, x, y - 5);
+                    ctx.font = `bold 10px ${HUD_FONT}`; ctx.fillStyle = hov ? '#FFE070' : 'rgba(255,225,120,0.95)'; ctx.fillText(pitchKmh(pitcher, p) + ' km/h', x, y + 8);
+                    ctx.fillStyle = 'rgba(255,255,255,0.18)'; ctx.fillRect(x - 17, y + 14, 34, 3);           // level bar (max 7)
+                    ctx.fillStyle = col; ctx.fillRect(x - 17, y + 14, 34 * Math.min(1, p.lv / 7), 3);
+                };
+                WL.ring.forEach((pi, k) => {
+                    const p = pitcher.pitches[pi], pd = PITCH_DICT[p.id], hov = pi === G.hoveredPitchChoice;
+                    const th = -Math.PI / 2 + k * Math.PI * 2 / n, a0 = th - Math.PI / n + 0.02, a1 = th + Math.PI / n - 0.02;
+                    ctx.beginPath(); ctx.arc(WL.cx, WL.cy, WL.R, a0, a1); ctx.arc(WL.cx, WL.cy, WL.r0 + 4, a1, a0, true); ctx.closePath();
+                    ctx.fillStyle = hov ? 'rgba(90,70,0,0.92)' : 'rgba(14,24,54,0.88)'; ctx.fill();
+                    ctx.strokeStyle = hov ? '#FFD700' : 'rgba(140,170,255,0.5)'; ctx.lineWidth = hov ? 2.5 : 1.2; ctx.stroke();
+                    const rr = (WL.R + WL.r0 + 4) / 2 + 1;
+                    drawLabel(WL.cx + Math.cos(th) * rr, WL.cy + Math.sin(th) * rr + (n >= 5 ? -1 : 0), p, hov, pd.col);
                 });
+                if (WL.ci >= 0) {
+                    const p = pitcher.pitches[WL.ci], hov = WL.ci === G.hoveredPitchChoice;
+                    ctx.beginPath(); ctx.arc(WL.cx, WL.cy, WL.r0, 0, Math.PI * 2); ctx.fillStyle = hov ? 'rgba(90,70,0,0.95)' : 'rgba(20,34,78,0.95)'; ctx.fill();
+                    ctx.strokeStyle = hov ? '#FFD700' : 'rgba(170,195,255,0.8)'; ctx.lineWidth = hov ? 3 : 2; ctx.stroke();
+                    drawLabel(WL.cx, WL.cy, p, hov, PITCH_DICT[p.id].col);
+                }
+                ctx.font = `bold 11px ${HUD_FONT}`; ctx.textAlign = 'center'; ctx.fillStyle = 'rgba(200,215,240,0.85)'; ctx.fillText('選擇球種', WL.cx, WL.cy - WL.R - 12);
+                ctx.restore();
                 // (the pitch name + movement are shown by renderPitchPreview)
                 const sbx = 14, sby = H - 132; const sHover = mouseX >= sbx && mouseX <= sbx + 120 && mouseY >= sby && mouseY <= sby + 38; drawGlossyPill(sbx, sby, 120, 38, sHover, '⚡ 自動', '#443300', '#886600', sHover ? '#FFD700' : '#FFF');
                 const pbx = W - 130, pby = H - 50; const pHHover = mouseX >= pbx && mouseX <= pbx + 120 && mouseY >= pby && mouseY <= pby + 38; drawGlossyPill(pbx, pby, 120, 38, pHHover, '🔄 換投手', '#004422', '#007733', pHHover ? '#FFD700' : '#FFF');
@@ -3267,21 +3263,37 @@
             }
 
             if (G.phase === PH.POWER_GAUGE && (MP.active || !playerBatting())) {
-                const gx = W / 2 - 100, gy = SZcy - SZh / 2 - 60, gw = 220, gh = 24;
-                ctx.fillStyle = '#FFF'; ctx.beginPath(); ctx.arc(gx - 10, gy + gh / 2, 18, 0, Math.PI * 2); ctx.fill(); ctx.strokeStyle = '#003388'; ctx.lineWidth = 3; ctx.stroke();
-                ctx.strokeStyle = '#FF3333'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(gx - 20, gy + gh / 2, 10, -Math.PI / 3, Math.PI / 3); ctx.stroke(); ctx.beginPath(); ctx.arc(gx, gy + gh / 2, 10, Math.PI - Math.PI / 3, Math.PI + Math.PI / 3); ctx.stroke();
-                ctx.fillStyle = '#FFF'; drawRoundRect(ctx, gx - 2, gy - 4, gw + 8, gh + 8, (gh + 8) / 2); ctx.fill(); ctx.strokeStyle = '#003388'; ctx.lineWidth = 2; ctx.stroke();
-                ctx.fillStyle = '#222'; drawRoundRect(ctx, gx + 10, gy, gw - 10, gh, gh / 2); ctx.fill();
-                ctx.save(); ctx.beginPath(); drawRoundRect(ctx, gx + 10, gy, gw - 10, gh, gh / 2); ctx.clip();
-                ctx.fillStyle = '#00DD00'; ctx.fillRect(gx + 10, gy, gw * 0.7, gh); ctx.fillStyle = '#DDDD00'; ctx.fillRect(gx + 10 + gw * 0.7, gy, gw * 0.2, gh); ctx.fillStyle = '#DD0000'; ctx.fillRect(gx + 10 + gw * 0.9, gy, gw * 0.1, gh); ctx.restore();
-                const curX = gx + 10 + G.gaugePos * (gw - 10);
-                ctx.fillStyle = '#FF8800'; ctx.strokeStyle = '#FFF'; ctx.lineWidth = 1;
-                ctx.beginPath(); ctx.moveTo(curX, gy - 2); ctx.lineTo(curX - 7, gy - 12); ctx.lineTo(curX + 7, gy - 12); ctx.closePath(); ctx.fill(); ctx.stroke();
-                ctx.beginPath(); ctx.moveTo(curX, gy + gh + 2); ctx.lineTo(curX - 7, gy + gh + 12); ctx.lineTo(curX + 7, gy + gh + 12); ctx.closePath(); ctx.fill(); ctx.stroke();
+                // horizontal power bar: pitch name banner + level badge + zoned bar with markers
+                const po = getPitcher().pitches[G.pitchChoice], pd = PITCH_DICT[po.id], x0 = W / 2 - 238, y0 = 462, bh = 26;
+                const bx = x0 + 214, bw = 262, pos = G.gaugePos;
+                ctx.save();
+                const gb = ctx.createLinearGradient(0, y0 - 4, 0, y0 + bh + 6); gb.addColorStop(0, '#1b2f86'); gb.addColorStop(1, '#0a1348');
+                ctx.fillStyle = gb; ctx.beginPath(); ctx.moveTo(x0, y0 + bh + 4); ctx.lineTo(x0 + 14, y0 - 6); ctx.lineTo(x0 + 190, y0 - 6); ctx.lineTo(x0 + 176, y0 + bh + 4); ctx.closePath(); ctx.fill();
+                ctx.strokeStyle = 'rgba(190,210,255,0.8)'; ctx.lineWidth = 1.5; ctx.stroke();
+                hudText(pd.name, x0 + 24, y0 + 17, 17, '#fff'); hudText(pitchKmh(getPitcher(), po) + '', x0 + 166, y0 + 17, 13, '#FFE070', 'right');
+                ctx.fillStyle = '#0a1348'; ctx.strokeStyle = '#fff'; ctx.lineWidth = 2.2; ctx.beginPath(); ctx.arc(x0 + 196, y0 + bh / 2 - 1, 19, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+                hudText(String(po.lv), x0 + 196, y0 + bh / 2 + 6, 18, '#fff', 'center');
+                // zoned bar
+                ctx.fillStyle = 'rgba(0,0,0,0.6)'; drawRoundRect(ctx, bx - 4, y0 - 4, bw + 8, bh + 8, 8); ctx.fill();
+                ctx.save(); drawRoundRect(ctx, bx, y0, bw, bh, 5); ctx.clip();
+                const zones = [[0, PWR.good, '#2fbf4a'], [PWR.good, PWR.great, '#f2c21b'], [PWR.great, PWR.wild, '#f4f6fa'], [PWR.wild, 1, '#d62a1e']];
+                zones.forEach(([a1, b1, c1]) => { ctx.fillStyle = c1; ctx.fillRect(bx + a1 * bw, y0, (b1 - a1) * bw, bh); });
+                ctx.fillStyle = 'rgba(0,0,0,0.38)'; ctx.fillRect(bx + pos * bw, y0, bw * (1 - pos), bh);       // dim what is not reached yet
+                ctx.fillStyle = 'rgba(255,255,255,0.14)'; ctx.fillRect(bx, y0, bw, bh * 0.4);
+                ctx.restore();
+                ctx.strokeStyle = 'rgba(255,255,255,0.7)'; ctx.lineWidth = 1.5; drawRoundRect(ctx, bx, y0, bw, bh, 5); ctx.stroke();
+                // markers
+                const mx = bx + pos * bw; ctx.fillStyle = '#ff8c1a'; ctx.strokeStyle = '#fff'; ctx.lineWidth = 1.5;
+                ctx.beginPath(); ctx.moveTo(mx, y0 + 1); ctx.lineTo(mx - 7, y0 - 11); ctx.lineTo(mx + 7, y0 - 11); ctx.closePath(); ctx.fill(); ctx.stroke();
+                ctx.beginPath(); ctx.moveTo(mx, y0 + bh - 1); ctx.lineTo(mx - 7, y0 + bh + 11); ctx.lineTo(mx + 7, y0 + bh + 11); ctx.closePath(); ctx.fill(); ctx.stroke();
+                // zone tags + hint
+                [['普通', 0, PWR.good, '#9ff0ad'], ['良好', PWR.good, PWR.great, '#ffe27a'], ['極佳', PWR.great, PWR.wild, '#ffffff'], ['失控', PWR.wild, 1, '#ff8b80']].forEach(([t, a1, b1, c1]) => hudText(t, bx + (a1 + b1) / 2 * bw, y0 + bh + 30, 10, c1, 'center'));
+                hudText('點擊 / 空白鍵 投球', bx + bw / 2, y0 + bh + 46, 11, 'rgba(210,225,255,0.85)', 'center', 'normal');
+                ctx.restore();
             }
 
             if (G.phase === PH.BATTING && (MP.active || playerBatting())) {
-                const tbW = 380, tbH = 28, tbX = W / 2 - tbW / 2, tbY = 552;
+                const tbW = 380, tbH = 28, tbX = W / 2 - tbW / 2, tbY = 476;
                 ctx.fillStyle = 'rgba(0,0,0,0.65)'; drawRoundRect(ctx, tbX - 4, tbY - 4, tbW + 8, tbH + 8, tbH / 2 + 4); ctx.fill();
                 ctx.strokeStyle = 'rgba(100,130,180,0.4)'; ctx.lineWidth = 1; drawRoundRect(ctx, tbX - 4, tbY - 4, tbW + 8, tbH + 8, tbH / 2 + 4); ctx.stroke();
                 ctx.save(); ctx.beginPath(); drawRoundRect(ctx, tbX, tbY, tbW, tbH, tbH / 2); ctx.clip();
