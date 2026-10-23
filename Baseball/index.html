@@ -284,7 +284,7 @@
         </div>
     </div>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-    <script src="stadium3d.js?v=20261024k"></script>
+    <script src="stadium3d.js?v=20261024m"></script>
     <script src="https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.js"></script>
     <script>
@@ -1368,6 +1368,91 @@
             if (!isBatter) return t;
             return t + (p.bats === 'S' ? '左右打' : p.bats === 'L' ? '左打' : '右打');
         }
+
+        // ── starting-lineup defensive positions ──
+        const POS_ORDER = ['C', '1B', '2B', '3B', 'SS', 'LF', 'CF', 'RF', 'DH'];
+        const POS_NAME = { IF: '內野', OF: '外野', TWP: '二刀',  C: '捕手', '1B': '一壘', '2B': '二壘', '3B': '三壘', SS: '游擊', LF: '左外', CF: '中外', RF: '右外', DH: '指定' };
+        const POS_FLEX = { IF: ['2B', 'SS', '3B', '1B'], OF: ['LF', 'CF', 'RF'], TWP: ['DH'], DH: ['DH'] };
+        function defaultPositions(roster, lineup) {
+            const out = Array(lineup.length).fill(null), taken = {};
+            lineup.forEach((bi, k) => { const ps = roster[bi].pos; if (POS_NAME[ps] && !taken[ps]) { out[k] = ps; taken[ps] = true; } });
+            lineup.forEach((bi, k) => { if (out[k]) return; const pool = POS_FLEX[roster[bi].pos] || []; const f = pool.find(x => !taken[x]); if (f) { out[k] = f; taken[f] = true; } });
+            lineup.forEach((bi, k) => { if (out[k]) return; const f = POS_ORDER.find(x => !taken[x]); out[k] = f; taken[f] = true; });
+            return out;
+        }
+        function ensureLineupPos() {
+            if (G.lineupPos) return;
+            G.lineupPos = [0, 1].map(sd => defaultPositions(TEAMS[sd === 0 ? G.awayIdx : G.homeIdx].roster.batters, G.lineups[sd]));
+        }
+        function lnLayout() {
+            const bx = [W / 2 - 340, W / 2 + 20];
+            return bx.map((x, sd) => ({
+                x, sd,
+                rows: Array.from({ length: 9 }, (_, i) => { const y = 160 + i * 35; return { i, y, row: { x: x + 8, y: y - 23, w: 304, h: 32 }, chip: { x: x + 38, y: y - 20, w: 50, h: 26 }, btn: { x: x + 284, y: y - 20, w: 28, h: 26 } }; }),
+                pBtn: { x: x + 284, y: 500 - 20, w: 28, h: 26 }
+            }));
+        }
+        function lnBenchList(sd, isP) {
+            const team = TEAMS[sd === 0 ? G.awayIdx : G.homeIdx], list = isP ? team.roster.pitchers : team.roster.batters, out = [];
+            list.forEach((_, i) => { if (isP ? G.pitchers[sd] !== i : !G.lineups[sd].includes(i)) out.push(i); });
+            return out;
+        }
+        function lnPickLayout() {
+            const pk = G.lnPick, list = lnBenchList(pk.sd, pk.isP), cols = list.length > 8 ? 2 : 1, per = Math.ceil(list.length / cols);
+            const pw = cols === 2 ? 700 : 400, ph = Math.max(220, 110 + per * 40 + 60), px = W / 2 - pw / 2, py = H / 2 - ph / 2, cw = (pw - 40 - (cols - 1) * 12) / cols;
+            return { list, pw, ph, px, py, items: list.map((idx, k) => ({ idx, x: px + 20 + Math.floor(k / per) * (cw + 12), y: py + 66 + (k % per) * 40, w: cw, h: 34 })), cancel: { x: px + pw / 2 - 70, y: py + ph - 48, w: 140, h: 34 } };
+        }
+        const inR = (r) => mouseX >= r.x && mouseX <= r.x + r.w && mouseY >= r.y && mouseY <= r.y + r.h;
+        function lineupClick() {
+            // returns true when the click was used for editing the lineup
+            if (MP.active) return false;
+            ensureLineupPos();
+            if (G.lnPick) {
+                const L = lnPickLayout(), pk = G.lnPick;
+                for (const it of L.items) if (inR(it)) {
+                    const sd = pk.sd;
+                    if (pk.isP) { G.usedPitchers[sd][G.pitchers[sd]] = false; G.pitchers[sd] = it.idx; G.usedPitchers[sd][it.idx] = true; }
+                    else { G.usedBatters[sd][G.lineups[sd][pk.i]] = false; G.lineups[sd][pk.i] = it.idx; G.usedBatters[sd][it.idx] = true; }
+                    G.lnPick = null; return true;
+                }
+                G.lnPick = null; return true;
+            }
+            for (const b of lnLayout()) {
+                if (inR({ x: b.pBtn.x, y: b.pBtn.y, w: b.pBtn.w, h: b.pBtn.h })) { G.lnPick = { sd: b.sd, isP: true }; G.lnSel = null; return true; }
+                for (const r of b.rows) {
+                    if (inR(r.btn)) { G.lnPick = { sd: b.sd, i: r.i, isP: false }; G.lnSel = null; return true; }
+                    const kind = inR(r.chip) ? 'pos' : inR(r.row) ? 'ord' : null; if (!kind) continue;
+                    const sel = G.lnSel;
+                    if (sel && sel.sd === b.sd && sel.kind === kind && sel.i !== r.i) {
+                        const L = G.lineups[b.sd], P = G.lineupPos[b.sd];
+                        if (kind === 'pos') { const t = P[sel.i]; P[sel.i] = P[r.i]; P[r.i] = t; }
+                        else { let t = L[sel.i]; L[sel.i] = L[r.i]; L[r.i] = t; t = P[sel.i]; P[sel.i] = P[r.i]; P[r.i] = t; }   // the position travels with the player
+                        G.lnSel = null;
+                    } else G.lnSel = (sel && sel.sd === b.sd && sel.kind === kind && sel.i === r.i) ? null : { sd: b.sd, i: r.i, kind };
+                    return true;
+                }
+            }
+            if (G.lnSel) { G.lnSel = null; return true; }
+            const sb = { x: W / 2 - 110, y: H - 44, w: 220, h: 34 }; return !inR(sb);        // only the start button (or Z / Space) begins the game
+        }
+        // ── pickoff throws (human pitcher, at most 3 per plate appearance; a 3rd failed attempt is a balk) ──
+        const PICK_MAX = 3, BASE_NAME = ['一壘', '二壘', '三壘'];
+        function pickBtnRect(k) { const slots = [0, 1, 2].filter(b => G.runners[b]); const n = slots.indexOf(k); return { x: 14, y: H - 176 - n * 42, w: 150, h: 36 }; }
+        function canPickoff() { return !MP.active && !playerBatting() && G.phase === PH.PITCH_SELECT && (G.pickoffs || 0) < PICK_MAX && G.runners.some(r => r); }
+        function doPickoff(k) {
+            const n = G.pickoffs = (G.pickoffs || 0) + 1;
+            G._continueAtBat = true;
+            if (Math.random() < [0.09, 0.07, 0.05][k]) {
+                G.runners[k] = false; G.outs++; SFX.out();
+                showRes(`牽制成功！${BASE_NAME[k]}跑者出局`, 'PICKOFF', '#FF4444', G.outs >= 3); return;
+            }
+            if (n >= PICK_MAX) {                         // third unsuccessful attempt: balk, every runner moves up
+                const bat = G.half, r = G.runners, runs = r[2] ? 1 : 0;
+                G.runners = [false, r[0], r[1]]; if (runs) { G.score[bat] += runs; G.scoreFlash[bat] = 35; }
+                showRes(runs ? '投手犯規！跑者進壘，得分' : '投手犯規！跑者進壘', 'BALK', '#FFAA44', false); return;
+            }
+            SFX.ball(); showRes(`牽制，${BASE_NAME[k]}跑者安全回壘（${n}/${PICK_MAX}）`, 'PICKOFF', '#FFD24A', false);
+        }
         function playerBatting() { return G.half === G.playerSide; }
         function batTeamInfo() { return TEAMS[G.half === 0 ? G.awayIdx : G.homeIdx]; }
         function pitTeamInfo() { return TEAMS[G.half === 0 ? G.homeIdx : G.awayIdx]; }
@@ -1423,7 +1508,7 @@
         }
 
         function startAtBat(isContinue = false) {
-            if (!isContinue) { G.balls = 0; G.strikes = 0; G.pitchLog = []; aiPitchingChange(); const ps = G.half === 0 ? 1 : 0; G.pApp[ps].bf++; }
+            if (!isContinue) { G.balls = 0; G.strikes = 0; G.pickoffs = 0; G.pitchLog = []; aiPitchingChange(); const ps = G.half === 0 ? 1 : 0; G.pApp[ps].bf++; }
             G.ballActive = false; G.batSwingFrame = -999; G._pitchPending = false;
             if (MP.active || !playerBatting()) {
                 G.phase = PH.PITCH_SELECT; G.pitchChoice = 0; G.aimX = 0; G.aimY = 0; G.gaugePos = 0; G.gaugeDir = 1;
@@ -1912,7 +1997,7 @@
                                 G.difficulty = di;
                                 G.inning = 1; G.half = 0; G.outs = 0; G.balls = 0; G.strikes = 0; G.score = [0, 0]; G.batOrder = [0, 0];
                                 G.lineups = [[0, 1, 2, 3, 4, 5, 6, 7, 8], [0, 1, 2, 3, 4, 5, 6, 7, 8]];
-                                G.pitchers = [0, 0];
+                                G.pitchers = [0, 0]; G.lineupPos = null; G.lnSel = null; G.lnPick = null;
                                 G.usedBatters = [Array(TEAMS[G.awayIdx].roster.batters.length).fill(false), Array(TEAMS[G.homeIdx].roster.batters.length).fill(false)];
                                 G.usedPitchers = [Array(TEAMS[G.awayIdx].roster.pitchers.length).fill(false), Array(TEAMS[G.homeIdx].roster.pitchers.length).fill(false)];
 
@@ -1929,7 +2014,9 @@
 
             if (G.scr === SCR.LINEUP) {
                 G.introTimer++;
-                if (actionTrigger() || G.introTimer > 300) {
+                ensureLineupPos();
+                const startKey = J('KeyZ') || J('Space'), editing = isMouseJustPressed && lineupClick();
+                if (!editing && (startKey || isMouseJustPressed || (MP.active && G.introTimer > 300))) {
                     G.scr = SCR.GAME; G.phase = PH.INNING_START; G.phaseTimer = 60;
                 }
                 clearInput(); return;
@@ -1994,6 +2081,7 @@
                         if (mouseX >= sbx && mouseX <= sbx + 120 && mouseY >= sby && mouseY <= sby + 38) { simulateHalf(); break; }
                         const pbx = W - 130, pby = H - 50;
                         if (mouseX >= pbx && mouseX <= pbx + 120 && mouseY >= pby && mouseY <= pby + 38) { G.subType = 'P'; G.prevPhase = G.phase; G.phase = PH.SUB_MENU; break; }
+                        if (canPickoff()) { const hitK = [0, 1, 2].find(b => G.runners[b] && inR(pickBtnRect(b))); if (hitK !== undefined) { doPickoff(hitK); break; } }
                         if (hovered !== -1) { G.pitchChoice = hovered; G.phase = PH.AIM; G.aimState = 0; break; }
                     }
                     break;
@@ -2704,8 +2792,9 @@
             hudPanel(cx, cy, cw, chh, 12, hudTeamColor(batTeam));
             ctx.fillStyle = hudTeamColor(batTeam); ctx.beginPath(); ctx.arc(cx + 34, cy + 28, 16, 0, Math.PI * 2); ctx.fill();
             hudText(String(G.batOrder[G.half] + 1), cx + 34, cy + 34, 17, '#fff', 'center');
+            const _lp = G.lineupPos && G.lineupPos[G.half] && G.lineupPos[G.half][G.batOrder[G.half]];
             hudText(batter.name, cx + 58, cy + 30, 20, '#fff');
-            hudText(`${handText(batter, true) ? handText(batter, true) + '  ' : ''}${batter.avg}  ${batter.hr}轟  ${batter.rbi}打點`, cx + 58, cy + 48, 11, 'rgba(200,215,240,0.85)', 'left', 'normal');
+            hudText(`${_lp ? POS_NAME[_lp] + ' ' : ''}${handText(batter, true) ? handText(batter, true) + ' ' : ''}${batter.avg}  ${batter.hr}轟  ${batter.rbi}打點`, cx + 58, cy + 48, 11, 'rgba(200,215,240,0.85)', 'left', 'normal');
             const rating = Math.round((batter.con + batter.pow + batter.spd) / 3);
             const cond = rating >= 85 ? '絕好調' : rating >= 72 ? '好調' : '普通';
             hudText(cond, cx + cw - 12, cy + 28, 11, rating >= 85 ? '#ff9a3a' : rating >= 72 ? '#5dff9a' : '#aab', 'right');
@@ -2893,21 +2982,45 @@
 
                 for (let i = 0; i < 9; i++) {
                     const b = team.roster.batters[sideLineups[i]]; const y = 160 + i * 35;
-                    ctx.font = 'bold 16px Arial'; ctx.textAlign = 'left'; ctx.fillStyle = '#88AAFF'; ctx.fillText(`${i + 1}.`, x + 30, y);
-                    ctx.font = 'bold 18px "PingFang TC", "Microsoft JhengHei", Arial'; ctx.fillStyle = '#FFF'; ctx.fillText(b.name, x + 60, y);
-                    ctx.font = '14px Arial'; ctx.textAlign = 'right'; ctx.fillStyle = '#AAAAAA'; ctx.fillText(`AVG ${b.avg}`, x + 290, y);
+                    const sd = x < W / 2 ? 0 : 1, sel = G.lnSel && G.lnSel.sd === sd && G.lnSel.i === i ? G.lnSel.kind : null, canEdit = !MP.active;
+                    if (sel === 'ord') { ctx.fillStyle = 'rgba(255,215,0,0.18)'; ctx.fillRect(x + 8, y - 23, 304, 32); }
+                    ctx.font = 'bold 16px Arial'; ctx.textAlign = 'left'; ctx.fillStyle = '#88AAFF'; ctx.fillText(`${i + 1}.`, x + 14, y);
+                    const pos = (G.lineupPos && G.lineupPos[sd][i]) || '';
+                    ctx.fillStyle = sel === 'pos' ? '#FFD700' : '#1c4f6e'; drawRoundRect(ctx, x + 38, y - 20, 50, 26, 6); ctx.fill();
+                    ctx.font = 'bold 14px "PingFang TC", "Microsoft JhengHei", Arial'; ctx.textAlign = 'center'; ctx.fillStyle = sel === 'pos' ? '#222' : '#BFE9FF'; ctx.fillText(POS_NAME[pos] || pos, x + 63, y - 2);
+                    ctx.font = 'bold 17px "PingFang TC", "Microsoft JhengHei", Arial'; ctx.textAlign = 'left'; ctx.fillStyle = '#FFF'; ctx.fillText(b.name, x + 96, y);
+                    ctx.font = '13px Arial'; ctx.textAlign = 'right'; ctx.fillStyle = '#AAAAAA'; ctx.fillText(`${b.avg}`, x + 278, y);
+                    if (canEdit) { ctx.fillStyle = '#2a5a2a'; drawRoundRect(ctx, x + 284, y - 20, 28, 26, 6); ctx.fill(); ctx.font = 'bold 15px Arial'; ctx.textAlign = 'center'; ctx.fillStyle = '#9dff9d'; ctx.fillText('⇄', x + 298, y - 1); }
                 }
                 const pLineY = 500;
                 ctx.strokeStyle = 'rgba(255,255,255,0.2)'; ctx.beginPath(); ctx.moveTo(x + 20, pLineY - 30); ctx.lineTo(x + 300, pLineY - 30); ctx.stroke();
                 const p = team.roster.pitchers[pitcherIdx];
                 ctx.font = 'bold 16px Arial'; ctx.textAlign = 'left'; ctx.fillStyle = '#FF88AA'; ctx.fillText('P.', x + 30, pLineY);
                 ctx.font = 'bold 18px "PingFang TC", "Microsoft JhengHei", Arial'; ctx.fillStyle = '#FFF'; ctx.fillText(p.name, x + 60, pLineY);
-                ctx.font = '14px Arial'; ctx.textAlign = 'right'; ctx.fillStyle = '#AAAAAA'; ctx.fillText(`ERA ${p.era}`, x + 290, pLineY);
+                ctx.font = '13px Arial'; ctx.textAlign = 'right'; ctx.fillStyle = '#AAAAAA'; ctx.fillText(`${handText(p, false)} ERA ${p.era}`, x + 278, pLineY);
+                if (!MP.active) { ctx.fillStyle = '#2a5a2a'; drawRoundRect(ctx, x + 284, pLineY - 20, 28, 26, 6); ctx.fill(); ctx.font = 'bold 15px Arial'; ctx.textAlign = 'center'; ctx.fillStyle = '#9dff9d'; ctx.fillText('⇄', x + 298, pLineY - 1); }
             }
 
             drawTeamBoard(W / 2 - 340, aw, G.lineups[0], G.pitchers[0], 'AWAY');
             drawTeamBoard(W / 2 + 20, hw, G.lineups[1], G.pitchers[1], 'HOME');
-            if (Math.floor(G.frame / 20) % 2 === 0) txt('點擊畫面開始比賽 (CLICK TO START)', W / 2, H - 20, 16, '#00FFFF', 'center', '', false);
+            if (MP.active) { if (Math.floor(G.frame / 20) % 2 === 0) txt('點擊畫面開始比賽 (CLICK TO START)', W / 2, H - 20, 16, '#00FFFF', 'center', '', false); }
+            else {
+                txt('點打線互換棒次 · 點守位互換守備位置 · ⇄ 更換球員', W / 2, 68, 13, '#9fd0e8', 'center', '', false);
+                const hov = mouseX >= W / 2 - 110 && mouseX <= W / 2 + 110 && mouseY >= H - 44 && mouseY <= H - 10;
+                drawGlossyPill(W / 2 - 110, H - 44, 220, 34, hov, '開始比賽 (Z)', '#0a5a2a', '#1fa84a');
+                if (G.lnPick) {
+                    ctx.fillStyle = 'rgba(0,0,0,0.72)'; ctx.fillRect(0, 0, W, H);
+                    const L = lnPickLayout(), pk = G.lnPick, team = TEAMS[pk.sd === 0 ? G.awayIdx : G.homeIdx];
+                    drawRetroPanel(L.px, L.py, L.pw, L.ph, '#002244', '#FFF');
+                    txt(pk.isP ? '更換先發投手' : `更換第 ${pk.i + 1} 棒（${POS_NAME[G.lineupPos[pk.sd][pk.i]]}）`, W / 2, L.py + 38, 22, '#FFD700');
+                    L.items.forEach(it => {
+                        const q = pk.isP ? team.roster.pitchers[it.idx] : team.roster.batters[it.idx], hv = inR(it);
+                        const lab = pk.isP ? `${q.name}  ${handText(q, false)}  防${q.era}` : `${q.name}  ${POS_NAME[q.pos] || '野手'}  ${handText(q, true)}  ${q.avg}`;
+                        drawGlossyPill(it.x, it.y, it.w, it.h, hv, lab, '#113355', '#225588');
+                    });
+                    drawGlossyPill(L.cancel.x, L.cancel.y, L.cancel.w, L.cancel.h, inR(L.cancel), '取消', '#662222', '#aa4444');
+                }
+            }
         }
 
         function renderSubMenu() {
@@ -3616,6 +3729,7 @@
                 ctx.restore();
                 // (the pitch name + movement are shown by renderPitchPreview)
                 const sbx = 14, sby = H - 132; const sHover = mouseX >= sbx && mouseX <= sbx + 120 && mouseY >= sby && mouseY <= sby + 38; drawGlossyPill(sbx, sby, 120, 38, sHover, '⚡ 自動', '#443300', '#886600', sHover ? '#FFD700' : '#FFF');
+                if (canPickoff()) [0, 1, 2].forEach(b => { if (!G.runners[b]) return; const r = pickBtnRect(b); drawGlossyPill(r.x, r.y, r.w, r.h, inR(r), `牽制${BASE_NAME[b]} ${G.pickoffs || 0}/${PICK_MAX}`, '#224466', '#3a77aa'); });
                 const pbx = W - 130, pby = H - 50; const pHHover = mouseX >= pbx && mouseX <= pbx + 120 && mouseY >= pby && mouseY <= pby + 38; drawGlossyPill(pbx, pby, 120, 38, pHHover, '🔄 換投手', '#004422', '#007733', pHHover ? '#FFD700' : '#FFF');
             }
 
@@ -3989,6 +4103,7 @@
             G.usedPitchers = [Array(TEAMS[G.awayIdx].roster.pitchers.length).fill(false), Array(TEAMS[G.homeIdx].roster.pitchers.length).fill(false)];
             for (let i = 0; i < 9; i++) { G.usedBatters[0][i] = true; G.usedBatters[1][i] = true; }
             G.usedPitchers[0][0] = true; G.usedPitchers[1][0] = true;
+            G.lineupPos = null; G.lnSel = null; G.lnPick = null;
             G.scr = SCR.LINEUP; G.introTimer = 0; G.ballActive = false;
             MP.active = true; MP.mySide = hostSide;
             mpSend({ t: 'assign', hostSide: hostSide });

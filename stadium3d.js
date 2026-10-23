@@ -1067,6 +1067,25 @@ const Stadium3D = (function () {
             else if (G.hitKind === 'line') { kind = 'line'; dist = 28 + R() * 40; apex = 3 + R() * 3; dur = Math.round(30 + dist / 3); }
             else { kind = 'fly'; dist = 55 + R() * 28; apex = 30; dur = 84; }
         }
+        if (type !== 'FOUL' && type !== 'HR') {
+            // fielding range: an out is hit within reach of a fielder, a base hit drops where nobody can get to it
+            const fs = actors.fielders, hm = f => ({ x: f.base0 ? f.base0.x : f.home.x, z: f.base0 ? f.base0.z : f.home.z });
+            const reach = (kind === 'grounder' ? 9 : kind === 'line' ? 10 : 13);
+            let tries = 0, ok = false, d2 = dist, th2 = th;
+            while (!ok && tries++ < 24) {
+                if (type === 'OUT') {
+                    const pool = fs.filter(f => kind === 'grounder' ? !/^(LF|CF|RF)$/.test(f.pos) : (G.hitKind === 'pop' ? !/^(LF|CF|RF)$/.test(f.pos) : (G.hitKind === 'fly' || G.hitKind === 'line') ? true : true));
+                    const f = pool[Math.floor(R() * pool.length)], h = hm(f), a = (R() - 0.5) * 2 * reach * 0.6, b = (R() - 0.5) * 2 * reach * 0.6;
+                    const x = h.x + a, z = h.z + b; d2 = Math.hypot(x, z); th2 = Math.atan2(x, -z);
+                    ok = Math.abs(th2) < 0.7 && (kind !== 'grounder' || d2 > 14) && d2 > 10;
+                } else {
+                    th2 = (R() - 0.5) * 1.3; d2 = dist * (0.9 + R() * 0.2);
+                    const x = Math.sin(th2) * d2, z = -Math.cos(th2) * d2;
+                    ok = fs.every(f => { const h = hm(f); return Math.hypot(h.x - x, h.z - z) > reach * (kind === 'fly' ? 0.8 : 1); });
+                }
+            }
+            if (ok) { th = th2; dist = d2; dir.set(Math.sin(th), 0, -Math.cos(th)); }
+        }
         const end = start.clone().addScaledVector(dir, dist); end.y = 0;
         const landing = end.clone();
         const fl = { t0: G.frame, type, kind, start, dir, dist, apex, dur, roll, rollDist, end, landing, catch: type === 'OUT', fielder: null, arrive: 0, spin: rnd(0.3, 0.9) };
@@ -1264,6 +1283,21 @@ const Stadium3D = (function () {
             }
             if (!fl || !f.chase) f.chase = null;
             f.root.rotation.x = 0; f.root.position.y = 0;
+            if (!f.base0) f.base0 = { x: f.home.x, z: f.home.z };
+            if (!fl && info.batter) {
+                // pre-pitch positioning: pull-side shift and depth by the batter's power (the shifted spot becomes the fielder's new base)
+                const pull = (info.batSide || info.batter.bats) === 'L' ? 1 : -1, out = /^(LF|CF|RF)$/.test(f.pos), pw = info.batter.pow || 60;
+                const gx = f.base0.x + pull * (out ? 5 : 2.2) * (f.pos === '1B' ? 0.3 : 1), gz = f.base0.z - (out ? clamp((pw - 60) / 6, -4, 6) : 0);
+                f.home.x += (gx - f.home.x) * 0.03 * df; f.home.z += (gz - f.home.z) * 0.03 * df;
+            }
+            if (fl && fl.type !== 'FOUL' && fl.fielder !== f) {
+                // everybody else breaks toward the ball a few metres (first step / backing up)
+                const k = clamp((G.frame - fl.t0) / 30, 0, 1), bx = fl.landing.x, bz = fl.landing.z, d = Math.hypot(bx - f.home.x, bz - f.home.z) || 1, mv = Math.min(5, d * 0.3) * ease(k);
+                const tx2 = f.home.x + (bx - f.home.x) / d * mv, tz2 = f.home.z + (bz - f.home.z) / d * mv;
+                f.cur.x += (tx2 - f.cur.x) * 0.12 * df; f.cur.z += (tz2 - f.cur.z) * 0.12 * df;
+                f.root.position.x = f.cur.x; f.root.position.z = f.cur.z; faceToward(f, bx, bz);
+                f.phase += 0.4 * df; applyPose(f, runPose({}, f.phase, 0.7)); f.root.visible = true; return;
+            }
             // drift back home
             const dx = f.home.x - f.cur.x, dz = f.home.z - f.cur.z, d = Math.hypot(dx, dz);
             if (d > 0.05) { const st = Math.min(d, 0.22 * df); f.cur.x += dx / d * st; f.cur.z += dz / d * st; f.root.position.x = f.cur.x; f.root.position.z = f.cur.z; faceToward(f, f.home.x, f.home.z); f.phase += 0.5 * df; applyPose(f, runPose({}, f.phase, 0.9)); }
