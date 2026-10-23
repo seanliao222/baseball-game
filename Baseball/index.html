@@ -199,6 +199,38 @@
             color: #ccc;
         }
 
+        #mp-overlay { overflow-y: auto; }
+
+        #mp-overlay .mp-sub { font-size: 14px; color: #9fb0cc; margin-top: 4px; }
+
+        #mp-overlay .mp-row { display: flex; gap: 10px; align-items: center; justify-content: center; flex-wrap: wrap; }
+
+        #mp-overlay .mp-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(84px, 1fr));
+            gap: 6px;
+            width: min(620px, 92vw);
+            max-height: 36vh;
+            overflow-y: auto;
+            padding: 4px;
+        }
+
+        #mp-overlay .mp-team {
+            padding: 9px 4px;
+            font-size: 15px;
+            color: #fff;
+            background: rgba(255, 255, 255, 0.08);
+            border: 2px solid rgba(255, 255, 255, 0.18);
+            border-left-width: 6px;
+            border-radius: 8px;
+            cursor: pointer;
+        }
+
+        #mp-overlay .mp-team.sel { background: rgba(255, 200, 40, 0.28); border-color: #ffd23a; }
+        #mp-overlay .mp-team.taken { opacity: 0.3; cursor: not-allowed; }
+        #mp-overlay .mp-btn.sel { outline: 3px solid #ffd23a; }
+        #mp-overlay .mp-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
         .mp-hidden {
             display: none !important;
         }
@@ -217,32 +249,42 @@
     <div id="mp-overlay">
         <div id="mp-view-menu">
             <h2>雙人連線對戰</h2>
+            <p class="mp-sub" style="line-height:1.6;">你建立房間，朋友掃描 QR code 加入，<br>雙方各自選擇隊伍後即可對戰。</p>
             <div style="display:flex; flex-direction:column; gap:10px; margin-top:10px;">
                 <button class="mp-btn" id="mp-create-btn">建立房間</button>
                 <button class="mp-btn" id="mp-close-btn" style="background:radial-gradient(circle at 40% 35%,#666,#333);">返回</button>
             </div>
         </div>
         <div id="mp-view-host" class="mp-hidden">
-            <h2>等待對手加入</h2>
+            <h2 id="mp-host-title">等待對手加入</h2>
             <div id="mp-qr"></div>
             <div id="mp-room-code"></div>
             <div id="mp-status">請對方掃描 QR code 加入</div>
-            <div id="mp-team-pick" class="mp-hidden" style="display:flex; flex-direction:column; gap:10px; margin-top:10px;">
-                <div>選擇你的隊伍：</div>
-                <div style="display:flex; gap:10px;">
-                    <button class="mp-btn" id="mp-pick-home">主場</button>
-                    <button class="mp-btn" id="mp-pick-away">客場</button>
+            <div id="mp-lobby" class="mp-hidden" style="display:flex; flex-direction:column; gap:8px; align-items:center;">
+                <div class="mp-row"><span>你要當：</span>
+                    <button class="mp-btn" id="mp-side-home" style="padding:8px 16px;font-size:14px;">主場（後攻）</button>
+                    <button class="mp-btn" id="mp-side-away" style="padding:8px 16px;font-size:14px;">客場（先攻）</button>
                 </div>
+                <div class="mp-sub">選擇你的隊伍：</div>
+                <div id="mp-team-grid-host" class="mp-grid"></div>
+                <div id="mp-opp-pick" class="mp-sub">對手：尚未選擇隊伍</div>
+                <button class="mp-btn" id="mp-start" disabled>開始比賽</button>
             </div>
-            <button class="mp-btn" id="mp-host-cancel" style="margin-top:10px; background:radial-gradient(circle at 40% 35%,#666,#333);">取消</button>
+            <button class="mp-btn" id="mp-host-cancel" style="margin-top:6px; background:radial-gradient(circle at 40% 35%,#666,#333);">取消</button>
         </div>
         <div id="mp-view-guest" class="mp-hidden">
             <h2>加入對戰</h2>
             <div id="mp-guest-status">連線中...</div>
+            <div id="mp-guest-lobby" class="mp-hidden" style="display:flex; flex-direction:column; gap:8px; align-items:center;">
+                <div class="mp-sub" id="mp-guest-side"></div>
+                <div class="mp-sub">選擇你的隊伍：</div>
+                <div id="mp-team-grid-guest" class="mp-grid"></div>
+                <div id="mp-guest-opp" class="mp-sub"></div>
+            </div>
         </div>
     </div>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-    <script src="stadium3d.js?v=20261024a"></script>
+    <script src="stadium3d.js?v=20261024f"></script>
     <script src="https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.js"></script>
     <script>
@@ -885,7 +927,7 @@
                 dragStartX: 0, dragStartY: 0, baseCurX: 0, baseCurY: 0, isDraggingBat: false, aimState: 0,
                 resText: '', resSub: '', resCol: '#fff', resTimer: 0, resEndHalf: false, _continueAtBat: false,
                 frame: 0, readyPulse: 0, batSwingFrame: -999, hitEffectFrame: -999, hitType: '', hitFlyDir: 0, outKind: 'fly',
-                pitchCounts: [0, 0], lastPitchKmh: 0, lastPitchName: '', speedGunTimer: 0,
+                pitchCounts: [0, 0], pcBy: [{}, {}], pApp: [{ runs0: 0, hits: 0, bf: 0 }, { runs0: 0, hits: 0, bf: 0 }], pcNotice: null, lastPitchKmh: 0, lastPitchName: '', speedGunTimer: 0,
                 batStats: [
                     Array.from({ length: 9 }, () => ({ ab: 0, h: 0, bb: 0, hr: 0, rbi: 0, k: 0 })),
                     Array.from({ length: 9 }, () => ({ ab: 0, h: 0, bb: 0, hr: 0, rbi: 0, k: 0 }))
@@ -1307,8 +1349,35 @@
             return { isPitcher, sideIdx, teamDataIdx, roster, availIndices, slots, panelW, panelH, px, py };
         }
 
+        // ── computer manager: pull the pitcher when he is getting shelled, is worn out, or the game is slipping away ──
+        function aiPitchingChange() {
+            if (MP.active || G.scr !== SCR.GAME || !playerBatting()) return;           // only when the COMPUTER is pitching
+            const ps = G.half === 0 ? 1 : 0, bs = 1 - ps;                              // pitching side / batting side
+            const team = TEAMS[ps === 0 ? G.awayIdx : G.homeIdx], roster = team.roster.pitchers, cur = roster[G.pitchers[ps]];
+            const app = G.pApp[ps], pc = G.pitchCounts[ps];
+            const runsApp = G.score[bs] - app.runs0;                                    // runs allowed since he came in
+            const innRuns = G.score[bs] - Math.max(G.innScores[bs].reduce((a, b) => a + b, 0), app.runs0);   // runs HE allowed this half-inning (not the previous pitcher's)
+            const deficit = G.score[bs] - G.score[ps];
+            let reason = '';
+            if (runsApp >= 5 || innRuns >= 4 || (runsApp >= 3 && app.hits >= 6)) reason = '被打爆';
+            else if (pc >= 20 && pc >= cur.stm * 0.95) reason = '體力不支';
+            else if (deficit >= 6 && runsApp >= 3) reason = '落後太多';
+            if (!reason) return;
+            const avail = [];
+            for (let i = 0; i < roster.length; i++) if (!G.usedPitchers[ps][i] && i !== G.pitchers[ps]) avail.push(i);
+            if (!avail.length) return;
+            // best arm available (control + velocity, a little stamina early in the game; ERA as a tiebreak)
+            const score = i => { const p = roster[i]; return p.ctrl * 0.4 + p.vel * 0.4 + (G.inning <= 5 ? p.stm * 0.2 : 0) - parseFloat(p.era) * 3; };
+            avail.sort((a, b) => score(b) - score(a));
+            const next = avail[0];
+            G.pcBy[ps][G.pitchers[ps]] = pc;
+            G.pitchers[ps] = next; G.pitchCounts[ps] = 0; G.usedPitchers[ps][next] = true;
+            G.pApp[ps] = { runs0: G.score[bs], hits: 0, bf: 0 };
+            G.pcNotice = { frame: G.frame, text: `${team.abbr} 換投：${cur.name} → ${roster[next].name}`, sub: reason };
+        }
+
         function startAtBat(isContinue = false) {
-            if (!isContinue) { G.balls = 0; G.strikes = 0; G.pitchLog = []; }
+            if (!isContinue) { G.balls = 0; G.strikes = 0; G.pitchLog = []; aiPitchingChange(); const ps = G.half === 0 ? 1 : 0; G.pApp[ps].bf++; }
             G.ballActive = false; G.batSwingFrame = -999; G._pitchPending = false;
             if (MP.active || !playerBatting()) {
                 G.phase = PH.PITCH_SELECT; G.pitchChoice = 0; G.aimX = 0; G.aimY = 0; G.gaugePos = 0; G.gaugeDir = 1;
@@ -1553,6 +1622,7 @@
             let text = '', sub = '', col = '#fff', endHalf = false;
             const slotIdx = G.batOrder[bat];
             const st = G.batStats[bat][slotIdx];
+            if (type === 'HR' || type === '1B' || type === '2B') G.pApp[1 - bat].hits++;
             if (type === 'HR') {
                 logPitch('HOMERUN');
                 const runs = 1 + G.runners.filter(r => r).length;
@@ -1792,7 +1862,7 @@
 
             if (G.scr === SCR.HALF_END) {
                 G.halfEndTimer++;
-                if (G.halfEndTimer > 30 && actionTrigger()) { _doNextHalf(); }
+                if (G.halfEndTimer > 30 && (actionTrigger() || (MP.active && MP.isHost && MP.remoteDown))) { MP.remoteDown = false; _doNextHalf(); }
                 clearInput(); return;
             }
 
@@ -1819,7 +1889,11 @@
                         for (const sl of slots) {
                             if (mouseX >= sl.x && mouseX <= sl.x + sl.w && mouseY >= sl.y && mouseY <= sl.y + sl.h) {
                                 const rIdx = sl.idx;
-                                if (isPitcher) { G.pitchers[sideIdx] = rIdx; G.usedPitchers[sideIdx][rIdx] = true; }
+                                if (isPitcher) {      // each pitcher keeps his own pitch count: the reliever starts fresh at 0
+                                    G.pcBy[sideIdx][G.pitchers[sideIdx]] = G.pitchCounts[sideIdx];
+                                    G.pitchers[sideIdx] = rIdx; G.pitchCounts[sideIdx] = G.pcBy[sideIdx][rIdx] || 0; G.usedPitchers[sideIdx][rIdx] = true;
+                                    G.pApp[sideIdx] = { runs0: G.score[1 - sideIdx], hits: 0, bf: 0 };
+                                }
                                 else { let curOrder = G.batOrder[sideIdx]; G.lineups[sideIdx][curOrder] = rIdx; G.usedBatters[sideIdx][rIdx] = true; }
                                 G.phase = G.prevPhase; break;
                             }
@@ -2464,6 +2538,34 @@
             });
         }
 
+        // versus mode: which team you are, and whose turn it is
+        function renderMpBanner() {
+            if (!MP.active || G.scr !== SCR.GAME) return;
+            const mine = mpMySide(); if (mine == null) return;
+            const myBat = G.half === mine, ph = G.phase;
+            const myTurn = (ph === PH.PITCH_SELECT || ph === PH.AIM || ph === PH.POWER_GAUGE) ? !myBat : (ph === PH.BATTING ? myBat : false);
+            const team = TEAMS[mine === 0 ? G.awayIdx : G.homeIdx];
+            const role = myBat ? '打擊' : '投球';
+            const status = myTurn ? (myBat ? '輪到你揮棒！' : '輪到你投球！') : (ph === PH.WAIT_PITCH || ph === PH.BALL_FLIGHT || ph === PH.RESULT || ph === PH.INNING_START ? '' : '等待對手…');
+            const x = 14, y = 112, w = 252, h = 26;
+            ctx.save(); ctx.fillStyle = myTurn ? 'rgba(255,190,30,0.92)' : 'rgba(8,12,22,0.86)'; drawRoundRect(ctx, x, y, w, h, 13); ctx.fill();
+            ctx.strokeStyle = myTurn ? '#fff' : 'rgba(255,255,255,0.22)'; ctx.lineWidth = 1.5; drawRoundRect(ctx, x, y, w, h, 13); ctx.stroke();
+            hudText('你：' + team.abbr + '（' + role + '）' + (status ? '  ' + status : ''), x + 12, y + 18, 12, myTurn ? '#1a1200' : '#e6eefc');
+            ctx.restore();
+        }
+
+        function renderPitchChangeNotice() {
+            const n = G.pcNotice; if (!n) return;
+            const age = G.frame - n.frame; if (age < 0 || age > 240) return;
+            const a = Math.min(1, age / 12, (240 - age) / 30), w = 360, h = 44, x = W / 2 - w / 2, y = 226;
+            ctx.save(); ctx.globalAlpha = a;
+            ctx.fillStyle = 'rgba(8,12,22,0.92)'; drawRoundRect(ctx, x, y, w, h, 12); ctx.fill();
+            ctx.strokeStyle = '#ff9a3a'; ctx.lineWidth = 2; drawRoundRect(ctx, x, y, w, h, 12); ctx.stroke();
+            hudText('🔄 ' + n.text, W / 2, y + 20, 15, '#fff', 'center');
+            hudText('原因：' + n.sub, W / 2, y + 37, 11, '#ffb86b', 'center', 'normal');
+            ctx.restore();
+        }
+
         function renderBroadcastHUD() {
             const aw = TEAMS[G.awayIdx], hw = TEAMS[G.homeIdx];
             const batTeam = G.half === 0 ? aw : hw, pitTeam = G.half === 0 ? hw : aw;
@@ -2623,6 +2725,8 @@
             if (S3D.isBatCam() && (MP.active || playerBatting()) && (G.phase === PH.WAIT_PITCH || G.phase === PH.BATTING)) renderBatCursor();
             renderHitFlash();
             renderBroadcastHUD();
+            renderMpBanner();
+            renderPitchChangeNotice();
             renderPitchHistory();
             renderPhaseUI();
             if (G.phase === PH.SUB_MENU) renderSubMenu();
@@ -3626,10 +3730,14 @@
         const MP = {
             active: false, isHost: false, peer: null, conn: null,
             remoteX: 0, remoteY: 0, remoteDown: false, remoteUp: false,
-            roomId: null, pendingRoomId: null
+            roomId: null, pendingRoomId: null,
+            mySide: null, hostSide: 1, hostPick: -1, guestPick: -1, lobbyOpen: false
         };
+        const mpSideName = side => side === 1 ? '主場（後攻）' : '客場（先攻）';
+        const mpTeamName = i => i >= 0 ? TEAMS[i].abbr : '尚未選擇';
 
         function mpSend(msg) { if (MP.conn && MP.conn.open) MP.conn.send(msg); }
+        function mpMySide() { return MP.isHost ? G.playerSide : MP.mySide; }
 
         function mpRemoteTurn() {
             if (!MP.active || G.scr !== SCR.GAME) return false;
@@ -3646,14 +3754,80 @@
                 isMouseJustPressed = MP.remoteDown; isMouseJustReleased = MP.remoteUp;
                 MP.remoteDown = false; MP.remoteUp = false;
             }
+            else if (G.scr === SCR.GAME) { MP.remoteDown = false; MP.remoteUp = false; }   // taps made when it is not their turn must not fire later
         }
 
         function mpBroadcastState() { mpSend({ t: 'state', g: G }); }
 
+        // ---------- lobby (team selection) ----------
+        function mpBuildGrid(el, myPick, oppPick, onPick) {
+            el.innerHTML = '';
+            TEAMS.forEach((t, i) => {
+                const b = document.createElement('button');
+                b.className = 'mp-team' + (i === myPick ? ' sel' : '') + (i === oppPick ? ' taken' : '');
+                b.textContent = t.abbr; b.style.borderLeftColor = t.c1 || '#888';
+                b.addEventListener('click', () => { if (i !== oppPick) onPick(i); });
+                el.appendChild(b);
+            });
+        }
+        function mpLobbyMsg() { return { t: 'lobby', hostSide: MP.hostSide, hostPick: MP.hostPick, guestPick: MP.guestPick }; }
+        function mpRefreshLobby() {
+            if (MP.isHost) {
+                document.getElementById('mp-side-home').classList.toggle('sel', MP.hostSide === 1);
+                document.getElementById('mp-side-away').classList.toggle('sel', MP.hostSide === 0);
+                mpBuildGrid(document.getElementById('mp-team-grid-host'), MP.hostPick, MP.guestPick, i => { MP.hostPick = i; mpRefreshLobby(); mpSend(mpLobbyMsg()); });
+                document.getElementById('mp-opp-pick').textContent = '對手（' + mpSideName(1 - MP.hostSide) + '）：' + mpTeamName(MP.guestPick);
+                document.getElementById('mp-start').disabled = !(MP.hostPick >= 0 && MP.guestPick >= 0 && MP.conn && MP.conn.open);
+            } else {
+                document.getElementById('mp-guest-side').textContent = '你是 ' + mpSideName(1 - MP.hostSide) + '　房主：' + mpTeamName(MP.hostPick);
+                mpBuildGrid(document.getElementById('mp-team-grid-guest'), MP.guestPick, MP.hostPick, i => { MP.guestPick = i; mpSend({ t: 'pick', idx: i }); mpRefreshLobby(); });
+                document.getElementById('mp-guest-opp').textContent = MP.guestPick >= 0 ? (MP.hostPick >= 0 ? '已選好，等待房主按「開始比賽」…' : '已選好，等待房主選擇隊伍…') : '請選擇你的隊伍';
+            }
+        }
+
+        function mpHandleData(data) {
+            if (!data || !data.t) return;
+            if (data.t === 'ptr') { MP.remoteX = data.x; MP.remoteY = data.y; }
+            else if (data.t === 'down') { MP.remoteDown = true; }
+            else if (data.t === 'up') { MP.remoteUp = true; }
+            else if (data.t === 'pick' && MP.isHost) {               // guest chose a team
+                if (data.idx !== MP.hostPick && data.idx >= 0 && data.idx < TEAMS.length) MP.guestPick = data.idx;
+                mpRefreshLobby(); mpSend(mpLobbyMsg());
+            } else if (data.t === 'lobby' && !MP.isHost) {            // host's lobby state
+                MP.hostSide = data.hostSide; MP.hostPick = data.hostPick;
+                if (data.guestPick !== MP.guestPick && data.guestPick >= 0) MP.guestPick = data.guestPick;
+                if (MP.hostPick === MP.guestPick) MP.guestPick = -1;   // host just took the team the guest wanted
+                document.getElementById('mp-guest-status').textContent = '已連線：請選擇隊伍';
+                document.getElementById('mp-guest-lobby').classList.remove('mp-hidden');
+                mpRefreshLobby();
+            } else if (data.t === 'assign') {
+                MP.mySide = 1 - data.hostSide;
+            } else if (data.t === 'start') {
+                MP.active = true; mpCloseOverlay();
+            } else if (data.t === 'state') {
+                if (!MP.isHost) {
+                    G = data.g;
+                    // never depend on the one-shot 'start' message: once match screens arrive, switch to versus mode
+                    if (!MP.active && G.scr !== SCR.TITLE && G.scr !== SCR.SELECT) { MP.active = true; MP.mySide = 1 - G.playerSide; mpCloseOverlay(); }
+                    if (MP.active && G.scr === SCR.TITLE) { mpShowEnded(); }
+                }
+            }
+        }
+
+        function mpShowEnded() {
+            MP.active = false; MP.lobbyOpen = false;
+            document.getElementById('mp-view-menu').classList.add('mp-hidden');
+            document.getElementById('mp-view-host').classList.add('mp-hidden');
+            document.getElementById('mp-view-guest').classList.remove('mp-hidden');
+            document.getElementById('mp-guest-lobby').classList.add('mp-hidden');
+            document.getElementById('mp-guest-status').textContent = '對戰已結束（房主已回到主畫面），重新整理頁面即可再玩';
+            document.getElementById('mp-overlay').classList.add('show');
+        }
+
         function mpWireConn(conn) {
             MP.conn = conn;
             conn.on('data', mpHandleData);
-            conn.on('close', () => { mpSetStatus('對手已離線'); });
+            conn.on('close', () => { mpSetStatus('對手已離線'); if (MP.isHost) mpRefreshLobby(); });
             conn.on('error', err => console.error('MP conn error', err));
         }
 
@@ -3662,25 +3836,6 @@
             const guestStatus = document.getElementById('mp-guest-status');
             if (MP.isHost && hostStatus) hostStatus.textContent = text;
             if (!MP.isHost && guestStatus) guestStatus.textContent = text;
-        }
-
-        function mpHandleData(data) {
-            if (!data || !data.t) return;
-            if (data.t === 'ptr') { MP.remoteX = data.x; MP.remoteY = data.y; }
-            else if (data.t === 'down') { MP.remoteDown = true; }
-            else if (data.t === 'up') { MP.remoteUp = true; }
-            else if (data.t === 'assign') {
-                MP.mySide = 1 - data.hostSide;
-                mpSetStatus('你是' + (MP.mySide === 1 ? '主場' : '客場') + '，等待房主開始比賽...');
-            } else if (data.t === 'start') {
-                MP.active = true; mpCloseOverlay();
-            } else if (data.t === 'state') {
-                if (!MP.isHost) {
-                    G = data.g;
-                    // never depend on the one-shot 'start' message: once match screens arrive, switch to versus mode
-                    if (!MP.active && G.scr !== SCR.TITLE && G.scr !== SCR.SELECT) { MP.active = true; MP.mySide = 1 - G.playerSide; mpCloseOverlay(); }
-                }
-            }
         }
 
         function mpOpenMenu() {
@@ -3695,7 +3850,7 @@
             MP.isHost = true;
             document.getElementById('mp-view-menu').classList.add('mp-hidden');
             document.getElementById('mp-view-host').classList.remove('mp-hidden');
-            document.getElementById('mp-team-pick').classList.add('mp-hidden');
+            document.getElementById('mp-lobby').classList.add('mp-hidden');
             document.getElementById('mp-status').textContent = '建立房間中...';
             MP.peer = new Peer();
             MP.peer.on('open', id => {
@@ -3712,22 +3867,28 @@
             MP.peer.on('connection', conn => {
                 mpWireConn(conn);
                 conn.on('open', () => {
-                    document.getElementById('mp-status').textContent = '對手已連線！請選擇你的隊伍';
-                    document.getElementById('mp-team-pick').classList.remove('mp-hidden');
+                    document.getElementById('mp-host-title').textContent = '對手已連線';
+                    document.getElementById('mp-status').textContent = '請選擇主客場與你的隊伍，雙方選好後按「開始比賽」';
+                    document.getElementById('mp-qr').classList.add('mp-hidden'); document.getElementById('mp-room-code').classList.add('mp-hidden');
+                    document.getElementById('mp-lobby').classList.remove('mp-hidden');
+                    MP.guestPick = -1; mpRefreshLobby(); mpSend(mpLobbyMsg());
                 });
             });
             MP.peer.on('error', err => { document.getElementById('mp-status').textContent = '連線服務錯誤，請重新整理再試'; console.error(err); });
         }
 
-        function mpHostStart(hostSide) {
+        function mpHostStart() {
+            const hostSide = MP.hostSide, hp = MP.hostPick, gp = MP.guestPick;
+            if (hp < 0 || gp < 0 || hp === gp) return;
             initState();
-            G.playerSide = hostSide; G.awayIdx = 0; G.homeIdx = 1; G.difficulty = 1;
-            G.usedBatters = [Array(TEAMS[0].roster.batters.length).fill(false), Array(TEAMS[1].roster.batters.length).fill(false)];
-            G.usedPitchers = [Array(TEAMS[0].roster.pitchers.length).fill(false), Array(TEAMS[1].roster.pitchers.length).fill(false)];
+            G.playerSide = hostSide; G.difficulty = 1;
+            G.awayIdx = hostSide === 0 ? hp : gp; G.homeIdx = hostSide === 1 ? hp : gp;
+            G.usedBatters = [Array(TEAMS[G.awayIdx].roster.batters.length).fill(false), Array(TEAMS[G.homeIdx].roster.batters.length).fill(false)];
+            G.usedPitchers = [Array(TEAMS[G.awayIdx].roster.pitchers.length).fill(false), Array(TEAMS[G.homeIdx].roster.pitchers.length).fill(false)];
             for (let i = 0; i < 9; i++) { G.usedBatters[0][i] = true; G.usedBatters[1][i] = true; }
             G.usedPitchers[0][0] = true; G.usedPitchers[1][0] = true;
             G.scr = SCR.LINEUP; G.introTimer = 0; G.ballActive = false;
-            MP.active = true;
+            MP.active = true; MP.mySide = hostSide;
             mpSend({ t: 'assign', hostSide: hostSide });
             mpSend({ t: 'start' });
             [300, 1000, 2500].forEach(ms => setTimeout(() => { mpSend({ t: 'assign', hostSide: hostSide }); mpSend({ t: 'start' }); }, ms));
@@ -3738,10 +3899,12 @@
         document.getElementById('mp-close-btn').addEventListener('click', mpCloseOverlay);
         document.getElementById('mp-host-cancel').addEventListener('click', () => {
             if (MP.peer) MP.peer.destroy();
-            MP.isHost = false; MP.active = false; mpCloseOverlay();
+            MP.isHost = false; MP.active = false; MP.peer = null; MP.conn = null; MP.hostPick = MP.guestPick = -1; mpCloseOverlay();
+            document.getElementById('mp-qr').classList.remove('mp-hidden'); document.getElementById('mp-room-code').classList.remove('mp-hidden');
         });
-        document.getElementById('mp-pick-home').addEventListener('click', () => mpHostStart(1));
-        document.getElementById('mp-pick-away').addEventListener('click', () => mpHostStart(0));
+        document.getElementById('mp-side-home').addEventListener('click', () => { MP.hostSide = 1; mpRefreshLobby(); mpSend(mpLobbyMsg()); });
+        document.getElementById('mp-side-away').addEventListener('click', () => { MP.hostSide = 0; mpRefreshLobby(); mpSend(mpLobbyMsg()); });
+        document.getElementById('mp-start').addEventListener('click', mpHostStart);
 
         (function mpCheckAutoJoin() {
             const room = new URLSearchParams(location.search).get('room');
@@ -3756,7 +3919,7 @@
             MP.peer.on('open', () => {
                 const conn = MP.peer.connect(room, { reliable: true });
                 mpWireConn(conn);
-                conn.on('open', () => { document.getElementById('mp-guest-status').textContent = '已連線，等待房主選擇隊伍...'; });
+                conn.on('open', () => { document.getElementById('mp-guest-status').textContent = '已連線，等待房主...'; });
             });
             MP.peer.on('error', err => { document.getElementById('mp-guest-status').textContent = '連線失敗，請確認連結正確，或請房主重新建立房間'; console.error(err); });
         })();
