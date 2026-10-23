@@ -541,7 +541,7 @@ const Stadium3D = (function () {
         const pantsC = canvasOf(64, 128), pantsT = new THREE.CanvasTexture(pantsC); pantsT.anisotropy = maxAniso; m.pants.map = pantsT;
         m.jersey.bumpMap = fabricBump(256, 256, 'jersey'); m.jersey.bumpMap.wrapS = THREE.RepeatWrapping; m.jersey.bumpMap.offset.x = 0.5; m.jersey.bumpScale = 0.6;
 
-        const root = new THREE.Group(); root.add(contactAO());
+        const root = new THREE.Group(); root.rotation.order = 'YXZ'; root.add(contactAO());
         const part = (g, mat, parent, shadow = true) => { const me = new THREE.Mesh(g, mat); me.castShadow = shadow; parent.add(me); return me; };
         const blob = (mat, parent, sx, sy, sz, x = 0, y = 0, z = 0) => { const me = new THREE.Mesh(geo.ball, mat); me.scale.set(sx, sy, sz); me.position.set(x, y, z); me.castShadow = true; parent.add(me); return me; };
         const hips = new THREE.Group(); hips.position.y = HIP_Y; root.add(hips);
@@ -644,6 +644,8 @@ const Stadium3D = (function () {
         Dodgers: { noPiping: true, trim: '#005A9C', front: h => h ? 'Dodgers' : 'Los Angeles', frontCol: '#005A9C', sock: '#005A9C', accent: '#005A9C', frontSize: 40 },
         // 統一獅 2026: orange jersey with black side panels, white piping, UNILIONS across the chest (road: grey-white with the same trim)
         Lions: { noPiping: true, lions: true, trim: '#111111', front: () => '', frontCol: '#111111', sock: '#111111', accent: '#111111', jerseyOverride: h => h ? '#FF6A13' : '#E6E7EA' },
+        // 中華隊 2026: charcoal jersey with fine vertical stripes, white italic "Taiwan" script (blue outline), white pants, black cap
+        'Chinese Taipei': { noPiping: true, taiwan: true, trim: '#9fb4c8', front: () => '', frontCol: '#ffffff', sock: '#ffffff', accent: '#9fb4c8', cap: '#111111', whitePants: true, jerseyOverride: () => '#2b2d31' },
         Yankees: { noPiping: true, pinstripe: '#0c2340', trim: '#0c2340', front: h => h ? '' : 'NEW YORK', frontCol: '#0c2340', sock: '#0c2340', accent: '#0c2340', frontSize: 34 }
     };
     function dressTeam(p, team, isHome, opts = {}) {
@@ -656,7 +658,7 @@ const Stadium3D = (function () {
         p.mats.jersey.color.set(0xffffff); p.mats.pants.color.set(0xffffff); p.mats.sleeve.color.set(jersey); p.mats.hips.color.set(isHome ? '#f3f3f6' : '#c9ced8');
         p.mats.accent.color.set(isHome ? (jl > 0.6 ? '#f1f1f4' : c2) : c2);
         p.mats.band.color.set(c2);
-        const pantsHex = isHome ? '#f3f3f6' : '#c9ced8', U = UNI[team.name] || null;
+        const U = UNI[team.name] || null, pantsHex = (isHome || (U && U.whitePants)) ? '#f3f3f6' : '#c9ced8';
         if (U) { p.mats.accent.color.set(U.accent); p.mats.band.color.set(U.accent); }
         // jersey texture: front lettering, side piping, subtle fabric noise
         {
@@ -672,6 +674,13 @@ const Stadium3D = (function () {
                 g.fillRect(0, 20, w, 2);
                 const word = 'UNILIONS'; g.font = 'italic 900 19px Arial'; g.textAlign = 'center'; g.textBaseline = 'middle';
                 g.lineWidth = 4; g.strokeStyle = isHome ? '#ffffff' : '#FF6A13'; g.lineJoin = 'round'; g.strokeText(word, w / 2, 104); g.fillStyle = '#111111'; g.fillText(word, w / 2, 104);
+            }
+            if (U && U.taiwan) {
+                g.fillStyle = 'rgba(255,255,255,0.10)'; for (let x = 3; x < w; x += 5) g.fillRect(x, 0, 1, h);       // fine vertical stripes
+                const word = 'Taiwan'; g.font = 'italic 900 40px "Brush Script MT","Segoe Script",cursive'; g.textAlign = 'center'; g.textBaseline = 'middle';
+                g.lineWidth = 7; g.lineJoin = 'round'; g.strokeStyle = '#1d4fa8'; g.strokeText(word, w / 2, 110);
+                g.lineWidth = 3; g.strokeStyle = '#ffffff'; g.strokeText(word, w / 2, 110);
+                g.fillStyle = '#ffffff'; g.fillText(word, w / 2, 110);
             }
             if (U && U.pinstripe && isHome) { g.fillStyle = U.pinstripe; g.globalAlpha = 0.85; for (let x = 4; x < w; x += 9) g.fillRect(x, 0, 1.6, h); g.globalAlpha = 1; }   // home pinstripes
             g.fillStyle = 'rgba(0,0,0,0.18)'; g.fillRect(0, h - 10, w, 10);
@@ -692,7 +701,7 @@ const Stadium3D = (function () {
         }
         p.gloves = !!opts.helmet; p.mats.hand.color.set(p.gloves ? 0xf4f4f6 : (p.skinColor || 0xe0ac84)); p.mats.forearm.color.set(p.skinColor || 0xe0ac84);
         p.mats.sock.color.set(U ? U.sock : c2);
-        p.mats.cap.color.set(team.c1);
+        p.mats.cap.color.set(U && U.cap ? U.cap : team.c1);
         p.flap.visible = !!opts.helmet;
         p.mats.cap.roughness = opts.helmet ? 0.18 : 0.75; p.mats.cap.metalness = opts.helmet ? 0.25 : 0; p.mats.cap.envMapIntensity = opts.helmet ? 1.6 : 0.5;
         // cap logo
@@ -806,7 +815,7 @@ const Stadium3D = (function () {
         const bt = makePerson('batter'); scene.remove(bt.root); wrap.add(bt.root);
         bt.root.position.set(-0.95, 0, 0.05); bt.root.rotation.y = Math.PI / 2; bt.holder.visible = true; bt.flap.visible = true; actors.batter = bt;
 
-        for (let i = 0; i < 3; i++) { const r = makePerson('runner'); r.root.visible = false; r.hold = i; actors.extras.push(r); }
+        for (let i = 0; i < 5; i++) { const r = makePerson('runner'); r.root.visible = false; r.hold = i; actors.extras.push(r); }
 
         // ball
         const bm = new THREE.MeshStandardMaterial({ map: ballTexture(), roughness: 0.55, emissive: 0x333330, emissiveIntensity: 0.55 });
@@ -917,6 +926,14 @@ const Stadium3D = (function () {
         return [lerpV(rel[0], fol[0], clamp(hh - 3, 0, 1)), lerpV(rel[1], fol[1], clamp(hh - 3, 0, 1))];
     }
 
+    // mirror a pose left <-> right (for left-handed pitchers)
+    const _SWAP = [['hipL', 'hipR'], ['kneeL', 'kneeR'], ['spreadL', 'spreadR'], ['armL', 'armR'], ['elbL', 'elbR'], ['absL', 'absR']];
+    function mirrorPose(P) {
+        const o = Object.assign({}, P);
+        _SWAP.forEach(([a, b]) => { const va = P[a], vb = P[b]; if (vb !== undefined) o[a] = vb; else delete o[a]; if (va !== undefined) o[b] = va; else delete o[b]; });
+        ['torsoY', 'hipsY', 'torsoZ', 'hipsZ', 'headY'].forEach(k => { if (o[k] !== undefined) o[k] = -o[k]; });
+        return o;
+    }
     function updatePitcher(G, info, df) {
         const p = actors.pitcher;
         let P, hh = 0;
@@ -936,13 +953,19 @@ const Stadium3D = (function () {
         } else if (f < 70) {
             const t = ease((f - 28) / 42); P = lerpPose(P_FOLLOW, P_SET, t); hh = 4 - t * 4; rootZ = lerp(P_FOLLOW.rootZ, 0, t);
         } else { P = keyPose(P_WIND, wu); hh = (wu > 0) ? (wu <= 0.55 ? wu / 0.55 : 1 + (wu - 0.55) / 0.45) : 0; rootZ = P.rootZ || 0; S.lastWu = wu > 0 ? S.lastWu : 0; }
+        const lefty = info.pitcher && info.pitcher.throws === 'L';
+        REL.x = lefty ? 0.28 : -0.28;                                      // release point is on the throwing-arm side
         p.root.position.z = MOUND_Z + 0.1 + rootZ;
+        if (lefty) P = mirrorPose(P);
         applyPose(p, P);
+        // glove on the non-throwing hand
+        { const tgtHand = lefty ? p.armR.hand : p.armL.hand; if (p.gloveG.parent !== tgtHand) { tgtHand.add(p.gloveG); p.gloveG.scale.x = lefty ? -1 : 1; } }
         p.root.updateMatrixWorld(true);
         const [hr, hl] = pitcherHands(p, hh, 0);
-        p.root.localToWorld(v1.set(hr[0], hr[1], hr[2])); p.root.localToWorld(v2.set(hl[0], hl[1], hl[2]));
-        ikArm(p.armR, v1, _hintDown.set(-0.4, -1, -0.2));
-        ikArm(p.armL, v2, _hintDown.set(0.5, -1, 0));
+        const mx = lefty ? -1 : 1;
+        p.root.localToWorld(v1.set(hr[0] * mx, hr[1], hr[2])); p.root.localToWorld(v2.set(hl[0] * mx, hl[1], hl[2]));
+        ikArm(lefty ? p.armL : p.armR, v1, _hintDown.set(-0.4 * mx, -1, -0.2));       // throwing hand
+        ikArm(lefty ? p.armR : p.armL, v2, _hintDown.set(0.5 * mx, -1, 0));            // glove hand
         _hintDown.set(0, -1, 0);
         p.handWorld = v1.clone();
     }
@@ -1030,14 +1053,19 @@ const Stadium3D = (function () {
             const sgn = Math.sign(G.hitFlyDir) || 1; th = sgn * (0.95 + R() * 0.35);
             dir.set(Math.sin(th), 0, -Math.cos(th)); kind = 'fly'; dist = 18 + R() * 26; apex = 10 + R() * 12; dur = 52;
         } else if (type === 'HR') { kind = 'fly'; dist = bowlR(th) + 18; apex = 38; dur = 112; }
-        else if (type === '2B') { kind = 'fly'; dist = 78 + R() * 12; apex = 22; dur = 76; roll = 36; rollDist = 18; }
+        else if (type === '2B') {
+            if (G.hitKind === 'line') { kind = 'line'; dist = 70 + R() * 14; apex = 7 + R() * 3; dur = 52; roll = 36; rollDist = 18; }
+            else { kind = 'fly'; dist = 78 + R() * 12; apex = 22; dur = 76; roll = 36; rollDist = 18; }
+        }
         else if (type === '1B') {
-            if (R() < 0.5) { kind = 'grounder'; dist = 42; apex = 0.9; dur = 52; roll = 30; rollDist = 18; }
+            if (G.hitKind === 'ground') { kind = 'grounder'; dist = 42; apex = 0.9; dur = 52; roll = 30; rollDist = 18; }
+            else if (G.hitKind === 'line') { kind = 'line'; dist = 38 + R() * 12; apex = 3.5; dur = 34; roll = 28; rollDist = 14; }
             else { kind = 'fly'; dist = 36 + R() * 14; apex = 9; dur = 40; roll = 28; rollDist = 14; }
-        } else { // OUT: kind follows the rules decision (fly = sac-fly candidate, ground = grounder)
-            if (G.outKind === 'ground') { kind = 'grounder'; dist = 26 + R() * 8; apex = 0.7; dur = 30; }
-            else if (R() < 0.75) { kind = 'fly'; dist = 55 + R() * 28; apex = 30; dur = 84; }
-            else { kind = 'fly'; dist = 13 + R() * 6; apex = 26; dur = 68; }
+        } else { // OUT
+            if (G.hitKind === 'ground') { kind = 'grounder'; dist = 26 + R() * 8; apex = 0.7; dur = 30; }
+            else if (G.hitKind === 'pop') { kind = 'fly'; dist = 13 + R() * 6; apex = 26; dur = 68; }
+            else if (G.hitKind === 'line') { kind = 'line'; dist = 28 + R() * 40; apex = 3 + R() * 3; dur = Math.round(30 + dist / 3); }
+            else { kind = 'fly'; dist = 55 + R() * 28; apex = 30; dur = 84; }
         }
         const end = start.clone().addScaledVector(dir, dist); end.y = 0;
         const landing = end.clone();
@@ -1050,12 +1078,71 @@ const Stadium3D = (function () {
             fl.fielder = best; fl.rest = rest;
             const tx = fl.catch ? end.x : rest.x, tz = fl.catch ? end.z : rest.z;
             best.chase = { tx, tz, t0: G.frame, arrive: G.frame + (fl.catch ? dur - 2 : dur + roll + 6) };
+            fl.nice = !!G.nicePlay && type === 'OUT'; fl.dp = !!G.dpPlay && type === 'OUT';
+            fl.hold = fl.nice && kind === 'grounder' ? 12 : 0;                          // a diving stop takes a moment to get up and throw
+            if (type === 'OUT' && kind === 'grounder') setupLegs(fl, best, G);
         }
         S.flight = fl;
         // contact flash + shake
         flashSprite.position.copy(start); flashSprite.material.opacity = 1; S.flashT = 0;
         S.shake = type === 'HR' ? 0.9 : 0.5;
         if (type === 'HR') S.celebrate = 1;
+    }
+
+
+    // ── ground-out / double-play throws ──────────────────
+    const BAG = [0, 1, 2, 3].map(i => ({ x: BASES[i][0], z: BASES[i][1] }));
+    function setupLegs(fl, f, G) {
+        const one = actors.fielders.find(p => p.pos === '1B'), g0 = fl.t0 + fl.dur + 5 + (fl.hold || 0);
+        fl.legs = [];
+        if (fl.dp) {
+            const cover = actors.fielders.find(p => p.pos === (f.pos === 'SS' ? '2B' : 'SS'));
+            if (cover && one && cover !== f) {
+                fl.legs.push({ from: f, to: cover, at: { x: BAG[2].x - 0.5, z: BAG[2].z + 0.7 }, t0: g0, d: 14 });
+                fl.legs.push({ from: cover, to: one, at: { x: BAG[1].x - 0.3, z: BAG[1].z + 0.6 }, t0: g0 + 17, d: 14 });
+                cover.chase = { tx: BAG[2].x - 0.5, tz: BAG[2].z + 0.7, t0: fl.t0, arrive: fl.t0 + fl.dur + 5 };
+                one.chase = { tx: BAG[1].x - 0.3, tz: BAG[1].z + 0.6, t0: fl.t0, arrive: fl.t0 + fl.dur + 24 };
+                fl.cover = cover; fl.one = one;
+            }
+        } else if (one && one !== f) {
+            fl.legs.push({ from: f, to: one, at: { x: BAG[1].x - 0.3, z: BAG[1].z + 0.6 }, t0: g0, d: 16 });
+            one.chase = { tx: BAG[1].x - 0.3, tz: BAG[1].z + 0.6, t0: fl.t0, arrive: fl.t0 + fl.dur + 12 };
+            fl.one = one;
+        }
+        fl.holder = f;
+        // the batter runs to first (and is out when the ball gets there); in a double play the runner from first is forced at second
+        const arrive = (fl.legs.length ? fl.legs[fl.legs.length - 1].t0 + fl.legs[fl.legs.length - 1].d : fl.t0 + fl.dur + 14) - fl.t0;
+        const o = actors.extras.find(q => !q.root.visible && !q.runnerBusy);
+        if (o) { o.root.visible = true; o.runnerBusy = true; o.root.position.set(-0.9, 0, 0.1); o.path = [[BAG[1].x, BAG[1].z]]; o.spd = Math.max(0.3, Math.hypot(BAG[1].x + 0.9, BAG[1].z - 0.1) / (arrive + 3)); o.leaving = true; o.fast = false; o.arrived = false; o.phase = 0; o.stealing = false; }
+        S.legCleanup = true;
+    }
+
+    // thrower: wind-up then release toward (tx, tz); u in 0..1
+    function throwPose(p, tx, tz, u) {
+        faceToward(p, tx, tz);
+        const P = Object.assign({}, P_FIELD, { torsoX: 0.25 - 0.5 * u, hipL: 0.6 * u, kneeL: 0.5 - 0.3 * u, crouch: 0.1 }); applyPose(p, P);
+        p.root.updateMatrixWorld(true);
+        const dx = tx - p.root.position.x, dz = tz - p.root.position.z, d = Math.hypot(dx, dz) || 1, ux = dx / d, uz = dz / d, w = u < 0.45 ? u / 0.45 : 1;
+        const back = [p.root.position.x - ux * 0.55, 1.75, p.root.position.z - uz * 0.55], fwd = [p.root.position.x + ux * 0.8, 1.55, p.root.position.z + uz * 0.8];
+        const k = u < 0.45 ? 0 : (u - 0.45) / 0.55;
+        v1.set(lerp(back[0], fwd[0], k), lerp(back[1], fwd[1], k), lerp(back[2], fwd[2], k));
+        ikArm(p.armR, v1, _hintDown.set(-0.3, -0.5, 0)); _hintDown.set(0, -1, 0);
+    }
+
+    function updateLegs(G, fl, t) {
+        if (!fl.legs || !fl.legs.length) return null;
+        // where is the ball? in a glove, or flying between two players
+        let holder = fl.fielder, pos = null;
+        for (const leg of fl.legs) {
+            const u = (t - leg.t0) / leg.d;
+            if (u >= 1) { holder = leg.to; continue; }
+            if (u >= 0) {
+                v2.set(leg.from.root.position.x, 1.5, leg.from.root.position.z); v3.set(leg.at.x, 1.25, leg.at.z);
+                pos = hitBall.position.copy(v2).lerp(v3, u); pos.y += Math.sin(u * Math.PI) * 1.2;   // a flat, quick throw
+            }
+            break;
+        }
+        return { holder, pos };
     }
 
     function flightPos(fl, f, out) {
@@ -1082,9 +1169,12 @@ const Stadium3D = (function () {
         flightPos(fl, G.frame, hitBall.position);
         hitBall.visible = true;
         hitBall.rotation.x += 0.4; hitBall.rotation.z += 0.2;
+        hitBall.scale.setScalar(0.06 * clamp(hitBall.position.distanceTo(camera.position) / 11, 1, 4.5));      // keep it readable when the camera is far away
         // catch: ball sticks to the fielder's glove
         if (fl.catch && t >= fl.dur - 1 && fl.fielder) {
-            const f = fl.fielder; f.gloveG.getWorldPosition(v1); hitBall.position.copy(v1);
+            const st = updateLegs(G, fl, t), f = (st && st.holder) || fl.fielder;
+            if (st && st.pos) { /* ball already positioned mid-throw */ }
+            else { f.gloveG.getWorldPosition(v1); hitBall.position.copy(v1); }
         }
         if (fl.type === 'HR' && t > fl.dur) { hitBall.visible = false; }
         // shadow
@@ -1144,13 +1234,36 @@ const Stadium3D = (function () {
                 else faceToward(f, 0, 0);
                 if (moving) { f.phase += 0.55 * df; applyPose(f, runPose({}, f.phase, 1)); }
                 else { f.phase += 0.04 * df; applyPose(f, P_FIELD); }
+                f.root.rotation.x = 0; f.root.position.y = 0;
+                // spectacular play: lay out for the ball
+                const ft = fl ? G.frame - fl.t0 : 0;
+                if (fl && fl.nice && fl.fielder === f) {
+                    const u = clamp((ft - (fl.dur - 10)) / 10, 0, 1), rec = clamp((ft - (fl.dur + 14 + (fl.hold || 0))) / 12, 0, 1), amt = ease(u) * (1 - ease(rec));
+                    if (amt > 0.01) {
+                        faceToward(f, fl.end.x, fl.end.z);
+                        applyPose(f, { crouch: 0.2, torsoX: 0.2, hipL: -0.3, hipR: -0.35, kneeL: 0.2, kneeR: 0.3, armL: 2.3, armR: 2.0, elbL: 0.1, elbR: 0.2, absL: 0.3, absR: 0.3 });
+                        f.root.rotation.x = 1.3 * amt; f.root.position.y = 0.5 * amt;
+                    }
+                }
                 f.root.updateMatrixWorld(true);
-                if (fl.catch && fl.fielder === f && k >= 0.9) { // glove up to the ball
+                if (fl && fl.catch && fl.fielder === f && k >= 0.9) { // glove up to the ball
                     ikArm(f.armL, hitBall.position, _hintDown.set(0.3, -1, 0)); _hintDown.set(0, -1, 0);
+                }
+                // throwing / receiving on a ground out or a double play
+                if (fl && fl.legs && fl.legs.length) {
+                    for (const leg of fl.legs) {
+                        const u = (ft - leg.t0 + 4) / (leg.d + 4);
+                        if (leg.from === f && u > 0 && u < 1.15) { throwPose(f, leg.at.x, leg.at.z, clamp(u, 0, 1)); }
+                        else if (leg.to === f && ft >= leg.t0 && ft < leg.t0 + leg.d + 10) {
+                            faceToward(f, leg.from.root.position.x, leg.from.root.position.z); f.root.updateMatrixWorld(true);
+                            ikArm(f.armL, v1.set(f.root.position.x + (leg.from.root.position.x - f.root.position.x) * 0.12, 1.3, f.root.position.z + (leg.from.root.position.z - f.root.position.z) * 0.12), _hintDown.set(0.3, -1, 0)); _hintDown.set(0, -1, 0);
+                        }
+                    }
                 }
                 return;
             }
             if (!fl || !f.chase) f.chase = null;
+            f.root.rotation.x = 0; f.root.position.y = 0;
             // drift back home
             const dx = f.home.x - f.cur.x, dz = f.home.z - f.cur.z, d = Math.hypot(dx, dz);
             if (d > 0.05) { const st = Math.min(d, 0.22 * df); f.cur.x += dx / d * st; f.cur.z += dz / d * st; f.root.position.x = f.cur.x; f.root.position.z = f.cur.z; faceToward(f, f.home.x, f.home.z); f.phase += 0.5 * df; applyPose(f, runPose({}, f.phase, 0.9)); }
@@ -1162,7 +1275,7 @@ const Stadium3D = (function () {
     // ── batter ──────────────────────────────────────────
     function updateBatter(G, info, dt, df) {
         const p = actors.batter, wrap = actors.batterWrap;
-        const left = info.batter.bats === 'L', mr = left ? -1 : 1; S.batLeft = left;   // mr mirrors the right-handed pose for lefties
+        const left = (info.batSide || info.batter.bats) === 'L', mr = left ? -1 : 1; S.batLeft = left;   // mr mirrors the right-handed pose for lefties
         wrap.scale.x = 1;
         p.root.position.x = -0.95 * mr; p.root.rotation.y = mr * Math.PI / 2;
         // swing progress
@@ -1337,6 +1450,10 @@ const Stadium3D = (function () {
                 let runs = Math.max(0, G.score[G.half] - (S.prevScore ? S.prevScore[G.half] : 0));
                 leavers.sort((x, y) => y[0] - x[0]).forEach(([k, o]) => {
                     if (runs > 0) { runs--; o.path = []; for (let b = k + 2; b <= 4; b++) o.path.push(BASES[b % 4]); o.arrived = false; o.leaving = true; }
+                    else if (S.flight && S.flight.dp && k === 0) {          // double play: the runner from first is forced at second
+                        o.path = [[BASES[2][0], BASES[2][1]]]; o.spd = Math.hypot(o.root.position.x - BASES[2][0], o.root.position.z - BASES[2][1]) / (S.flight.dur + 19);
+                        o.leaving = true; o.fast = false; o.arrived = false;
+                    }
                     else releaseRunner(o);
                 });
                 for (let k = 0; k < 3; k++) if (now[k] && !newObjs[k]) newObjs[k] = spawn(0, k);
@@ -1361,7 +1478,7 @@ const Stadium3D = (function () {
                 faceToward(o, o.root.position.x * 0.5 + 0, o.root.position.z - 8); o.hips.position.y += Math.sin(o.phase) * 0.01;
                 return;
             }
-            const sp = (o.fast ? 0.62 : 0.34) * df;
+            const sp = (o.spd || (o.fast ? 0.62 : 0.34)) * df;
             let step = sp;
             while (step > 0 && o.path.length) {
                 const tgt = o.path[0], dx = tgt[0] - o.root.position.x, dz = tgt[1] - o.root.position.z, d = Math.hypot(dx, dz);
@@ -1375,7 +1492,7 @@ const Stadium3D = (function () {
         const home = G.half === 1; // bottom half → home team bats
         pool.forEach(o => { if (o.root.visible) dressTeam(o, info.batTeam, home, { helmet: true }); });
     }
-    function releaseRunner(o) { o.root.visible = false; o.runnerBusy = false; o.path = []; o.leaving = false; o.fast = false; }
+    function releaseRunner(o) { o.root.visible = false; o.runnerBusy = false; o.path = []; o.leaving = false; o.fast = false; o.spd = 0; }
 
     // ── umpire + catcher teams, colours ─────────────────
     function syncTeams(G, info) {
@@ -1398,7 +1515,9 @@ const Stadium3D = (function () {
         const PH = info.PH; let tgt;
         const fl = S.flight;
         const flying = fl && fl.type !== 'FOUL' && (G.frame - fl.t0) < fl.dur + fl.roll + 10 && hitBall.visible;
-        if (G.phase === PH.HR_RUN || (fl && fl.type === 'HR' && G.phase === PH.RESULT)) {
+        const pc = fl && fl.type === 'OUT' ? playCam(fl, G) : null;
+        if (pc && (G.phase === PH.RESULT || G.phase === PH.BATTING)) tgt = pc;
+        else if (G.phase === PH.HR_RUN || (fl && fl.type === 'HR' && G.phase === PH.RESULT)) {
             if (fl && G.frame - fl.t0 < fl.dur * 0.62) tgt = followCam(fl, G);
             else tgt = HRCAM;
         } else if (flying && G.phase === PH.RESULT) tgt = followCam(fl, G);
@@ -1469,6 +1588,17 @@ const Stadium3D = (function () {
     }
     const UMP_CAM = { pos: new THREE.Vector3(4.2, 2.0, -6.0), look: new THREE.Vector3(-0.1, 2.7, 2.0), fov: 22, shift: 0 };
 
+    const NICE_CAM = { pos: new THREE.Vector3(), look: new THREE.Vector3(), fov: 30, shift: 0 };
+    const DP_CAM = { pos: new THREE.Vector3(-17, 7.5, -2), look: new THREE.Vector3(0.5, 1.0, -21), fov: 44, shift: 0 };
+    function playCam(fl, G) {                        // returns a camera for the key moment of a defensive play, or null
+        const t = G.frame - fl.t0;
+        if (fl.nice && fl.fielder && t >= fl.dur - 20 && t < fl.dur + 52 + (fl.hold || 0)) {
+            const p = fl.fielder.root.position, side = p.x >= 0 ? 1 : -1, back = p.z < -45 ? 1 : 0.6;
+            NICE_CAM.look.set(p.x, 0.75, p.z); NICE_CAM.pos.set(p.x - side * 6.5 * back, 2.1, p.z + 9 * back); NICE_CAM.fov = 28; return NICE_CAM;
+        }
+        if (fl.legs && fl.legs.length && t >= fl.dur - 6 && t < fl.dur + 70) return DP_CAM;
+        return null;
+    }
     const FOLLOW = { pos: new THREE.Vector3(), look: new THREE.Vector3(), fov: 38, shift: 0 };
     function followCam(fl, G) {
         const b = hitBall.position, far = Math.hypot(b.x, b.z);
@@ -1481,7 +1611,7 @@ const Stadium3D = (function () {
     function updateCamera(G, info, dt) {
         if (S.dbgCam) { applyCamera(camera, S.dbgCam); S.nearBat = false; S.nearPitch = false; return; }
         const tgt = cameraTarget(G, info);
-        const k = tgt === BAT_CAM ? 5.5 : (tgt === PITCH_CAM ? 4 : tgt === FOLLOW ? 7 : (tgt === STEAL_CAM ? 5 : (tgt === UMP_CAM ? 11 : 3.2)));
+        const k = tgt === BAT_CAM ? 5.5 : (tgt === PITCH_CAM ? 4 : tgt === FOLLOW ? 7 : (tgt === STEAL_CAM ? 5 : (tgt === UMP_CAM ? 11 : (tgt === NICE_CAM || tgt === DP_CAM ? 6 : 3.2))));
         camS.pos.x = damp(camS.pos.x, tgt.pos.x, k, dt); camS.pos.y = damp(camS.pos.y, tgt.pos.y, k, dt); camS.pos.z = damp(camS.pos.z, tgt.pos.z, k, dt);
         camS.look.x = damp(camS.look.x, tgt.look.x, k * 1.2, dt); camS.look.y = damp(camS.look.y, tgt.look.y, k * 1.2, dt); camS.look.z = damp(camS.look.z, tgt.look.z, k * 1.2, dt);
         camS.fov = damp(camS.fov, tgt.fov, k, dt); camS.shift = damp(camS.shift, tgt.shift, k, dt);
@@ -1574,7 +1704,7 @@ const Stadium3D = (function () {
 
         syncTeams(G, info);
         setFlagTeam(info.homeTeam);
-        drawScoreboard(G, info);
+        drawScoreboard(info.hud || G, info);
         // batter hides once he becomes a runner
         const hide = G.phase === info.PH.HR_RUN || (G.phase === info.PH.RESULT && ['OUT', 'HIT', '2 BASE HIT', 'WALK', 'HOMERUN'].includes(G.resSub));
         actors.batterWrap.visible = !hide;
