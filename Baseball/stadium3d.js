@@ -642,13 +642,16 @@ const Stadium3D = (function () {
     // team-specific uniform looks; anything not listed falls back to the generic colour-based style
     const UNI = {
         Dodgers: { noPiping: true, trim: '#005A9C', front: h => h ? 'Dodgers' : 'Los Angeles', frontCol: '#005A9C', sock: '#005A9C', accent: '#005A9C', frontSize: 40 },
+        // 統一獅 2026: orange jersey with black side panels, white piping, UNILIONS across the chest (road: grey-white with the same trim)
+        Lions: { noPiping: true, lions: true, trim: '#111111', front: () => '', frontCol: '#111111', sock: '#111111', accent: '#111111', jerseyOverride: h => h ? '#FF6A13' : '#E6E7EA' },
         Yankees: { noPiping: true, pinstripe: '#0c2340', trim: '#0c2340', front: h => h ? '' : 'NEW YORK', frontCol: '#0c2340', sock: '#0c2340', accent: '#0c2340', frontSize: 34 }
     };
     function dressTeam(p, team, isHome, opts = {}) {
         const key = [team.abbr, isHome, opts.helmet, opts.number, p.skinKey].join('|');
         if (p.teamKey === key) return; p.teamKey = key;
         const jl = lum(team.jersey || '#ffffff');
-        const jersey = isHome ? (team.jersey || '#ffffff') : (jl > 0.8 ? '#c4c9d2' : (team.jersey || '#c4c9d2'));
+        const U0 = UNI[team.name] || null;
+        const jersey = U0 && U0.jerseyOverride ? U0.jerseyOverride(isHome) : (isHome ? (team.jersey || '#ffffff') : (jl > 0.8 ? '#c4c9d2' : (team.jersey || '#c4c9d2')));
         const c2 = team.c2 && team.c2.toLowerCase() !== '#ffffff' ? team.c2 : team.c1;
         p.mats.jersey.color.set(0xffffff); p.mats.pants.color.set(0xffffff); p.mats.sleeve.color.set(jersey); p.mats.hips.color.set(isHome ? '#f3f3f6' : '#c9ced8');
         p.mats.accent.color.set(isHome ? (jl > 0.6 ? '#f1f1f4' : c2) : c2);
@@ -661,6 +664,15 @@ const Stadium3D = (function () {
             g.fillStyle = jersey; g.fillRect(0, 0, w, h);
             for (let i = 0; i < 700; i++) { g.fillStyle = Math.random() < 0.5 ? 'rgba(0,0,0,0.035)' : 'rgba(255,255,255,0.035)'; g.fillRect(Math.random() * w, Math.random() * h, 3, 2); }
             if (!(U && U.noPiping)) { g.fillStyle = pipe; [0.25, 0.75].forEach(f => g.fillRect(f * w - 2.5, 0, 5, h)); }
+            if (U && U.lions) {
+                // black side panels (centred on u=0.25 / 0.75), black shoulder yoke, white piping along the panel edges
+                g.fillStyle = '#111111'; [0.25, 0.75].forEach(f => { g.fillRect(f * w - 18, 44, 36, h - 44); });
+                g.fillRect(0, 0, w, 20);
+                g.fillStyle = '#ffffff'; [0.25, 0.75].forEach(f => { g.fillRect(f * w - 21, 44, 2, h - 44); g.fillRect(f * w + 19, 44, 2, h - 44); });
+                g.fillRect(0, 20, w, 2);
+                const word = 'UNILIONS'; g.font = 'italic 900 19px Arial'; g.textAlign = 'center'; g.textBaseline = 'middle';
+                g.lineWidth = 4; g.strokeStyle = isHome ? '#ffffff' : '#FF6A13'; g.lineJoin = 'round'; g.strokeText(word, w / 2, 104); g.fillStyle = '#111111'; g.fillText(word, w / 2, 104);
+            }
             if (U && U.pinstripe && isHome) { g.fillStyle = U.pinstripe; g.globalAlpha = 0.85; for (let x = 4; x < w; x += 9) g.fillRect(x, 0, 1.6, h); g.globalAlpha = 1; }   // home pinstripes
             g.fillStyle = 'rgba(0,0,0,0.18)'; g.fillRect(0, h - 10, w, 10);
             const front = U ? U.front(isHome) : (team.abbr || ''), lt = front.length;
@@ -672,7 +684,8 @@ const Stadium3D = (function () {
             g.strokeStyle = pipe; g.lineWidth = 4; g.beginPath(); g.moveTo(w / 2 - 22, 12); g.lineTo(w / 2, 36); g.lineTo(w / 2 + 22, 12); g.stroke();   // collar V
             p.jerseyT.needsUpdate = true;
             const q = p.pantsC.getContext('2d'); q.fillStyle = pantsHex; q.fillRect(0, 0, 64, 128);
-            if (U && U.pinstripe && isHome) { q.fillStyle = U.pinstripe; q.globalAlpha = 0.85; for (let x = 3; x < 64; x += 6) q.fillRect(x, 0, 1.2, 128); q.globalAlpha = 1; }
+            if (U && U.lions) { q.fillStyle = '#FF6A13'; [16, 48].forEach(x => q.fillRect(x - 1.5, 0, 3, 128)); }
+            else if (U && U.pinstripe && isHome) { q.fillStyle = U.pinstripe; q.globalAlpha = 0.85; for (let x = 3; x < 64; x += 6) q.fillRect(x, 0, 1.2, 128); q.globalAlpha = 1; }
             else if (!(U && U.noPiping)) { q.fillStyle = pipe; [16, 48].forEach(x => q.fillRect(x - 2, 0, 4, 128)); }
             for (let i = 0; i < 200; i++) { q.fillStyle = Math.random() < 0.5 ? 'rgba(0,0,0,0.04)' : 'rgba(255,255,255,0.05)'; q.fillRect(Math.random() * 64, Math.random() * 128, 2, 3); }
             p.pantsT.needsUpdate = true;
@@ -797,7 +810,7 @@ const Stadium3D = (function () {
 
         // ball
         const bm = new THREE.MeshStandardMaterial({ map: ballTexture(), roughness: 0.55, emissive: 0x333330, emissiveIntensity: 0.55 });
-        ball = new THREE.Mesh(geo.ball, bm); ball.scale.setScalar(0.062); ball.castShadow = true; ball.visible = false; scene.add(ball);
+        ball = new THREE.Mesh(geo.ball, bm); ball.scale.setScalar(0.045); ball.castShadow = true; ball.visible = false; scene.add(ball);
         hitBall = new THREE.Mesh(geo.ball, bm); hitBall.scale.setScalar(0.06); hitBall.castShadow = true; hitBall.visible = false; scene.add(hitBall);
         for (let i = 0; i < 8; i++) {
             const t = new THREE.Mesh(geo.ball, new THREE.MeshBasicMaterial({ color: 0xfff6d8, transparent: true, opacity: 0.2, depthWrite: false }));
@@ -978,10 +991,11 @@ const Stadium3D = (function () {
             if (G.frame - G.ballFrame < 0) show = false;
             if (show) {
                 pitchWorld(G, t, ball.position);
-                const near = aimMode === 'pitch' ? t : 1 - t;                         // far from the camera = bigger, so the ball stays readable
-                const grow = aimMode === 'pitch' ? 0.9 : 1.9;
-                ball.scale.setScalar(0.062 * (1 + grow * near));
-                ballGlow.visible = true; ballGlow.position.copy(ball.position); ballGlow.scale.setScalar((aimMode === 'pitch' ? 0.2 : 0.28) * (1 + (aimMode === 'pitch' ? 1.0 : 2.2) * near)); ballGlow.material.opacity = 0.55; if (G.lastPitchCol) ballGlow.material.color.set(G.lastPitchCol);
+                const Rr = ZHW * (info.ballR || 0.147);                                 // radius at the plate: ~4.5 cm (a real ball is 3.7 cm) = the radius used to call strikes
+                const toPlate = 1 - t;                                                  // 0 at the plate, 1 at release
+                ball.scale.setScalar(Rr * (1 + (aimMode === 'pitch' ? 0.25 : 0.8) * toPlate));   // only a touch bigger far away so it stays visible
+                const near = toPlate;
+                ballGlow.visible = true; ballGlow.position.copy(ball.position); ballGlow.scale.setScalar(ZHW * (info.ballR || 0.147) * 2.5 * (1 + 0.6 * near)); ballGlow.material.opacity = 0.38; if (G.lastPitchCol) ballGlow.material.color.set(G.lastPitchCol);
                 const pid = G.lastPitchId;
                 if (pid === 0) ball.rotation.x -= 0.55 * df;                                   // 4-seam: backspin
                 else if (pid === 4 || pid === 6) ball.rotation.x += 0.45 * df;                // curve / fork: topspin
@@ -994,7 +1008,7 @@ const Stadium3D = (function () {
                     const tt = t - (i + 1) * 0.035;
                     if (tt <= 0 || t >= 1) { trail[i].visible = false; continue; }
                     pitchWorld(G, tt, trail[i].position); trail[i].visible = true;
-                    trail[i].scale.setScalar(0.056 * (1 - i * 0.07) * (1 + 1.5 * (aimMode === 'pitch' ? tt : 1 - tt))); trail[i].material.opacity = 0.34 * (1 - i / trail.length); if (G.lastPitchCol) trail[i].material.color.set(G.lastPitchCol);
+                    trail[i].scale.setScalar(ZHW * 0.147 * 0.85 * (1 - i * 0.07) * (1 + 0.6 * (1 - tt))); trail[i].material.opacity = 0.34 * (1 - i / trail.length); if (G.lastPitchCol) trail[i].material.color.set(G.lastPitchCol);
                 }
                 if (t >= 1) { for (const tr of trail) tr.visible = false; ballGlow.visible = false; }
             }
