@@ -284,7 +284,7 @@
         </div>
     </div>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-    <script src="stadium3d.js?v=20261024q"></script>
+    <script src="stadium3d.js?v=20261024r"></script>
     <script src="https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.js"></script>
     <script>
@@ -1435,7 +1435,75 @@
             if (G.lnSel) { G.lnSel = null; return true; }
             const sb = { x: W / 2 - 110, y: H - 44, w: 220, h: 34 }; return !inR(sb);        // only the start button (or Z / Space) begins the game
         }
+        // ── in-game defensive adjustments (while the player's team is pitching) ──
+        const dfSide = () => (G.half === 0 ? 1 : 0);
+        function dfNatural(sd, i) {                 // is this fielder at a position he really plays?
+            const pl = TEAMS[sd === 0 ? G.awayIdx : G.homeIdx].roster.batters[G.lineups[sd][i]], ps = G.lineupPos[sd][i];
+            return ps === 'DH' || pl.pos === ps || (POS_FLEX[pl.pos] || []).includes(ps);
+        }
+        function dfPenalty(sd) { if (!G.lineupPos) return 0; let n = 0; for (let i = 0; i < 9; i++) if (!dfNatural(sd, i)) n++; return n; }
+        function dfLayout() {
+            const pw = 470, ph = 520, px = W / 2 - pw / 2, py = H / 2 - ph / 2;
+            return { px, py, pw, ph, close: { x: px + pw / 2 - 80, y: py + ph - 48, w: 160, h: 36 },
+                rows: Array.from({ length: 9 }, (_, i) => { const y = py + 72 + i * 40; return { i, row: { x: px + 16, y, w: pw - 32, h: 34 }, chip: { x: px + 22, y: y + 3, w: 58, h: 28 }, btn: { x: px + pw - 56, y: y + 3, w: 34, h: 28 } }; }) };
+        }
+        function dfBench(sd) { const out = []; TEAMS[sd === 0 ? G.awayIdx : G.homeIdx].roster.batters.forEach((_, i) => { if (!G.usedBatters[sd][i] && !G.lineups[sd].includes(i)) out.push(i); }); return out; }
+        function dfPickLayout(sd) {
+            const list = dfBench(sd), cols = list.length > 8 ? 2 : 1, per = Math.max(1, Math.ceil(list.length / cols)), pw = cols === 2 ? 700 : 420, ph = Math.max(200, 110 + per * 40 + 60), px = W / 2 - pw / 2, py = H / 2 - ph / 2, cw = (pw - 40 - (cols - 1) * 12) / cols;
+            return { list, pw, ph, px, py, items: list.map((idx, k) => ({ idx, x: px + 20 + Math.floor(k / per) * (cw + 12), y: py + 66 + (k % per) * 40, w: cw, h: 34 })), cancel: { x: px + pw / 2 - 70, y: py + ph - 48, w: 140, h: 34 } };
+        }
+        function defMenuClick() {
+            ensureLineupPos();
+            const sd = dfSide(), L = dfLayout();
+            if (G.dfPick != null) {
+                const PL = dfPickLayout(sd);
+                for (const it of PL.items) if (inR(it)) {      // a substitute takes the spot (and the position); the player he replaces is out for the game
+                    G.usedBatters[sd][G.lineups[sd][G.dfPick]] = true; G.lineups[sd][G.dfPick] = it.idx; G.usedBatters[sd][it.idx] = true; break;
+                }
+                G.dfPick = null; return;
+            }
+            if (inR(L.close)) { G.phase = G.prevPhase; G.dfSel = null; return; }
+            for (const r of L.rows) {
+                if (inR(r.btn)) { G.dfPick = r.i; G.dfSel = null; return; }
+                if (inR(r.row)) {
+                    if (G.dfSel != null && G.dfSel !== r.i) { const P = G.lineupPos[sd], t = P[G.dfSel]; P[G.dfSel] = P[r.i]; P[r.i] = t; G.dfSel = null; }
+                    else G.dfSel = G.dfSel === r.i ? null : r.i;
+                    return;
+                }
+            }
+            G.dfSel = null;
+        }
+        function renderDefMenu() {
+            ensureLineupPos();
+            ctx.fillStyle = 'rgba(0,0,0,0.7)'; ctx.fillRect(0, 0, W, H);
+            const sd = dfSide(), L = dfLayout(), team = TEAMS[sd === 0 ? G.awayIdx : G.homeIdx];
+            drawRetroPanel(L.px, L.py, L.pw, L.ph, '#002244', '#FFF');
+            txt('守備調整', W / 2, L.py + 34, 24, '#FFD700');
+            txt('點兩個人互換守位 · ⇄ 換上板凳球員 · 不在本位會增加失誤', W / 2, L.py + 56, 12, '#9fd0e8', 'center', '', false);
+            const pen = dfPenalty(sd);
+            L.rows.forEach(r => {
+                const b = team.roster.batters[G.lineups[sd][r.i]], ps = G.lineupPos[sd][r.i], ok = dfNatural(sd, r.i), sel = G.dfSel === r.i;
+                if (sel) { ctx.fillStyle = 'rgba(255,215,0,0.18)'; ctx.fillRect(r.row.x, r.row.y, r.row.w, r.row.h); }
+                ctx.fillStyle = sel ? '#FFD700' : ok ? '#1c4f6e' : '#8a2a2a'; drawRoundRect(ctx, r.chip.x, r.chip.y, r.chip.w, r.chip.h, 6); ctx.fill();
+                ctx.font = 'bold 14px "PingFang TC", "Microsoft JhengHei", Arial'; ctx.textAlign = 'center'; ctx.fillStyle = sel ? '#222' : '#FFF'; ctx.fillText(POS_NAME[ps] || ps, r.chip.x + r.chip.w / 2, r.chip.y + 19);
+                ctx.font = 'bold 17px "PingFang TC", "Microsoft JhengHei", Arial'; ctx.textAlign = 'left'; ctx.fillStyle = '#FFF'; ctx.fillText(`${r.i + 1}. ${b.name}`, r.chip.x + 70, r.chip.y + 20);
+                ctx.font = '12px "PingFang TC", Arial'; ctx.textAlign = 'right'; ctx.fillStyle = ok ? '#AAAAAA' : '#ff9a9a'; ctx.fillText(ok ? `本職${POS_NAME[b.pos] || ''}` : `本職${POS_NAME[b.pos] || ''} ⚠`, r.btn.x - 8, r.chip.y + 19);
+                ctx.fillStyle = '#2a5a2a'; drawRoundRect(ctx, r.btn.x, r.btn.y, r.btn.w, r.btn.h, 6); ctx.fill(); ctx.font = 'bold 15px Arial'; ctx.textAlign = 'center'; ctx.fillStyle = '#9dff9d'; ctx.fillText('⇄', r.btn.x + 17, r.btn.y + 19);
+            });
+            if (pen) txt(`${pen} 人不在本位`, W / 2, L.py + L.ph - 58, 13, '#ff9a9a', 'center', '', false);
+            drawGlossyPill(L.close.x, L.close.y, L.close.w, L.close.h, inR(L.close), '完成', '#0a5a2a', '#1fa84a');
+            if (G.dfPick != null) {
+                ctx.fillStyle = 'rgba(0,0,0,0.6)'; ctx.fillRect(0, 0, W, H);
+                const PL = dfPickLayout(sd);
+                drawRetroPanel(PL.px, PL.py, PL.pw, PL.ph, '#002244', '#FFF');
+                txt(`換下第 ${G.dfPick + 1} 棒（${POS_NAME[G.lineupPos[sd][G.dfPick]]}）`, W / 2, PL.py + 38, 22, '#FFD700');
+                if (!PL.items.length) txt('板凳已無可用球員', W / 2, PL.py + 90, 18, '#AAA');
+                PL.items.forEach(it => { const q = team.roster.batters[it.idx]; drawGlossyPill(it.x, it.y, it.w, it.h, inR(it), `${q.name}  ${POS_NAME[q.pos] || '野手'}  ${handText(q, true)}  ${q.avg}`, '#113355', '#225588'); });
+                drawGlossyPill(PL.cancel.x, PL.cancel.y, PL.cancel.w, PL.cancel.h, inR(PL.cancel), '取消', '#662222', '#aa4444');
+            }
+        }
         // ── pickoff throws (human pitcher, at most 3 per plate appearance; a 3rd failed attempt is a balk) ──
+        const dfBtnRect = () => ({ x: W - 130, y: H - 96, w: 120, h: 38 });
         const PICK_MAX = 3, BASE_NAME = ['一壘', '二壘', '三壘'];
         function pickBtnRect(k) { const slots = [0, 1, 2].filter(b => G.runners[b]); const n = slots.indexOf(k); return { x: 14, y: H - 176 - n * 42, w: 150, h: 36 }; }
         function canPickoff() { return !MP.active && !playerBatting() && G.phase === PH.PITCH_SELECT && (G.pickoffs || 0) < PICK_MAX && G.runners.some(r => r); }
@@ -1777,7 +1845,7 @@
             let text = '', sub = '', col = '#fff', endHalf = false;
             const slotIdx = G.batOrder[bat];
             const st = G.batStats[bat][slotIdx];
-            if (type === 'OUT' && !G.nicePlay && G.hitKind !== 'pop' && Math.random() < 0.05) type = 'ROE';       // fielding error: the batter reaches
+            if (type === 'OUT' && !G.nicePlay && G.hitKind !== 'pop' && Math.random() < 0.05 + 0.015 * dfPenalty(G.half === 0 ? 1 : 0)) type = 'ROE';       // fielding error: the batter reaches
             if (type === 'HR' || type === '1B' || type === '2B') G.pApp[1 - bat].hits++;
             addLoad(1 - bat, { HR: 5, '2B': 3, '1B': 2, BB: 1.5, HBP: 1.5, ROE: 0 }[type] || 0);
             if (type === 'HR') {
@@ -2065,6 +2133,7 @@
 
             switch (G.phase) {
                 case PH.SUB_MENU:
+                    if (G.subType === 'D') { if (isMouseJustPressed) defMenuClick(); break; }
                     if (isMouseJustPressed) {
                         const layout = getSubMenuLayout();
                         const { isPitcher, sideIdx, slots, panelW, panelH, px, py } = layout;
@@ -2096,6 +2165,7 @@
                         if (mouseX >= sbx && mouseX <= sbx + 120 && mouseY >= sby && mouseY <= sby + 38) { simulateHalf(); break; }
                         const pbx = W - 130, pby = H - 50;
                         if (mouseX >= pbx && mouseX <= pbx + 120 && mouseY >= pby && mouseY <= pby + 38) { G.subType = 'P'; G.prevPhase = G.phase; G.phase = PH.SUB_MENU; break; }
+                        if (!MP.active && inR(dfBtnRect())) { ensureLineupPos(); G.subType = 'D'; G.prevPhase = G.phase; G.phase = PH.SUB_MENU; G.dfSel = null; G.dfPick = null; break; }
                         if (canPickoff()) { const hitK = [0, 1, 2].find(b => G.runners[b] && inR(pickBtnRect(b))); if (hitK !== undefined) { doPickoff(hitK); break; } }
                         if (hovered !== -1) { G.pitchChoice = hovered; G.phase = PH.AIM; G.aimState = 0; break; }
                     }
@@ -3039,6 +3109,7 @@
         }
 
         function renderSubMenu() {
+            if (G.subType === 'D') return renderDefMenu();
             ctx.fillStyle = 'rgba(0,0,0,0.7)'; ctx.fillRect(0, 0, W, H);
             const layout = getSubMenuLayout();
             const { isPitcher, roster, availIndices, slots, panelW, panelH, px, py } = layout;
@@ -3745,6 +3816,7 @@
                 // (the pitch name + movement are shown by renderPitchPreview)
                 const sbx = 14, sby = H - 132; const sHover = mouseX >= sbx && mouseX <= sbx + 120 && mouseY >= sby && mouseY <= sby + 38; drawGlossyPill(sbx, sby, 120, 38, sHover, '⚡ 自動', '#443300', '#886600', sHover ? '#FFD700' : '#FFF');
                 if (canPickoff()) [0, 1, 2].forEach(b => { if (!G.runners[b]) return; const r = pickBtnRect(b); drawGlossyPill(r.x, r.y, r.w, r.h, inR(r), `牽制${BASE_NAME[b]} ${G.pickoffs || 0}/${PICK_MAX}`, '#224466', '#3a77aa'); });
+                if (!MP.active) { const dr = dfBtnRect(); drawGlossyPill(dr.x, dr.y, dr.w, dr.h, inR(dr), '🧢 守備調整', '#222a55', '#3a4a99', inR(dr) ? '#FFD700' : '#FFF'); }
                 const pbx = W - 130, pby = H - 50; const pHHover = mouseX >= pbx && mouseX <= pbx + 120 && mouseY >= pby && mouseY <= pby + 38; drawGlossyPill(pbx, pby, 120, 38, pHHover, '🔄 換投手', '#004422', '#007733', pHHover ? '#FFD700' : '#FFF');
             }
 
