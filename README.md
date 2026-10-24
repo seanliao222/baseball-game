@@ -20,7 +20,7 @@ A browser baseball game with a Three.js 3D broadcast view and a 2D TV-style HUD.
 - **Pickoffs** — when pitching you can throw over to any occupied base, up to 3 times per batter; a 3rd failed attempt is a balk.
 - **Fielding range** — fielders shift toward the pull side and play deeper for power hitters; outs are hit within a fielder's reach, base hits drop into gaps, and the other fielders break toward the ball.
 - **AI manager** — the computer changes pitchers only when the pitcher is truly shelled (6+ runs / 5+ in an inning / 4+ runs on 7+ hits, and already worn down), out of gas (workload past his stamina, 25+ pitches), or the game is far gone (down 8+ after the 4th).
-- **Versus mode (QR / PeerJS)** — host and guest each pick a team and play head-to-head.
+- **Versus mode (QR / PeerJS)** — host and guest each pick a team and play head-to-head. Each screen shows only its own role: the pitcher gets the behind-the-mound view with the pitch wheel / aim / power bar, the batter gets the batter view and timing bar and never sees the pitch selection.
 - **Music** — each CPBL/WBC team has its own offense song (YouTube, highlights section, WebAudio fallback; phone gesture-unlock prompt). See `music/README.md`.
 - **Mobile support** — touch controls, responsive HUD.
 

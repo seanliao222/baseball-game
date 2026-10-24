@@ -284,7 +284,7 @@
         </div>
     </div>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-    <script src="stadium3d.js?v=20261024o"></script>
+    <script src="stadium3d.js?v=20261024p"></script>
     <script src="https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.js"></script>
     <script>
@@ -1453,6 +1453,9 @@
             }
             SFX.ball(); showRes(`牽制，${BASE_NAME[k]}跑者安全回壘（${n}/${PICK_MAX}）`, 'PICKOFF', '#FFD24A', false);
         }
+        // what THIS screen shows: in versus mode each player sees only their own role (pitch wheel for the pitcher, timing bar for the batter)
+        function uiPitching() { if (!MP.active) return !playerBatting(); const m = mpMySide(); return m != null && G.half !== m; }
+        function uiBatting() { if (!MP.active) return playerBatting(); const m = mpMySide(); return m != null && G.half === m; }
         function playerBatting() { return G.half === G.playerSide; }
         function batTeamInfo() { return TEAMS[G.half === 0 ? G.awayIdx : G.homeIdx]; }
         function pitTeamInfo() { return TEAMS[G.half === 0 ? G.homeIdx : G.awayIdx]; }
@@ -2655,7 +2658,7 @@
             return {
                 PH, batTeam: batTeamInfo(), pitTeam: pitTeamInfo(), batter: getBatter(), pitcher: getPitcher(), batSide: batSideOf(getBatter(), getPitcher()),
                 humanPitching: MP.active || !playerBatting(), humanBatting: MP.active || playerBatting(),
-                pitchView: !MP.active && !playerBatting(),                 // single player: you pitch -> view from behind the mound
+                pitchView: uiPitching(),                 // single player: you pitch -> view from behind the mound
                 ballProgress: G.ballActive ? ballProgress() : 0, ballR: BALL_R,
                 awayAbbr: aw.abbr, homeAbbr: hw.abbr, awayCol: aw.c1, homeCol: hw.c1, homeTeam: hw, hud: hudView()
             };
@@ -2849,7 +2852,7 @@
         // Strike-zone view of the selected pitch: where it enters the zone (hollow circle = 投球點) and where it
         // ends up after the break (filled circle = 進壘位置), joined by a curved arrow.
         function renderPitchPreview() {
-            if (!(MP.active || !playerBatting())) return;
+            if (!uiPitching()) return;
             let idx = -1, ex = SZcx, ey = SZcy;
             if (G.phase === PH.PITCH_SELECT && G.hoveredPitchChoice >= 0) idx = G.hoveredPitchChoice;
             else if ((G.phase === PH.AIM && G.aimState === 1) || G.phase === PH.POWER_GAUGE) { idx = G.pitchChoice; ex = SZcx + G.aimX * (SZw / 2); ey = SZcy + G.aimY * (SZh / 2); }
@@ -2910,7 +2913,7 @@
             ctx.strokeStyle = fielding ? 'rgba(255,255,255,0.92)' : 'rgba(255,170,230,0.95)'; ctx.lineWidth = 2;
             ctx.shadowColor = 'rgba(0,0,0,0.6)'; ctx.shadowBlur = 4; ctx.strokeRect(x, y, SZw, SZh);
             ctx.restore();
-            if (fielding && (G.phase === PH.AIM || G.phase === PH.POWER_GAUGE)) {
+            if (fielding && uiPitching() && (G.phase === PH.AIM || G.phase === PH.POWER_GAUGE)) {
                 const cx = SZcx + G.aimX * (SZw / 2), cy = SZcy + G.aimY * (SZh / 2);
                 ctx.save(); ctx.strokeStyle = '#37f0ff'; ctx.lineWidth = 2; ctx.shadowColor = '#37f0ff'; ctx.shadowBlur = 8;
                 ctx.beginPath(); ctx.arc(cx, cy, 9, 0, Math.PI * 2); ctx.stroke();
@@ -2923,7 +2926,7 @@
             S3D.frame(G, stage3DInfo());
             { const zb = S3D.aimBox(); SZcx = zb.cx; SZcy = zb.cy; SZw = zb.hw * 2; SZh = zb.hh * 2; }
             if (G.phase !== PH.HR_RUN) { renderZone3D(); renderPitchPreview(); }
-            if (S3D.isBatCam() && (MP.active || playerBatting()) && (G.phase === PH.WAIT_PITCH || G.phase === PH.BATTING)) renderBatCursor();
+            if (S3D.isBatCam() && uiBatting() && (G.phase === PH.WAIT_PITCH || G.phase === PH.BATTING)) renderBatCursor();
             renderHitFlash();
             renderBroadcastHUD();
             renderHitKindChip();
@@ -2961,7 +2964,7 @@
                 if (fieldingPhase) { renderPitchingZone(); renderPitchPreview(); } else renderBattingZone();
             }
             if (G.ballActive) renderBall();
-            if ((MP.active || playerBatting()) && (G.phase === PH.WAIT_PITCH || G.phase === PH.BATTING)) renderBatCursor();
+            if (uiBatting() && (G.phase === PH.WAIT_PITCH || G.phase === PH.BATTING)) renderBatCursor();
 
             renderHitEffect();
             renderClassicUI();
@@ -3709,7 +3712,7 @@
                 return;
             }
 
-            if (G.phase === PH.PITCH_SELECT && (MP.active || !playerBatting())) {
+            if (G.phase === PH.PITCH_SELECT && uiPitching()) {
                 const pitcher = getPitcher(), WL = getPitchWheel(pitcher), n = WL.ring.length;
                 ctx.save();
                 // backdrop disc
@@ -3751,7 +3754,7 @@
                 if (mouseY >= H - 80) txt('－ 投球暫停中 (思考戰術) －', W / 2, H - 20, 16, '#00FFFF', 'center', '', false);
             }
 
-            if (G.phase === PH.POWER_GAUGE && (MP.active || !playerBatting())) {
+            if (G.phase === PH.POWER_GAUGE && uiPitching()) {
                 // horizontal power bar: pitch name banner + level badge + zoned bar with markers
                 const po = getPitcher().pitches[G.pitchChoice], pd = PITCH_DICT[po.id], x0 = W / 2 - 238, y0 = 462, bh = 26;
                 const bx = x0 + 214, bw = 262, pos = G.gaugePos;
@@ -3781,7 +3784,7 @@
                 ctx.restore();
             }
 
-            if (G.phase === PH.BATTING && (MP.active || playerBatting())) {
+            if (G.phase === PH.BATTING && uiBatting()) {
                 const tbW = 380, tbH = 28, tbX = W / 2 - tbW / 2, tbY = 476;
                 ctx.fillStyle = 'rgba(0,0,0,0.65)'; drawRoundRect(ctx, tbX - 4, tbY - 4, tbW + 8, tbH + 8, tbH / 2 + 4); ctx.fill();
                 ctx.strokeStyle = 'rgba(100,130,180,0.4)'; ctx.lineWidth = 1; drawRoundRect(ctx, tbX - 4, tbY - 4, tbW + 8, tbH + 8, tbH / 2 + 4); ctx.stroke();
