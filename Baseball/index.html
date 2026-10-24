@@ -293,7 +293,7 @@
         </div>
     </div>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-    <script src="stadium3d.js?v=20261024w"></script>
+    <script src="stadium3d.js?v=20261024x"></script>
     <script src="https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.js"></script>
     <script>
@@ -1672,7 +1672,9 @@
                 const inZone = isStrikePos(G._actualAimX, G._actualAimY);
                 const aiSwingMult = [0.45, 1.0, 1.45][G.difficulty];
                 const aiErrMult = [2.2, 1.0, 0.45][G.difficulty];
-                G.aiSwing = Math.random() < (inZone ? (0.50 + batter.con / 200) * aiSwingMult : 0.12 * aiSwingMult);
+                const far = Math.max(Math.abs(G._actualAimX), Math.abs(G._actualAimY)), prot = G.strikes >= 2 ? 1.6 : 1;      // hitters chase pitches near the zone, more so with two strikes
+                const chase = (far < 1.35 ? 0.34 : far < 1.8 ? 0.20 : 0.07) * prot * (1.35 - batter.con / 150);
+                G.aiSwing = Math.random() < (inZone ? Math.min(0.95, (0.50 + batter.con / 200) * aiSwingMult + (G.strikes >= 2 ? 0.12 : 0)) : Math.min(0.7, chase * aiSwingMult));
                 const sacSit = G.outs < 2 && (G.runners[0] || G.runners[1]) && !G.runners[2] && G.strikes < 2 && Math.abs(G.score[0] - G.score[1]) <= 2;
                 G.bunt = false;
                 if (sacSit && Math.random() < clamp(0.22 - (batter.pow - 50) / 250, 0.04, 0.3)) { G.bunt = true; G.aiSwing = inZone && Math.random() < 0.9; }      // the computer sacrifices now and then
