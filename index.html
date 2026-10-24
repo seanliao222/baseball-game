@@ -1678,7 +1678,7 @@
                 if (sacSit && Math.random() < clamp(0.22 - (batter.pow - 50) / 250, 0.04, 0.3)) { G.bunt = true; G.aiSwing = inZone && Math.random() < 0.9; }      // the computer sacrifices now and then
                 G.aiCX = G._actualAimX + rnd(-0.3, 0.3) * (100 - batter.con) / 30 * aiErrMult;
                 G.aiCY = G._actualAimY + rnd(-0.3, 0.3) * (100 - batter.con) / 30 * aiErrMult;
-                G.aiSwingFrame = G.ballFrame + G.ballDur + rndI(-8, 8);
+                G.aiSwingFrame = G.ballFrame + G.ballDur + rndI(-8, 0);      // never later than the pitch arriving, or the swing would be shown but the pitch called a ball
                 G.phase = PH.BALL_FLIGHT;
             } else {
                 G.phase = PH.BATTING; G.phPos = 0; G.phPressed = false; G.phDone = false; G.phValue = 0;
