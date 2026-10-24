@@ -16,10 +16,10 @@ A browser baseball game with a Three.js 3D broadcast view and a 2D TV-style HUD.
 - **Batted balls** — ground / line / fly / pop labels, diving "NICE PLAY" close-ups, double-play animation, sacrifice flies, umpire gestures.
 - **Rules** — swinging at a ball is a strike, fouls (never strike three), steals (single / double / home), hit-by-pitch, wild pitch, fielding errors, infield-fly rule, walk-offs, extra innings, mercy rule (15 runs after 5 innings, 10 after 7).
 - **Lineup editor** — the pre-game lineup shows each starter's defensive position; swap batting order, swap positions, or replace any starter / the starting pitcher from the bench (single-player).
-- **Stamina** — pitch counts accumulate even in auto-sim; once a pitcher passes about half his stamina his velocity (up to ~7 mph / ~11 km/h) and control drop.
+- **Stamina** — workload = pitches + stress (hits +2/3/5, walks +1.5, every run allowed +2.5), counted even in auto-sim; once workload passes about half his stamina his velocity (up to ~7 mph / ~11 km/h) and control drop.
 - **Pickoffs** — when pitching you can throw over to any occupied base, up to 3 times per batter; a 3rd failed attempt is a balk.
 - **Fielding range** — fielders shift toward the pull side and play deeper for power hitters; outs are hit within a fielder's reach, base hits drop into gaps, and the other fielders break toward the ball.
-- **AI manager** — the computer changes pitchers when they are shelled, tired, or trailing badly.
+- **AI manager** — the computer changes pitchers only when the pitcher is truly shelled (6+ runs / 5+ in an inning / 4+ runs on 7+ hits, and already worn down), out of gas (workload past his stamina, 25+ pitches), or the game is far gone (down 8+ after the 4th).
 - **Versus mode (QR / PeerJS)** — host and guest each pick a team and play head-to-head.
 - **Music** — each CPBL/WBC team has its own offense song (YouTube, highlights section, WebAudio fallback; phone gesture-unlock prompt). See `music/README.md`.
 - **Mobile support** — touch controls, responsive HUD.
