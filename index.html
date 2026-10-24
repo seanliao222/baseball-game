@@ -284,7 +284,7 @@
         </div>
     </div>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-    <script src="stadium3d.js?v=20261024m"></script>
+    <script src="stadium3d.js?v=20261024n"></script>
     <script src="https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.js"></script>
     <script>
@@ -1561,7 +1561,7 @@
             else { devX = rnd(-10, 10) * cMod; devY = rnd(-6, 10) * cMod; }
 
             G.ballActive = true; G.ballFrame = G.frame; G._pitchPending = true;
-            const baseMph = pDef.mph + (pitcher.vel - 90) / 2;
+            const baseMph = pDef.mph + (pitcher.vel - 90) / 2 - tiredness(pitcher, G.pitchCounts[pitcherSide]) * 7;       // a tired arm loses up to ~7 mph
             G.lastPitchKmh = Math.round(baseMph * 1.60934);
             G.lastPitchName = pDef.name;
             G.speedGunTimer = 90;
@@ -1895,10 +1895,13 @@
             G.scr = SCR.GAME; G.phase = PH.INNING_START; G.phaseTimer = 100;
         }
 
-        function simAtBat(batter, pitcher) {
+        // 0 = fresh, 1 = gassed: velocity and control fall off once a pitcher passes about half of his stamina
+        function tiredness(pitcher, pc) { return clamp((pc - pitcher.stm * 0.5) / (pitcher.stm * 0.7), 0, 1.2); }
+        function simAtBat(batter, pitcher, pc = 0) {
+            const tire = tiredness(pitcher, pc);
             const diffPitchAdj = [0.7, 1.0, 1.3][G.difficulty];
-            const ctrl = clamp(pitcher.ctrl / 100 * diffPitchAdj, 0.3, 1.0);
-            const vel = clamp(pitcher.vel / 100 * diffPitchAdj, 0.5, 1.0);
+            const ctrl = clamp(pitcher.ctrl / 100 * diffPitchAdj * (1 - tire * 0.18), 0.3, 1.0);
+            const vel = clamp(pitcher.vel / 100 * diffPitchAdj * (1 - tire * 0.12), 0.5, 1.0);
             const con = batter.con / 100;
             const pow = batter.pow / 100;
             const kProb = clamp(0.28 * ctrl - 0.08 * con, 0.06, 0.45);
@@ -1917,10 +1920,11 @@
         function simulateHalf() {
             const pitcher = getPitcher();
             let outs = G.outs, runners = [...G.runners], score = 0, atBats = 0;
-            const bat = G.half;
+            const bat = G.half, pSide = 1 - bat;
             while (outs < 3 && atBats < 27) {
                 const batIdx = (G.batOrder[bat] + atBats) % 9;
-                const result = simAtBat(batTeamInfo().roster.batters[G.lineups[bat][batIdx]], pitcher);
+                const result = simAtBat(batTeamInfo().roster.batters[G.lineups[bat][batIdx]], pitcher, G.pitchCounts[pSide]);
+                G.pitchCounts[pSide] += result === 'K' ? rndI(4, 7) : result === 'BB' ? rndI(5, 8) : rndI(2, 6); G.pApp[pSide].bf++;      // the pitcher still throws pitches in auto mode
                 const st = G.batStats[bat][batIdx];
                 atBats++;
                 if (result === 'K') {
