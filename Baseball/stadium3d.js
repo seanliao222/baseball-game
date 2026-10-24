@@ -553,11 +553,22 @@ const Stadium3D = (function () {
         part(geo.neck, m.skin, torso, false);
         const head = new THREE.Group(); head.position.set(0, 0.74, 0.01); torso.add(head);
         const skull = part(geo.head, m.skin, head); skull.scale.set(0.95, 1.1, 1.02);
-        blob(m.skin, head, 0.026, 0.03, 0.03, 0, -0.012, 0.108);              // nose
         blob(m.skin, head, 0.022, 0.034, 0.02, 0.104, -0.005, 0); blob(m.skin, head, 0.022, 0.034, 0.02, -0.104, -0.005, 0); // ears
         blob(m.skin, head, 0.055, 0.04, 0.05, 0, -0.085, 0.05);               // jaw
-        [-0.04, 0.04].forEach(x => blob(m.dark, head, 0.013, 0.013, 0.013, x, 0.018, 0.1));   // eyes
-        [-0.04, 0.04].forEach(x => { const br = blob(m.dark, head, 0.026, 0.005, 0.01, x, 0.045, 0.098); br.rotation.z = x > 0 ? -0.15 : 0.15; }); // brows
+        // パワプロ-style face: two big white eye panels with blue irises, determined slanted brows, no nose
+        if (!geo.eyeMat) {
+            const c = canvasOf(64, 80), g = c.getContext('2d');
+            g.fillStyle = '#ffffff'; g.beginPath(); g.roundRect ? g.roundRect(2, 2, 60, 76, 22) : g.rect(2, 2, 60, 76); g.fill();
+            g.fillStyle = '#2f4fd0'; g.beginPath(); g.ellipse(32, 46, 13, 24, 0, 0, Math.PI * 2); g.fill();
+            g.fillStyle = '#10163a'; g.beginPath(); g.ellipse(32, 48, 7, 14, 0, 0, Math.PI * 2); g.fill();
+            g.fillStyle = '#ffffff'; g.beginPath(); g.arc(27, 34, 4.5, 0, Math.PI * 2); g.fill();
+            geo.eyeMat = new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(c), transparent: true });
+            geo.eyeGeo = new THREE.PlaneGeometry(0.066, 0.082);
+        }
+        [-1, 1].forEach(sx => {
+            const e = new THREE.Mesh(geo.eyeGeo, geo.eyeMat); e.position.set(sx * 0.048, -0.004, 0.104); e.rotation.y = sx * 0.42; head.add(e);
+            const br = blob(m.dark, head, 0.034, 0.007, 0.012, sx * 0.05, 0.05, 0.102); br.rotation.z = sx * 0.3; br.rotation.y = sx * 0.4;   // inner ends lower
+        });
         blob(m.hair, head, 0.094, 0.07, 0.08, 0, 0.0, -0.04);                // hair under the cap
         // cap / helmet
         const capG = new THREE.Group(); head.add(capG);
