@@ -1126,10 +1126,16 @@ const Stadium3D = (function () {
         if (G.hitKind === 'bunt' && type !== 'FOUL') best = actors.fielders.find(f => f.pos === (end.x > 3 ? '1B' : '3B')) || best;      // the corner men charge
         if (type !== 'HR' && type !== 'FOUL') {
             fl.fielder = best; fl.rest = rest;
-            if (fl.catch) best.chase = { tx: end.x, tz: end.z, t0: G.frame, arrive: G.frame + (G.hitKind === 'bunt' ? dur + 2 : dur - 2) };
-            else {                                             // a base hit: he reaches it while it is still rolling
+            const react = kind === 'grounder' ? 12 : kind === 'line' ? 10 : 8;           // he breaks after this many frames, then runs flat out (same numbers as fieldReach)
+            if (fl.catch) best.chase = { tx: end.x, tz: end.z, t0: G.frame, arrive: G.frame + (G.hitKind === 'bunt' ? dur + 2 : dur - 2), react };
+            else {                                             // a base hit: he reaches it while it is still rolling, as late as his legs make it
                 fl.pickT = dur + Math.round(roll * 0.55); flightPos(fl, G.frame + fl.pickT, _fp);
-                best.chase = { tx: _fp.x, tz: _fp.z, t0: G.frame, arrive: G.frame + fl.pickT };
+                for (let it = 0; it < 4; it++) {
+                    const need = Math.ceil(react + Math.hypot(_fp.x - best.cur.x, _fp.z - best.cur.z) / 0.25);
+                    if (need <= fl.pickT) break;
+                    fl.pickT = need; flightPos(fl, G.frame + fl.pickT, _fp);
+                }
+                best.chase = { tx: _fp.x, tz: _fp.z, t0: G.frame, arrive: G.frame + fl.pickT, react };
             }
             fl.nice = !!G.nicePlay && type === 'OUT'; fl.dp = !!G.dpPlay && type === 'OUT';
             fl.hold = fl.nice && kind === 'grounder' ? 12 : 0;                          // a diving stop takes a moment to get up and throw
@@ -1307,8 +1313,8 @@ const Stadium3D = (function () {
             let tx = f.home.x, tz = f.home.z, sp = 0.09;
             const inWide = true;
             if (f.chase && fl) {
-                const c = f.chase, span = Math.max(1, c.arrive - c.t0), k = clamp((G.frame - c.t0) / span, 0, 1);
-                tx = lerp(f.home.x, c.tx, easeOut(k)); tz = lerp(f.home.z, c.tz, easeOut(k)); sp = 0;
+                const c = f.chase, rc = c.react || 0, span = Math.max(1, c.arrive - c.t0 - rc), k = clamp((G.frame - c.t0 - rc) / span, 0, 1), kk = rc ? k : easeOut(k);      // with a reaction time he runs at a steady pace, so a ball he cannot reach visibly gets past him
+                tx = lerp(f.home.x, c.tx, kk); tz = lerp(f.home.z, c.tz, kk); sp = 0;
                 const moving = k < 0.98;
                 f.cur.x = tx; f.cur.z = tz; f.root.position.x = tx; f.root.position.z = tz;
                 if (moving) faceToward(f, c.tx, c.tz);
@@ -1770,14 +1776,15 @@ const Stadium3D = (function () {
         const out = {}; const keep = S.flight;
         const cases = [['OUT', 'ground'], ['OUT', 'fly'], ['OUT', 'pop'], ['OUT', 'line'], ['1B', 'ground'], ['1B', 'line'], ['1B', 'fly'], ['2B', 'line'], ['2B', 'fly'], ['3B', 'line'], ['3B', 'fly']];
         for (const [type, hk] of cases) {
-            let bad = 0, sl = 0;
+            let bad = 0, sl = 0, mx = 0, vs = 0, late = 0;
             for (let i = 0; i < n; i++) {
                 startFlight({ hitType: type, hitKind: hk, hitFlyDir: (Math.random() < 0.5 ? 1 : -1) * (0.6 + Math.random() * 0.8), curX: 0, frame: 0, nicePlay: false, dpPlay: false }, {});
                 const fl = S.flight, c = { t0: 0, kind: fl.kind, start: fl.start, dir: fl.dir, dist: fl.dist, apex: fl.apex, dur: fl.dur, roll: fl.roll, rollDist: fl.rollDist, end: fl.end };
                 const r = catchSlack(c); sl += r.slack;
+                { const f = fl.fielder; if (f && f.chase) { const cc = f.chase, v = Math.hypot(cc.tx - f.home.x, cc.tz - f.home.z) / Math.max(1, cc.arrive - cc.t0 - cc.react); mx = Math.max(mx, v); vs += v; if (fl.pickT !== undefined && fl.pickT > fl.dur + Math.round(fl.roll * 0.55)) late++; } }
                 if (type === 'OUT' ? r.slack <= 0 : r.slack >= 0) bad++;
             }
-            out[type + '/' + hk] = { bad, avgSlack: +(sl / n).toFixed(2) };
+            out[type + '/' + hk] = { bad, avgSlack: +(sl / n).toFixed(2), maxV: +mx.toFixed(2), avgV: +(vs / n).toFixed(2), late };
         }
         S.flight = keep; return out;
     };

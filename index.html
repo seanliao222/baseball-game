@@ -293,7 +293,7 @@
         </div>
     </div>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-    <script src="stadium3d.js?v=20261024y"></script>
+    <script src="stadium3d.js?v=20261024z"></script>
     <script src="https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.js"></script>
     <script>
@@ -2018,8 +2018,8 @@
                 if (k === 'ground') return (G.dpPlay ? 74 : 50) + nice;
                 return ({ fly: 112, pop: 92, line: 84 }[k] || 84) + nice;
             }
-            if (type === '1B') return k === 'ground' ? 96 : k === 'line' ? 84 : 90;
-            if (type === '2B') return k === 'line' ? 112 : 126;
+            if (type === '1B') return (k === 'ground' ? 96 : k === 'line' ? 84 : 90) + 24;      // + the fielder now gets there at running pace
+            if (type === '2B') return (k === 'line' ? 112 : 126) + 20;
             if (type === '3B') return k === 'line' ? 150 : 164;
             return 0;
         }
