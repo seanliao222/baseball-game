@@ -1105,7 +1105,7 @@ const Stadium3D = (function () {
                     d2 = Math.hypot(x, z); th2 = Math.atan2(x, -z);
                     if (!(Math.abs(th2) < 0.7 && (kind !== 'grounder' || d2 > 14) && d2 > 10)) continue;
                 } else {
-                    th2 = (R() - 0.5) * 1.4; d2 = Math.min(dist * (0.82 + R() * 0.36), bowlR(th2) - 8);
+                    th2 = (R() - 0.5) * 1.4; d2 = Math.min(Math.max(dist * (0.82 + R() * 0.36), type === '3B' ? 80 : type === '2B' ? 64 : 0), bowlR(th2) - 8);      // extra-base hits land deep, never a shallow bloop
                 }
                 const sl = catchSlack(mk(th2, d2)), score = hit ? -sl.slack : sl.slack;
                 const good = hit ? sl.slack < (kind === 'fly' ? -3.5 : -1.5) : (sl.slack > 0.8 && (!nice || sl.slack < 3.5 || tries > 45));

@@ -293,7 +293,7 @@
         </div>
     </div>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-    <script src="stadium3d.js?v=20261024x"></script>
+    <script src="stadium3d.js?v=20261024y"></script>
     <script src="https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.js"></script>
     <script>
@@ -1538,6 +1538,21 @@
         function batTeamInfo() { return TEAMS[G.half === 0 ? G.awayIdx : G.homeIdx]; }
         function pitTeamInfo() { return TEAMS[G.half === 0 ? G.homeIdx : G.awayIdx]; }
         function getBatter() { return batTeamInfo().roster.batters[G.lineups[G.half][G.batOrder[G.half]]]; }
+        // ── 實況-style ability values, estimated from each batter's season line ──
+        // 彈道 (1-4) from isolated power / homers, 選球 from OBP minus AVG; 肩力 and 守備 have no stat in the data, so they come from the position's demands plus speed / power
+        const POS_ARM = { C: 74, RF: 76, CF: 70, LF: 60, '3B': 72, SS: 70, '2B': 56, '1B': 46, DH: 40, TWP: 80 };
+        const POS_DEF = { C: 66, CF: 76, SS: 74, '2B': 68, '3B': 66, RF: 66, LF: 58, '1B': 55, DH: 40, TWP: 62 };
+        function ratingsOf(b) {
+            if (b._r) return b._r;
+            const avg = parseFloat(b.avg) || 0.24, obp = b.obp || avg + 0.065, slg = b.slg || avg + 0.15, iso = slg - avg, pos = b.pos;
+            const traj = iso >= 0.24 || b.hr >= 35 ? 4 : iso >= 0.17 ? 3 : iso >= 0.11 ? 2 : 1;
+            const eye = clamp(Math.round(50 + (obp - avg - 0.07) * 900), 25, 99);
+            const arm = clamp(Math.round((POS_ARM[pos] || 55) + (b.pow - 70) * 0.25), 30, 99);
+            const def = clamp(Math.round((POS_DEF[pos] || 55) + (b.spd - 60) * 0.3 - Math.max(0, iso - 0.2) * 40), 30, 99);
+            return (b._r = { traj, con: b.con, pow: b.pow, spd: b.spd, eye, arm, def });
+        }
+        function gradeOf(v) { return v >= 90 ? 'S' : v >= 80 ? 'A' : v >= 70 ? 'B' : v >= 60 ? 'C' : v >= 50 ? 'D' : v >= 40 ? 'E' : 'F'; }
+        function fieldDef() { const sd = G.half === 0 ? 1 : 0, bs = pitTeamInfo().roster.batters; let t = 0; for (let i = 0; i < 9; i++) t += ratingsOf(bs[G.lineups[sd][i]]).def; return t / 9; }
         function getPitcher() { return pitTeamInfo().roster.pitchers[G.pitchers[G.half === 0 ? 1 : 0]]; }
 
         function getSubMenuLayout() {
@@ -1673,7 +1688,7 @@
                 const aiSwingMult = [0.45, 1.0, 1.45][G.difficulty];
                 const aiErrMult = [2.2, 1.0, 0.45][G.difficulty];
                 const far = Math.max(Math.abs(G._actualAimX), Math.abs(G._actualAimY)), prot = G.strikes >= 2 ? 1.6 : 1;      // hitters chase pitches near the zone, more so with two strikes
-                const chase = (far < 1.35 ? 0.34 : far < 1.8 ? 0.20 : 0.07) * prot * (1.35 - batter.con / 150);
+                const chase = (far < 1.35 ? 0.34 : far < 1.8 ? 0.20 : 0.07) * prot * (1.35 - (batter.con * 0.4 + ratingsOf(batter).eye * 0.6) / 150);
                 G.aiSwing = Math.random() < (inZone ? Math.min(0.95, (0.50 + batter.con / 200) * aiSwingMult + (G.strikes >= 2 ? 0.12 : 0)) : Math.min(0.7, chase * aiSwingMult));
                 const sacSit = G.outs < 2 && (G.runners[0] || G.runners[1]) && !G.runners[2] && G.strikes < 2 && Math.abs(G.score[0] - G.score[1]) <= 2;
                 G.bunt = false;
@@ -1759,8 +1774,9 @@
 
             // What kind of ball is it? (drives the 3D flight, the on-screen label, sacrifice flies and double plays)
             { const r = Math.random(); let kind = 'fly';
-              if (type === 'OUT') kind = r < 0.40 ? 'ground' : r < 0.73 ? 'fly' : r < 0.85 ? 'pop' : 'line';
-              else if (type === '1B') kind = r < 0.45 ? 'ground' : r < 0.80 ? 'line' : 'fly';
+              const tj = ratingsOf(batter).traj, gnd = g0 => clamp(g0 + (2.5 - tj) * 0.08, 0.12, 0.7), up = g => (r - g) / (1 - g);      // 彈道: a high-trajectory hitter hits fewer grounders
+              if (type === 'OUT') { const g = gnd(0.40), u = up(g); kind = r < g ? 'ground' : u < 0.55 ? 'fly' : u < 0.75 ? 'pop' : 'line'; }
+              else if (type === '1B') { const g = gnd(0.45), u = up(g); kind = r < g ? 'ground' : u < 0.64 ? 'line' : 'fly'; }
               else if (type === '2B') kind = r < 0.55 ? 'line' : 'fly';
               else if (type === '3B') kind = r < 0.35 ? 'line' : 'fly';
               G.hitKind = kind;
@@ -1900,7 +1916,7 @@
             let text = '', sub = '', col = '#fff', endHalf = false;
             const slotIdx = G.batOrder[bat];
             const st = G.batStats[bat][slotIdx];
-            if (type === 'OUT' && !G.nicePlay && G.hitKind !== 'pop' && Math.random() < 0.05 + 0.015 * dfPenalty(G.half === 0 ? 1 : 0)) type = 'ROE';       // fielding error: the batter reaches
+            if (type === 'OUT' && !G.nicePlay && G.hitKind !== 'pop' && Math.random() < Math.max(0.02, 0.05 + 0.015 * dfPenalty(G.half === 0 ? 1 : 0) + (62 - fieldDef()) * 0.0012)) type = 'ROE';       // fielding error: the batter reaches
             if (type === 'HR' || type === '1B' || type === '2B' || type === '3B') G.pApp[1 - bat].hits++;
             addLoad(1 - bat, { HR: 5, '3B': 4, '2B': 3, '1B': 2, BB: 1.5, HBP: 1.5, ROE: 0 }[type] || 0);
             if (type === 'HR') {
@@ -2938,7 +2954,7 @@
             hudText('O', x0 + 160, y0 + 83, 13, '#9fb0cc'); hudDots(x0 + 178, y0 + 78, GV.outs, 2, '#ff5a44');
 
             // ── batter card (bottom-left) ──
-            const cx = 14, cy = H - 84, cw = 226, chh = 70;
+            const cx = 14, cy = H - 98, cw = 226, chh = 84;
             hudPanel(cx, cy, cw, chh, 12, hudTeamColor(batTeam));
             ctx.fillStyle = hudTeamColor(batTeam); ctx.beginPath(); ctx.arc(cx + 34, cy + 28, 16, 0, Math.PI * 2); ctx.fill();
             hudText(String(G.batOrder[G.half] + 1), cx + 34, cy + 34, 17, '#fff', 'center');
@@ -2952,6 +2968,10 @@
             ctx.fillStyle = 'rgba(255,255,255,0.1)'; drawRoundRect(ctx, bx2, byy, bw2, 6, 3); ctx.fill();
             const pg = ctx.createLinearGradient(bx2, 0, bx2 + bw2, 0); pg.addColorStop(0, '#2ee06a'); pg.addColorStop(0.65, '#d4f03a'); pg.addColorStop(1, '#ff5a2a');
             ctx.save(); drawRoundRect(ctx, bx2, byy, bw2, 6, 3); ctx.clip(); ctx.fillStyle = pg; ctx.fillRect(bx2, byy, bw2 * batter.pow / 100, 6); ctx.restore();
+            { const R = ratingsOf(batter), gc = v => v >= 80 ? '#ff9a3a' : v >= 70 ? '#ffd23a' : v >= 60 ? '#9ee86a' : '#9fb0cc';
+              [['彈', R.traj, '' + R.traj, R.traj * 25 + 5], ['巧', R.con], ['力', R.pow], ['走', R.spd], ['肩', R.arm], ['守', R.def]].forEach((e, i) => {
+                const x = cx + 14 + i * 33, v = e[1], t = e[2] || gradeOf(v);
+                hudText(e[0], x, cy + 76, 9, '#9fb0cc'); hudText(t, x + 11, cy + 77, 11, e[2] ? '#ffd23a' : gc(v)); }); }
             
 
             // ── pitcher card (top-right, under the exit button) ──
