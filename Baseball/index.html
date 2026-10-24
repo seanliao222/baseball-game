@@ -141,6 +141,14 @@
             bottom: calc(max(18px, env(safe-area-inset-bottom)) + 84px);
         }
 
+        #bunt-btn {
+            left: max(18px, env(safe-area-inset-left));
+            bottom: calc(max(18px, env(safe-area-inset-bottom)) + 168px);
+            width: 72px; height: 72px; font-size: 12px;
+            background: radial-gradient(circle at 40% 35%, #556, #223);
+            border: 2px solid rgba(180, 180, 255, 0.7);
+        }
+
         #mp-overlay {
             position: fixed;
             inset: 0;
@@ -243,6 +251,7 @@
     <div id="mobile-overlay">
         <button class="mbtn" id="sim-btn">⚡<br>自動</button>
         <button class="mbtn" id="steal-btn">🏃<br>盜壘</button>
+        <button class="mbtn" id="bunt-btn">🏏<br>觸擊</button>
         <button class="mbtn" id="swing-btn">⚾<br>打擊!</button>
         <button class="mbtn" id="change-btn">🔄<br>換人</button>
     </div>
@@ -284,7 +293,7 @@
         </div>
     </div>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-    <script src="stadium3d.js?v=20261024s"></script>
+    <script src="stadium3d.js?v=20261024t"></script>
     <script src="https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.js"></script>
     <script>
@@ -1504,6 +1513,7 @@
         }
         // ── pickoff throws (human pitcher, at most 3 per plate appearance; a 3rd failed attempt is a balk) ──
         const dfBtnRect = () => ({ x: W - 130, y: H - 96, w: 120, h: 38 });
+        const buntBtnRect = () => ({ x: W - 130, y: H - 150, w: 120, h: 38 });
         const PICK_MAX = 3, BASE_NAME = ['一壘', '二壘', '三壘'];
         function pickBtnRect(k) { const slots = [0, 1, 2].filter(b => G.runners[b]); const n = slots.indexOf(k); return { x: 14, y: H - 176 - n * 42, w: 150, h: 36 }; }
         function canPickoff() { return !MP.active && !playerBatting() && G.phase === PH.PITCH_SELECT && (G.pickoffs || 0) < PICK_MAX && G.runners.some(r => r); }
@@ -1582,7 +1592,7 @@
 
         function startAtBat(isContinue = false) {
             if (!isContinue) { G.balls = 0; G.strikes = 0; G.pickoffs = 0; G.pitchLog = []; aiPitchingChange(); const ps = G.half === 0 ? 1 : 0; G.pApp[ps].bf++; }
-            G.ballActive = false; G.batSwingFrame = -999; G._pitchPending = false;
+            G.ballActive = false; G.batSwingFrame = -999; G._pitchPending = false; G.bunt = false;
             if (MP.active || !playerBatting()) {
                 G.phase = PH.PITCH_SELECT; G.pitchChoice = 0; G.aimX = 0; G.aimY = 0; G.gaugePos = 0; G.gaugeDir = 1;
             } else {
@@ -1663,6 +1673,9 @@
                 const aiSwingMult = [0.45, 1.0, 1.45][G.difficulty];
                 const aiErrMult = [2.2, 1.0, 0.45][G.difficulty];
                 G.aiSwing = Math.random() < (inZone ? (0.50 + batter.con / 200) * aiSwingMult : 0.12 * aiSwingMult);
+                const sacSit = G.outs < 2 && (G.runners[0] || G.runners[1]) && !G.runners[2] && G.strikes < 2 && Math.abs(G.score[0] - G.score[1]) <= 2;
+                G.bunt = false;
+                if (sacSit && Math.random() < clamp(0.22 - (batter.pow - 50) / 250, 0.04, 0.3)) { G.bunt = true; G.aiSwing = inZone && Math.random() < 0.9; }      // the computer sacrifices now and then
                 G.aiCX = G._actualAimX + rnd(-0.3, 0.3) * (100 - batter.con) / 30 * aiErrMult;
                 G.aiCY = G._actualAimY + rnd(-0.3, 0.3) * (100 - batter.con) / 30 * aiErrMult;
                 G.aiSwingFrame = G.ballFrame + G.ballDur + rndI(-8, 8);
@@ -1676,7 +1689,42 @@
 
         function ballProgress() { return clamp((G.frame - G.ballFrame) / G.ballDur, 0, 1); }
 
+        // ── bunting: the batter squares around and pushes the ball into the infield ──
+        function resolveBunt(phVal, cx, cy) {
+            G.bunt = false; SFX.crack();
+            const batter = getBatter(), _pt = getPitcher();
+            const timing = clamp(1 - Math.abs(phVal - 0.50) * 1.2, 0, 1);
+            const dist = Math.hypot(cx - G._actualAimX, cy - G._actualAimY), contact = clamp(1 - dist / (1.6 + batter.con / 100), 0, 1);
+            const qualAdj = playerBatting() ? [0.12, 0, -0.12][G.difficulty] : [-0.12, 0, 0.12][G.difficulty];
+            const q = clamp(timing * 0.6 + contact * 0.4 + qualAdj - (G.pitchGreat ? 0.1 : 0), 0, 1);
+            const spd = ((batter.spd || 60) - 60) / 400, r = Math.random();
+            let type;
+            if (q > 0.5) type = r < 0.10 + spd ? '1B' : r < 0.84 ? 'SAC' : 'OUT';
+            else if (q > 0.25) type = r < 0.05 + spd / 2 ? '1B' : r < 0.50 ? 'SAC' : r < 0.65 ? 'OUT' : 'FOUL';
+            else if (q > 0.1) type = r < 0.7 ? 'FOUL' : 'MISS';
+            else type = 'MISS';
+            G.hitKind = type === 'OUT' ? 'pop' : 'bunt'; G.outKind = type === 'OUT' ? 'air' : 'ground'; G.nicePlay = false; G.dpPlay = false;
+            if (type !== 'MISS') {
+                G.hitEffectFrame = G.frame; G.hitType = type === 'SAC' ? 'OUT' : type;
+                G.hitFlyDir = (Math.random() < 0.5 ? 1 : -1) * (type === 'FOUL' ? 1.5 + Math.random() * 0.7 : 0.15 + Math.random() * 0.8);
+            }
+            if (type === 'FOUL') {
+                SFX.strike();
+                if (G.strikes >= 2) { applyPlay('K'); return; }          // a foul bunt on two strikes is a strikeout
+                G.strikes++; G.resDelayNext = playDelay('FOUL'); showRes('觸擊界外', 'FOUL BALL', '#FFAA44', false); G._continueAtBat = true; return;
+            }
+            if (type === 'MISS') {
+                G.strikes++; SFX.strike();
+                if (G.strikes >= 3) applyPlay('K'); else { showRes('觸擊落空！', 'SWINGING STRIKE', '#FF8844', false); G._continueAtBat = true; }
+                return;
+            }
+            applyPlay(type);
+        }
+        function canBunt() { return !MP.active && playerBatting() && G.phase === PH.WAIT_PITCH; }
+        function toggleBunt() { if (canBunt()) G.bunt = !G.bunt; }
+
         function resolveSwing(phVal, cx, cy) {
+            if (G.bunt) return resolveBunt(phVal, cx, cy);
             G.batSwingFrame = G.frame;
             SFX.crack();
             const timingDist = Math.abs(phVal - 0.50);
@@ -1865,12 +1913,16 @@
                 G.hrRunFrame = G.frame;
                 G.phase = PH.HR_RUN;
                 return; // skip showRes – fired later when animation ends
+            } else if (type === 'SAC') {
+                const r = G.runners; G.outs++; SFX.out(); sub = 'OUT'; col = '#FF6644'; if (G.outs >= 3) endHalf = true;
+                text = (r[0] || r[1] || r[2]) ? '犧牲觸擊成功！' : '觸擊出局！';
+                if (G.outs < 3) { const runs = r[2] ? 1 : 0; G.runners = [false, r[0], r[1]]; if (runs) { G.score[bat] += runs; G.scoreFlash[bat] = 35; st.rbi += runs; text = '擠回一分！犧牲觸擊'; col = '#FFD24A'; } }
             } else if (type === '2B' || type === '1B') {
-                const { nr, runs } = advanceHit(G.runners, type);
+                const { nr, runs } = G.hitKind === 'bunt' ? { nr: [true, G.runners[0], G.runners[1]], runs: G.runners[2] ? 1 : 0 } : advanceHit(G.runners, type);
                 G.score[bat] += runs; if (runs > 0) G.scoreFlash[bat] = 35;
                 G.runners = nr; col = '#44FF88'; SFX.crack();
                 if (type === '2B') { text = runs > 0 ? `二壘安打！${runs} 分` : '二壘安打！'; sub = '2 BASE HIT'; }
-                else { text = runs > 0 ? `安打！${runs} 分` : '安打！'; sub = 'HIT'; }
+                else { text = G.hitKind === 'bunt' ? (runs > 0 ? `觸擊安打！${runs} 分` : '觸擊安打！') : runs > 0 ? `安打！${runs} 分` : '安打！'; sub = 'HIT'; }
                 st.ab++; st.h++; st.rbi += runs;
             } else if (type === 'BB' || type === 'HBP' || type === 'ROE') {
                 const rbi = (G.runners[0] && G.runners[1] && G.runners[2]) ? 1 : 0;
@@ -1913,7 +1965,7 @@
             }
             addLoad(1 - bat, 2.5 * Math.max(0, G.score[bat] - pre.score[bat]));       // every run allowed wears the pitcher down
             if (type !== 'BB' && type !== 'HBP' && !G._continueAtBat) G.batOrder[G.half] = (G.batOrder[G.half] + 1) % 9;
-            if (type === 'OUT' || type === 'ROE' || type === '1B' || type === '2B') { G.resDelayNext = playDelay(type === 'ROE' ? 'OUT' : type); G.hudHold = Object.assign(pre, { until: G.frame + G.resDelayNext }); }
+            if (type === 'OUT' || type === 'SAC' || type === 'ROE' || type === '1B' || type === '2B') { G.resDelayNext = playDelay(type === 'ROE' || type === 'SAC' ? 'OUT' : type); G.hudHold = Object.assign(pre, { until: G.frame + G.resDelayNext }); }
             showRes(text, sub, col, endHalf);
         }
 
@@ -1937,6 +1989,7 @@
         function playDelay(type) {
             const k = G.hitKind, nice = G.nicePlay ? 26 : 0;
             if (type === 'FOUL') return 30;
+            if (k === 'bunt') return 72;
             if (type === 'OUT') {
                 if (k === 'ground') return (G.dpPlay ? 74 : 50) + nice;
                 return ({ fly: 112, pop: 92, line: 84 }[k] || 84) + nice;
@@ -2210,9 +2263,11 @@
                     }
                     G.readyPulse = (G.readyPulse + 0.08) % (Math.PI * 2);
                     if (playerBatting() && J('KeyS') && canSteal()) { attemptSteal(); break; }
+                    if (J('KeyB')) toggleBunt();
                     if (playerBatting() && isMouseJustPressed) {
                         const bbx = W - 130, bby = H - 50;
                         if (mouseX >= bbx && mouseX <= bbx + 120 && mouseY >= bby && mouseY <= bby + 38) { G.subType = 'B'; G.prevPhase = G.phase; G.phase = PH.SUB_MENU; break; }
+                        if (inR(buntBtnRect())) { toggleBunt(); break; }
                         const stx = W - 130, sty = H - 100;
                         if (canSteal() && mouseX >= stx && mouseX <= stx + 120 && mouseY >= sty && mouseY <= sty + 38) { attemptSteal(); break; }
                     }
@@ -2726,7 +2781,7 @@
         function stage3DInfo() {
             const aw = TEAMS[G.awayIdx], hw = TEAMS[G.homeIdx];
             return {
-                PH, batTeam: batTeamInfo(), pitTeam: pitTeamInfo(), batter: getBatter(), pitcher: getPitcher(), batSide: batSideOf(getBatter(), getPitcher()),
+                PH, batTeam: batTeamInfo(), pitTeam: pitTeamInfo(), batter: getBatter(), pitcher: getPitcher(), batSide: batSideOf(getBatter(), getPitcher()), bunt: !!G.bunt && G.batSwingFrame < 0 && G.hitEffectFrame < 0,
                 humanPitching: MP.active || !playerBatting(), humanBatting: MP.active || playerBatting(),
                 pitchView: uiPitching(),                 // single player: you pitch -> view from behind the mound
                 ballProgress: G.ballActive ? ballProgress() : 0, ballR: BALL_R,
@@ -3822,6 +3877,7 @@
 
             if (G.phase === PH.WAIT_PITCH && playerBatting()) {
                 const bbx = W - 130, bby = H - 50; const bHover = mouseX >= bbx && mouseX <= bbx + 120 && mouseY >= bby && mouseY <= bby + 38; drawGlossyPill(bbx, bby, 120, 38, bHover, '🔄 換代打', '#004422', '#007733', bHover ? '#FFD700' : '#FFF');
+                if (canBunt() || (!MP.active && playerBatting() && G.bunt)) { const br = buntBtnRect(), on = !!G.bunt; drawGlossyPill(br.x, br.y, br.w, br.h, inR(br), on ? '✓ 觸擊中 (B)' : '🏏 觸擊 (B)', on ? '#116622' : '#444455', on ? '#22aa44' : '#6a6a88', inR(br) ? '#FFD700' : '#FFF'); }
                 if (canSteal()) { const stx = W - 130, sty = H - 100; const stHover = mouseX >= stx && mouseX <= stx + 120 && mouseY >= sty && mouseY <= sty + 38; drawGlossyPill(stx, sty, 120, 38, stHover, '🏃 盜壘', '#883300', '#CC5500', stHover ? '#FFD700' : '#FFF'); }
                 if (mouseY >= H - 80) txt('－ 投球暫停中 (思考戰術) －', W / 2, H - 20, 16, '#00FFFF', 'center', '', false);
             }
@@ -4267,7 +4323,8 @@
                 update(); render();
                 if (MP.active && MP.isHost) mpBroadcastState();
             }
-            const btnS = document.getElementById('swing-btn'); const btnC = document.getElementById('change-btn'); const btnA = document.getElementById('sim-btn'); const btnSt = document.getElementById('steal-btn');
+            const btnS = document.getElementById('swing-btn'); const btnC = document.getElementById('change-btn'); const btnA = document.getElementById('sim-btn'); const btnSt = document.getElementById('steal-btn'); const btnBu = document.getElementById('bunt-btn');
+            if (!(isMobile && G.scr === SCR.GAME && playerBatting() && !(MP.active && !MP.isHost))) btnBu.classList.remove('show');
             if (MP.active && !MP.isHost) {
                 // guest on a phone: a swing button while it is their turn to bat (aim by dragging, then press swing)
                 if (isMobile && G.scr === SCR.GAME && mpRemoteTurn() && G.phase === PH.BATTING) btnS.classList.add('show'); else btnS.classList.remove('show');
@@ -4276,6 +4333,7 @@
                 if (playerBatting() && (G.phase === PH.WAIT_PITCH || G.phase === PH.BATTING)) {
                     btnS.classList.add('show'); btnC.classList.add('show'); btnA.classList.remove('show');
                     if (canSteal()) btnSt.classList.add('show'); else btnSt.classList.remove('show');
+                    if (canBunt()) btnBu.classList.add('show'); else btnBu.classList.remove('show');
                 } else if (!playerBatting() && G.phase === PH.PITCH_SELECT) {
                     btnS.classList.remove('show'); btnC.classList.add('show'); btnA.classList.add('show'); btnSt.classList.remove('show');
                 } else { btnS.classList.remove('show'); btnC.classList.remove('show'); btnA.classList.remove('show'); btnSt.classList.remove('show'); }
@@ -4319,6 +4377,7 @@
             if (!playerBatting() && G.phase === PH.PITCH_SELECT) { G.subType = 'P'; G.prevPhase = G.phase; G.phase = PH.SUB_MENU; }
             else if (playerBatting() && G.phase === PH.WAIT_PITCH) { G.subType = 'B'; G.prevPhase = G.phase; G.phase = PH.SUB_MENU; }
         });
+        document.getElementById('bunt-btn').addEventListener('touchstart', e => { e.preventDefault(); toggleBunt(); }, { passive: false });
         document.getElementById('steal-btn').addEventListener('touchstart', e => {
             e.preventDefault(); attemptSteal();
         }, { passive: false });

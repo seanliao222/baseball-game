@@ -553,22 +553,11 @@ const Stadium3D = (function () {
         part(geo.neck, m.skin, torso, false);
         const head = new THREE.Group(); head.position.set(0, 0.74, 0.01); torso.add(head);
         const skull = part(geo.head, m.skin, head); skull.scale.set(0.95, 1.1, 1.02);
+        blob(m.skin, head, 0.026, 0.03, 0.03, 0, -0.012, 0.108);              // nose
         blob(m.skin, head, 0.022, 0.034, 0.02, 0.104, -0.005, 0); blob(m.skin, head, 0.022, 0.034, 0.02, -0.104, -0.005, 0); // ears
         blob(m.skin, head, 0.055, 0.04, 0.05, 0, -0.085, 0.05);               // jaw
-        // パワプロ-style face: two big white eye panels with blue irises, determined slanted brows, no nose
-        if (!geo.eyeMat) {
-            const c = canvasOf(64, 80), g = c.getContext('2d');
-            g.fillStyle = '#ffffff'; g.beginPath(); g.roundRect ? g.roundRect(2, 2, 60, 76, 22) : g.rect(2, 2, 60, 76); g.fill();
-            g.fillStyle = '#2f4fd0'; g.beginPath(); g.ellipse(32, 46, 13, 24, 0, 0, Math.PI * 2); g.fill();
-            g.fillStyle = '#10163a'; g.beginPath(); g.ellipse(32, 48, 7, 14, 0, 0, Math.PI * 2); g.fill();
-            g.fillStyle = '#ffffff'; g.beginPath(); g.arc(27, 34, 4.5, 0, Math.PI * 2); g.fill();
-            geo.eyeMat = new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(c), transparent: true });
-            geo.eyeGeo = new THREE.PlaneGeometry(0.066, 0.082);
-        }
-        [-1, 1].forEach(sx => {
-            const e = new THREE.Mesh(geo.eyeGeo, geo.eyeMat); e.position.set(sx * 0.048, -0.004, 0.104); e.rotation.y = sx * 0.42; head.add(e);
-            const br = blob(m.dark, head, 0.034, 0.007, 0.012, sx * 0.05, 0.05, 0.102); br.rotation.z = sx * 0.3; br.rotation.y = sx * 0.4;   // inner ends lower
-        });
+        [-0.04, 0.04].forEach(x => blob(m.dark, head, 0.013, 0.013, 0.013, x, 0.018, 0.1));   // eyes
+        [-0.04, 0.04].forEach(x => { const br = blob(m.dark, head, 0.026, 0.005, 0.01, x, 0.045, 0.098); br.rotation.z = x > 0 ? -0.15 : 0.15; }); // brows
         blob(m.hair, head, 0.094, 0.07, 0.08, 0, 0.0, -0.04);                // hair under the cap
         // cap / helmet
         const capG = new THREE.Group(); head.add(capG);
@@ -1084,10 +1073,13 @@ const Stadium3D = (function () {
             if (G.hitKind === 'line') { kind = 'line'; dist = 70 + R() * 14; apex = 7 + R() * 3; dur = 52; roll = 36; rollDist = 18; }
             else { kind = 'fly'; dist = 78 + R() * 12; apex = 22; dur = 76; roll = 36; rollDist = 18; }
         }
-        else if (type === '1B') {
+        else if (type === '1B' && G.hitKind !== 'bunt') {
             if (G.hitKind === 'ground') { kind = 'grounder'; dist = 42; apex = 0.9; dur = 52; roll = 30; rollDist = 18; }
             else if (G.hitKind === 'line') { kind = 'line'; dist = 38 + R() * 12; apex = 3.5; dur = 34; roll = 28; rollDist = 14; }
             else { kind = 'fly'; dist = 36 + R() * 14; apex = 9; dur = 40; roll = 28; rollDist = 14; }
+        } else if (G.hitKind === 'bunt') {                // a bunt dribbles into the infield grass
+            th = clamp(G.hitFlyDir * 0.55, -0.55, 0.55); dir.set(Math.sin(th), 0, -Math.cos(th));
+            kind = 'grounder'; dist = 9 + R() * 5; apex = 0.3; dur = 24; roll = type === '1B' ? 16 : 0; rollDist = type === '1B' ? 5 : 0;
         } else { // OUT
             if (G.hitKind === 'ground') { kind = 'grounder'; dist = 26 + R() * 8; apex = 0.7; dur = 30; }
             else if (G.hitKind === 'pop') { kind = 'fly'; dist = 13 + R() * 6; apex = 26; dur = 68; }
@@ -1095,7 +1087,7 @@ const Stadium3D = (function () {
             else { kind = 'fly'; dist = 55 + R() * 28; apex = 30; dur = 84; }
         }
         let pickWho = null;
-        if (type !== 'FOUL' && type !== 'HR') {
+        if (type !== 'FOUL' && type !== 'HR' && G.hitKind !== 'bunt') {
             // fielding range: an out is hit where a fielder can get to it in time, a base hit drops where nobody can
             const fs = actors.fielders, hit = type !== 'OUT', nice = !!G.nicePlay && !hit;
             const mk = (th2, d2) => { const dr = new THREE.Vector3(Math.sin(th2), 0, -Math.cos(th2)); const e = start.clone().addScaledVector(dr, d2); e.y = 0; return { t0: 0, kind, start, dir: dr, dist: d2, apex, dur, roll, rollDist, end: e }; };
@@ -1127,9 +1119,10 @@ const Stadium3D = (function () {
         let best = null, bd = 1e9;
         actors.fielders.forEach(f => { const d = Math.hypot(f.cur.x - rest.x, f.cur.z - rest.z); if (d < bd) { bd = d; best = f; } });
         if (pickWho) best = pickWho;
+        if (G.hitKind === 'bunt' && type !== 'FOUL') best = actors.fielders.find(f => f.pos === (end.x > 3 ? '1B' : '3B')) || best;      // the corner men charge
         if (type !== 'HR' && type !== 'FOUL') {
             fl.fielder = best; fl.rest = rest;
-            if (fl.catch) best.chase = { tx: end.x, tz: end.z, t0: G.frame, arrive: G.frame + dur - 2 };
+            if (fl.catch) best.chase = { tx: end.x, tz: end.z, t0: G.frame, arrive: G.frame + (G.hitKind === 'bunt' ? dur + 2 : dur - 2) };
             else {                                             // a base hit: he reaches it while it is still rolling
                 fl.pickT = dur + Math.round(roll * 0.55); flightPos(fl, G.frame + fl.pickT, _fp);
                 best.chase = { tx: _fp.x, tz: _fp.z, t0: G.frame, arrive: G.frame + fl.pickT };
@@ -1150,7 +1143,7 @@ const Stadium3D = (function () {
     // ── ground-out / double-play throws ──────────────────
     const BAG = [0, 1, 2, 3].map(i => ({ x: BASES[i][0], z: BASES[i][1] }));
     function setupLegs(fl, f, G) {
-        const one = actors.fielders.find(p => p.pos === '1B'), g0 = fl.dur + 5 + (fl.hold || 0);   // leg times are relative to the hit
+        let one = actors.fielders.find(p => p.pos === '1B'); const g0 = fl.dur + 5 + (fl.hold || 0);   // leg times are relative to the hit
         fl.legs = [];
         if (fl.dp) {
             const cover = actors.fielders.find(p => p.pos === (f.pos === 'SS' ? '2B' : 'SS'));
@@ -1161,7 +1154,8 @@ const Stadium3D = (function () {
                 one.chase = { tx: BAG[1].x - 0.3, tz: BAG[1].z + 0.6, t0: fl.t0, arrive: fl.t0 + fl.dur + 24 };
                 fl.cover = cover; fl.one = one;
             }
-        } else if (one && one !== f) {
+        } else if (one && (one !== f || actors.fielders.find(p => p.pos === '2B'))) {
+            if (one === f) one = actors.fielders.find(p => p.pos === '2B');
             fl.legs.push({ from: f, to: one, at: { x: BAG[1].x - 0.3, z: BAG[1].z + 0.6 }, t0: g0, d: 16 });
             one.chase = { tx: BAG[1].x - 0.3, tz: BAG[1].z + 0.6, t0: fl.t0, arrive: fl.t0 + fl.dur + 12 };
             fl.one = one;
@@ -1372,12 +1366,14 @@ const Stadium3D = (function () {
         if (G.batSwingFrame >= 0 && G.frame - G.batSwingFrame < 60) s = (G.frame - G.batSwingFrame) / 20 + 0.28;
         else if (!info.humanBatting && G.aiSwing && G.frame >= G.aiSwingFrame - 8 && G.ballActive) s = (G.frame - (G.aiSwingFrame - 8)) / 20 + 0.28;
         s = s >= 0 ? Math.min(s, 1.4) : -1;
+        if (info.bunt) s = -1;
         // right-handed reference pose: front (pitcher-side) leg = left leg
         const stance = { crouch: 0.14, torsoX: 0.22, torsoY: 0.08, hipsY: 0.12, hipL: 0.42, hipR: 0.38, kneeL: 0.78, kneeR: 0.85, spreadL: 0.34, spreadR: 0.34, headY: 1.2, headX: 0.08 };
         let P, hold = { rx: -0.05, rz: 0.55, ry: 0.0, px: -0.1, py: 0.4, pz: 0.12 };
         const wob = Math.sin(G.frame * 0.09) * 0.03;
         if (s < 0) {
             P = Object.assign({}, stance); P.torsoZ = wob; hold.rz += wob;
+            if (info.bunt) { P.torsoY = 1.0; P.hipsY = 0.85; P.headY = -1.0; P.torsoX = 0.3; P.torsoZ = 0; hold = { rx: -0.2, rz: -1.5, ry: 0.0, px: 0.0, py: 0.62, pz: 0.45 }; }       // squared around, bat held level in front
         } else {
             const T = clamp(s, 0, 1), e = ease(clamp(T / 0.9, 0, 1));
             P = Object.assign({}, stance);
