@@ -1041,6 +1041,22 @@ const Stadium3D = (function () {
         if (show && info.ballProgress >= 1) { ball.position.z = 0.22; }
     }
 
+    // ── fielding range ───────────────────────────────────
+    // how far (m) a fielder can be from a spot t frames after contact: a reaction delay, then a sprint
+    const _fp = new THREE.Vector3();
+    function fieldReach(kind, t) { return 1.6 + 0.24 * Math.max(0, t - (kind === 'fly' ? 8 : kind === 'line' ? 10 : 12)); }
+    // best chance any fielder has at a provisional batted ball c (t0 = 0): slack > 0 → someone gets there in time
+    function catchSlack(c) {
+        let best = -1e9, who = null;
+        for (let t = 6; t <= c.dur + 1; t += 2) {
+            flightPos(c, Math.min(t, c.dur), _fp);
+            if (_fp.y > 2.8) continue;                          // above a fielder's glove
+            const r = fieldReach(c.kind, t);
+            for (const f of actors.fielders) { const s = r - Math.hypot(f.cur.x - _fp.x, f.cur.z - _fp.z); if (s > best) { best = s; who = f; } }
+        }
+        return { slack: best, fielder: who };
+    }
+
     // ── batted ball ──────────────────────────────────────
     function startFlight(G, info) {
         const type = G.hitType; if (!type) return;
@@ -1067,39 +1083,50 @@ const Stadium3D = (function () {
             else if (G.hitKind === 'line') { kind = 'line'; dist = 28 + R() * 40; apex = 3 + R() * 3; dur = Math.round(30 + dist / 3); }
             else { kind = 'fly'; dist = 55 + R() * 28; apex = 30; dur = 84; }
         }
+        let pickWho = null;
         if (type !== 'FOUL' && type !== 'HR') {
-            // fielding range: an out is hit within reach of a fielder, a base hit drops where nobody can get to it
-            const fs = actors.fielders, hm = f => ({ x: f.base0 ? f.base0.x : f.home.x, z: f.base0 ? f.base0.z : f.home.z });
-            const reach = (kind === 'grounder' ? 9 : kind === 'line' ? 10 : 13);
-            let tries = 0, ok = false, d2 = dist, th2 = th;
-            while (!ok && tries++ < 24) {
-                if (type === 'OUT') {
-                    const pool = fs.filter(f => kind === 'grounder' ? !/^(LF|CF|RF)$/.test(f.pos) : (G.hitKind === 'pop' ? !/^(LF|CF|RF)$/.test(f.pos) : (G.hitKind === 'fly' || G.hitKind === 'line') ? true : true));
-                    const f = pool[Math.floor(R() * pool.length)], h = hm(f), a = (R() - 0.5) * 2 * reach * 0.6, b = (R() - 0.5) * 2 * reach * 0.6;
-                    const x = h.x + a, z = h.z + b; d2 = Math.hypot(x, z); th2 = Math.atan2(x, -z);
-                    ok = Math.abs(th2) < 0.7 && (kind !== 'grounder' || d2 > 14) && d2 > 10;
+            // fielding range: an out is hit where a fielder can get to it in time, a base hit drops where nobody can
+            const fs = actors.fielders, hit = type !== 'OUT', nice = !!G.nicePlay && !hit;
+            const mk = (th2, d2) => { const dr = new THREE.Vector3(Math.sin(th2), 0, -Math.cos(th2)); const e = start.clone().addScaledVector(dr, d2); e.y = 0; return { t0: 0, kind, start, dir: dr, dist: d2, apex, dur, roll, rollDist, end: e }; };
+            let pick = null, best = null;
+            for (let tries = 0; tries < 90 && !pick; tries++) {
+                let th2, d2;
+                if (!hit) {
+                    const pool = fs.filter(f => (kind === 'grounder' || G.hitKind === 'pop') ? !/^(LF|CF|RF)$/.test(f.pos) : true);
+                    const f = pool[Math.floor(R() * pool.length)], rr = fieldReach(kind, dur) * 0.75;
+                    const x = f.cur.x + (R() - 0.5) * 2 * rr, z = f.cur.z + (R() - 0.5) * 2 * rr;
+                    d2 = Math.hypot(x, z); th2 = Math.atan2(x, -z);
+                    if (!(Math.abs(th2) < 0.7 && (kind !== 'grounder' || d2 > 14) && d2 > 10)) continue;
                 } else {
-                    th2 = (R() - 0.5) * 1.3; d2 = dist * (0.9 + R() * 0.2);
-                    const x = Math.sin(th2) * d2, z = -Math.cos(th2) * d2;
-                    ok = fs.every(f => { const h = hm(f); return Math.hypot(h.x - x, h.z - z) > reach * (kind === 'fly' ? 0.8 : 1); });
+                    th2 = (R() - 0.5) * 1.4; d2 = Math.min(dist * (0.82 + R() * 0.36), bowlR(th2) - 8);
                 }
+                const sl = catchSlack(mk(th2, d2)), score = hit ? -sl.slack : sl.slack;
+                const good = hit ? sl.slack < (kind === 'fly' ? -3.5 : -1.5) : (sl.slack > 0.8 && (!nice || sl.slack < 3.5 || tries > 45));
+                const cand = { th2, d2, who: sl.fielder, score };
+                if (good) pick = cand; else if (!best || score > best.score) best = cand;
             }
-            if (ok) { th = th2; dist = d2; dir.set(Math.sin(th), 0, -Math.cos(th)); }
+            const ch = pick || best;
+            if (ch) { th = ch.th2; dist = ch.d2; dir.set(Math.sin(th), 0, -Math.cos(th)); if (!hit) pickWho = ch.who; }
         }
         const end = start.clone().addScaledVector(dir, dist); end.y = 0;
         const landing = end.clone();
         const fl = { t0: G.frame, type, kind, start, dir, dist, apex, dur, roll, rollDist, end, landing, catch: type === 'OUT', fielder: null, arrive: 0, spin: rnd(0.3, 0.9) };
-        // choose a fielder (nearest, for the ball's resting point)
+        // the fielder who plays it: the one with the best chance on an out, else whoever is nearest to where it stops
         const rest = roll ? end.clone().addScaledVector(dir, rollDist) : end;
         let best = null, bd = 1e9;
-        actors.fielders.forEach(f => { const d = Math.hypot(f.home.x - rest.x, f.home.z - rest.z); if (d < bd) { bd = d; best = f; } });
+        actors.fielders.forEach(f => { const d = Math.hypot(f.cur.x - rest.x, f.cur.z - rest.z); if (d < bd) { bd = d; best = f; } });
+        if (pickWho) best = pickWho;
         if (type !== 'HR' && type !== 'FOUL') {
             fl.fielder = best; fl.rest = rest;
-            const tx = fl.catch ? end.x : rest.x, tz = fl.catch ? end.z : rest.z;
-            best.chase = { tx, tz, t0: G.frame, arrive: G.frame + (fl.catch ? dur - 2 : dur + roll + 6) };
+            if (fl.catch) best.chase = { tx: end.x, tz: end.z, t0: G.frame, arrive: G.frame + dur - 2 };
+            else {                                             // a base hit: he reaches it while it is still rolling
+                fl.pickT = dur + Math.round(roll * 0.55); flightPos(fl, G.frame + fl.pickT, _fp);
+                best.chase = { tx: _fp.x, tz: _fp.z, t0: G.frame, arrive: G.frame + fl.pickT };
+            }
             fl.nice = !!G.nicePlay && type === 'OUT'; fl.dp = !!G.dpPlay && type === 'OUT';
             fl.hold = fl.nice && kind === 'grounder' ? 12 : 0;                          // a diving stop takes a moment to get up and throw
             if (type === 'OUT' && kind === 'grounder') setupLegs(fl, best, G);
+            else setupAirLegs(fl, best);
         }
         S.flight = fl;
         // contact flash + shake
@@ -1112,7 +1139,7 @@ const Stadium3D = (function () {
     // ── ground-out / double-play throws ──────────────────
     const BAG = [0, 1, 2, 3].map(i => ({ x: BASES[i][0], z: BASES[i][1] }));
     function setupLegs(fl, f, G) {
-        const one = actors.fielders.find(p => p.pos === '1B'), g0 = fl.t0 + fl.dur + 5 + (fl.hold || 0);
+        const one = actors.fielders.find(p => p.pos === '1B'), g0 = fl.dur + 5 + (fl.hold || 0);   // leg times are relative to the hit
         fl.legs = [];
         if (fl.dp) {
             const cover = actors.fielders.find(p => p.pos === (f.pos === 'SS' ? '2B' : 'SS'));
@@ -1136,6 +1163,23 @@ const Stadium3D = (function () {
         S.legCleanup = true;
     }
 
+    // after a catch or a fielded base hit: the ball goes to a base / a teammate
+    function setupAirLegs(fl, f) {
+        const F = k => actors.fielders.find(p => p.pos === k), isIn = p => !/^(LF|CF|RF)$/.test(p.pos), hit = !fl.catch;
+        const fx = f.chase.tx, fz = f.chase.tz;
+        let recv, at;
+        if (hit && fl.type === '1B' && isIn(f)) { recv = F('1B'); at = { x: BAG[1].x - 0.3, z: BAG[1].z + 0.6 }; }
+        else if (!hit && isIn(f)) {                              // caught in the infield: a toss to the nearest other infielder
+            recv = actors.fielders.filter(p => p !== f && isIn(p)).sort((a, b) => Math.hypot(a.cur.x - fx, a.cur.z - fz) - Math.hypot(b.cur.x - fx, b.cur.z - fz))[0];
+            if (recv) at = { x: recv.cur.x, z: recv.cur.z };
+        } else { recv = fx >= 0 ? F('2B') : F('SS'); at = { x: BAG[2].x - 0.5, z: BAG[2].z + 0.7 }; }     // outfielder: throw it in to second
+        if (!recv || recv === f) return;
+        const rel = (hit ? fl.pickT : fl.dur - 2) + 6, d = clamp(Math.round(Math.hypot(at.x - fx, at.z - fz) / 2.4), 9, 34);
+        fl.legs = [{ from: f, to: recv, at, t0: rel, d, h: clamp(d * 0.12, 1.2, 3.4) }];
+        recv.chase = { tx: at.x, tz: at.z, t0: fl.t0, arrive: fl.t0 + rel };
+        fl.holder = f;
+    }
+
     // thrower: wind-up then release toward (tx, tz); u in 0..1
     function throwPose(p, tx, tz, u) {
         faceToward(p, tx, tz);
@@ -1157,7 +1201,7 @@ const Stadium3D = (function () {
             if (u >= 1) { holder = leg.to; continue; }
             if (u >= 0) {
                 v2.set(leg.from.root.position.x, 1.5, leg.from.root.position.z); v3.set(leg.at.x, 1.25, leg.at.z);
-                pos = hitBall.position.copy(v2).lerp(v3, u); pos.y += Math.sin(u * Math.PI) * 1.2;   // a flat, quick throw
+                pos = hitBall.position.copy(v2).lerp(v3, u); pos.y += Math.sin(u * Math.PI) * (leg.h || 1.2);   // a flat, quick throw
             }
             break;
         }
@@ -1190,7 +1234,7 @@ const Stadium3D = (function () {
         hitBall.rotation.x += 0.4; hitBall.rotation.z += 0.2;
         hitBall.scale.setScalar(0.06 * clamp(hitBall.position.distanceTo(camera.position) / 11, 1, 4.5));      // keep it readable when the camera is far away
         // catch: ball sticks to the fielder's glove
-        if (fl.catch && t >= fl.dur - 1 && fl.fielder) {
+        if ((fl.catch ? t >= fl.dur - 1 : (fl.pickT !== undefined && t >= fl.pickT)) && fl.fielder) {
             const st = updateLegs(G, fl, t), f = (st && st.holder) || fl.fielder;
             if (st && st.pos) { /* ball already positioned mid-throw */ }
             else { f.gloveG.getWorldPosition(v1); hitBall.position.copy(v1); }
@@ -1687,6 +1731,23 @@ const Stadium3D = (function () {
             api.debug = { scene, camera, renderer, S, actors };
         } catch (e) { console.error('Stadium3D init failed', e); api.ok = false; }
         return api.ok;
+    };
+    // test hook: sample many batted balls and report how often the landing logic fails to honour hit / out
+    api._ball = () => ({ v: hitBall.visible, x: +hitBall.position.x.toFixed(1), y: +hitBall.position.y.toFixed(1), z: +hitBall.position.z.toFixed(1) });
+    api._probe = function (n) {
+        const out = {}; const keep = S.flight;
+        const cases = [['OUT', 'ground'], ['OUT', 'fly'], ['OUT', 'pop'], ['OUT', 'line'], ['1B', 'ground'], ['1B', 'line'], ['1B', 'fly'], ['2B', 'line'], ['2B', 'fly']];
+        for (const [type, hk] of cases) {
+            let bad = 0, sl = 0;
+            for (let i = 0; i < n; i++) {
+                startFlight({ hitType: type, hitKind: hk, hitFlyDir: (Math.random() < 0.5 ? 1 : -1) * (0.6 + Math.random() * 0.8), curX: 0, frame: 0, nicePlay: false, dpPlay: false }, {});
+                const fl = S.flight, c = { t0: 0, kind: fl.kind, start: fl.start, dir: fl.dir, dist: fl.dist, apex: fl.apex, dur: fl.dur, roll: fl.roll, rollDist: fl.rollDist, end: fl.end };
+                const r = catchSlack(c); sl += r.slack;
+                if (type === 'OUT' ? r.slack <= 0 : r.slack >= 0) bad++;
+            }
+            out[type + '/' + hk] = { bad, avgSlack: +(sl / n).toFixed(2) };
+        }
+        S.flight = keep; return out;
     };
     api.debugCam = function (pos, look, fov) { S.dbgCam = pos ? { pos: new THREE.Vector3(...pos), look: new THREE.Vector3(...look), fov: fov || 30, shift: 0 } : null; };
     api.pitchPoint = (G, t) => { const o = new THREE.Vector3(); pitchWorld(G, t, o); return [+o.x.toFixed(2), +o.y.toFixed(2), +o.z.toFixed(2)]; };

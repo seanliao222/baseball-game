@@ -284,7 +284,7 @@
         </div>
     </div>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-    <script src="stadium3d.js?v=20261024p"></script>
+    <script src="stadium3d.js?v=20261024q"></script>
     <script src="https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.js"></script>
     <script>
@@ -1871,10 +1871,10 @@
             if (type === 'FOUL') return 30;
             if (type === 'OUT') {
                 if (k === 'ground') return (G.dpPlay ? 74 : 50) + nice;
-                return ({ fly: 88, pop: 70, line: 60 }[k] || 60) + nice;
+                return ({ fly: 112, pop: 92, line: 84 }[k] || 84) + nice;
             }
-            if (type === '1B') return k === 'ground' ? 50 : k === 'line' ? 40 : 46;
-            if (type === '2B') return k === 'line' ? 52 : 70;
+            if (type === '1B') return k === 'ground' ? 96 : k === 'line' ? 84 : 90;
+            if (type === '2B') return k === 'line' ? 112 : 126;
             return 0;
         }
 
