@@ -293,7 +293,7 @@
         </div>
     </div>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-    <script src="stadium3d.js?v=20261024z"></script>
+    <script src="stadium3d.js?v=20261024A"></script>
     <script src="https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.js"></script>
     <script>
@@ -427,7 +427,7 @@
                     { name: '游竣宥', throws: 'L', vel: 87, ctrl: 58, stm: 60, era: '2.72', k: 14, pitches: [{ id: 0, lv: 3 }, { id: 2, lv: 5 }, { id: 8, lv: 3 }], num: 27 }
                 ],
                 batters: [
-                    { name: '江坤宇', bats: 'R', throws: 'R', pos: 'SS', avg: '.283', hr: 2, rbi: 40, con: 73, pow: 54, spd: 55, obp: 0.363, slg: 0.350, num: 90 },
+                    { name: '江坤宇', def: 93, arm: 80, bats: 'R', throws: 'R', pos: 'SS', avg: '.283', hr: 2, rbi: 40, con: 73, pow: 54, spd: 55, obp: 0.363, slg: 0.350, num: 90 },
                     { name: '張士綸', bats: 'L', throws: 'R', pos: 'SS', avg: '.327', hr: 2, rbi: 39, con: 89, pow: 54, spd: 76, obp: 0.388, slg: 0.392, num: 4 },
                     { name: '張仁瑋', bats: 'R', throws: 'R', pos: '2B', avg: '.300', hr: 4, rbi: 53, con: 79, pow: 57, spd: 76, obp: 0.340, slg: 0.380, num: 28 },
                     { name: '宋晟睿', bats: 'R', throws: 'R', pos: 'LF', avg: '.256', hr: 5, rbi: 34, con: 63, pow: 69, spd: 76, obp: 0.329, slg: 0.392, num: 88 },
@@ -617,7 +617,7 @@
                     { name: '張育成', bats: 'R', throws: 'R', pos: 'SS', avg: '.285', hr: 16, rbi: 48, con: 74, pow: 79, spd: 59, obp: 0.390, slg: 0.470, num: 99 },
                     { name: '宋晟睿', bats: 'R', throws: 'R', pos: 'LF', avg: '.256', hr: 5, rbi: 34, con: 63, pow: 69, spd: 76, obp: 0.329, slg: 0.392, num: 88 },
                     { name: '陳晨威', bats: 'L', throws: 'R', pos: 'CF', avg: '.304', hr: 6, rbi: 34, con: 81, pow: 64, spd: 89, obp: 0.361, slg: 0.416, num: 98 },
-                    { name: '江坤宇', bats: 'R', throws: 'R', pos: 'SS', avg: '.283', hr: 2, rbi: 40, con: 73, pow: 54, spd: 55, obp: 0.363, slg: 0.350, num: 90 },
+                    { name: '江坤宇', def: 93, arm: 80, bats: 'R', throws: 'R', pos: 'SS', avg: '.283', hr: 2, rbi: 40, con: 73, pow: 54, spd: 55, obp: 0.363, slg: 0.350, num: 90 },
                     { name: '張政禹', bats: 'L', throws: 'R', pos: 'SS', avg: '.284', hr: 1, rbi: 45, con: 73, pow: 52, spd: 92, obp: 0.356, slg: 0.339, num: 25 },
                     { name: '吳念庭', bats: 'L', throws: 'R', pos: '3B', avg: '.258', hr: 0, rbi: 45, con: 64, pow: 50, spd: 52, obp: 0.348, slg: 0.307, num: 39 },
                     { name: '林子偉', bats: 'L', throws: 'R', pos: '2B', avg: '.249', hr: 3, rbi: 25, con: 61, pow: 57, spd: 82, obp: 0.291, slg: 0.329, num: 15 },
@@ -1547,8 +1547,8 @@
             const avg = parseFloat(b.avg) || 0.24, obp = b.obp || avg + 0.065, slg = b.slg || avg + 0.15, iso = slg - avg, pos = b.pos;
             const traj = iso >= 0.24 || b.hr >= 35 ? 4 : iso >= 0.17 ? 3 : iso >= 0.11 ? 2 : 1;
             const eye = clamp(Math.round(50 + (obp - avg - 0.07) * 900), 25, 99);
-            const arm = clamp(Math.round((POS_ARM[pos] || 55) + (b.pow - 70) * 0.25), 30, 99);
-            const def = clamp(Math.round((POS_DEF[pos] || 55) + (b.spd - 60) * 0.3 - Math.max(0, iso - 0.2) * 40), 30, 99);
+            const arm = b.arm || clamp(Math.round((POS_ARM[pos] || 55) + (b.pow - 70) * 0.25), 30, 99);
+            const def = b.def || clamp(Math.round((POS_DEF[pos] || 55) + (b.spd - 60) * 0.3 - Math.max(0, iso - 0.2) * 40), 30, 99);      // a hand-set def / arm on the player (e.g. a multiple Golden Glove winner) overrides the estimate
             return (b._r = { traj, con: b.con, pow: b.pow, spd: b.spd, eye, arm, def });
         }
         function gradeOf(v) { return v >= 90 ? 'S' : v >= 80 ? 'A' : v >= 70 ? 'B' : v >= 60 ? 'C' : v >= 50 ? 'D' : v >= 40 ? 'E' : 'F'; }

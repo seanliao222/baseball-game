@@ -1107,8 +1107,9 @@ const Stadium3D = (function () {
                 } else {
                     th2 = (R() - 0.5) * 1.4; d2 = Math.min(Math.max(dist * (0.82 + R() * 0.36), type === '3B' ? 80 : type === '2B' ? 64 : 0), bowlR(th2) - 8);      // extra-base hits land deep, never a shallow bloop
                 }
+                // (a grounder only just beyond reach with a man on first would look like a double play, so it must clear by more)
                 const sl = catchSlack(mk(th2, d2)), score = hit ? -sl.slack : sl.slack;
-                const good = hit ? sl.slack < (kind === 'fly' ? -3.5 : -1.5) : (sl.slack > 0.8 && (!nice || sl.slack < 3.5 || tries > 45));
+                const good = hit ? sl.slack < (kind === 'fly' ? -3.5 : (kind === 'grounder' && G.runners && G.runners[0] && G.outs < 2) ? -4.5 : -1.5) : (sl.slack > 0.8 && (!nice || sl.slack < 3.5 || tries > 45));
                 const cand = { th2, d2, who: sl.fielder, score };
                 if (good) pick = cand; else if (!best || score > best.score) best = cand;
             }
@@ -1778,7 +1779,7 @@ const Stadium3D = (function () {
         for (const [type, hk] of cases) {
             let bad = 0, sl = 0, mx = 0, vs = 0, late = 0;
             for (let i = 0; i < n; i++) {
-                startFlight({ hitType: type, hitKind: hk, hitFlyDir: (Math.random() < 0.5 ? 1 : -1) * (0.6 + Math.random() * 0.8), curX: 0, frame: 0, nicePlay: false, dpPlay: false }, {});
+                startFlight({ hitType: type, hitKind: hk, hitFlyDir: (Math.random() < 0.5 ? 1 : -1) * (0.6 + Math.random() * 0.8), curX: 0, frame: 0, nicePlay: false, dpPlay: false, runners: [true, false, false], outs: 0 }, {});
                 const fl = S.flight, c = { t0: 0, kind: fl.kind, start: fl.start, dir: fl.dir, dist: fl.dist, apex: fl.apex, dur: fl.dur, roll: fl.roll, rollDist: fl.rollDist, end: fl.end };
                 const r = catchSlack(c); sl += r.slack;
                 { const f = fl.fielder; if (f && f.chase) { const cc = f.chase, v = Math.hypot(cc.tx - f.home.x, cc.tz - f.home.z) / Math.max(1, cc.arrive - cc.t0 - cc.react); mx = Math.max(mx, v); vs += v; if (fl.pickT !== undefined && fl.pickT > fl.dur + Math.round(fl.roll * 0.55)) late++; } }
