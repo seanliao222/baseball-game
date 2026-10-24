@@ -1069,6 +1069,10 @@ const Stadium3D = (function () {
             const sgn = Math.sign(G.hitFlyDir) || 1; th = sgn * (0.95 + R() * 0.35);
             dir.set(Math.sin(th), 0, -Math.cos(th)); kind = 'fly'; dist = 18 + R() * 26; apex = 10 + R() * 12; dur = 52;
         } else if (type === 'HR') { kind = 'fly'; dist = bowlR(th) + 18; apex = 38; dur = 112; }
+        else if (type === '3B') {                        // into the gap and to the wall
+            if (G.hitKind === 'line') { kind = 'line'; dist = 84 + R() * 12; apex = 8 + R() * 3; dur = 56; roll = 44; rollDist = 14; }
+            else { kind = 'fly'; dist = 90 + R() * 10; apex = 26; dur = 84; roll = 44; rollDist = 12; }
+        }
         else if (type === '2B') {
             if (G.hitKind === 'line') { kind = 'line'; dist = 70 + R() * 14; apex = 7 + R() * 3; dur = 52; roll = 36; rollDist = 18; }
             else { kind = 'fly'; dist = 78 + R() * 12; apex = 22; dur = 76; roll = 36; rollDist = 18; }
@@ -1182,6 +1186,15 @@ const Stadium3D = (function () {
         const rel = (hit ? fl.pickT : fl.dur - 2) + 6, d = clamp(Math.round(Math.hypot(at.x - fx, at.z - fz) / 2.4), 9, 34);
         fl.legs = [{ from: f, to: recv, at, t0: rel, d, h: clamp(d * 0.12, 1.2, 3.4) }];
         recv.chase = { tx: at.x, tz: at.z, t0: fl.t0, arrive: fl.t0 + rel };
+        if (hit && fl.type === '3B' && !isIn(f)) {              // a triple: relay man at the cutoff, then on to third
+            const third = F('3B'), cut = { x: fx * 0.45, z: fz * 0.45 + 4 }, d1 = clamp(Math.round(Math.hypot(cut.x - fx, cut.z - fz) / 2.4), 9, 34);
+            const relay = fx >= 0 ? F('2B') : F('SS');
+            if (third && relay && relay !== third) {
+                const at3 = { x: BAG[3].x + 0.5, z: BAG[3].z + 0.7 }, d2 = clamp(Math.round(Math.hypot(at3.x - cut.x, at3.z - cut.z) / 2.4), 9, 30);
+                fl.legs = [{ from: f, to: relay, at: cut, t0: rel, d: d1, h: clamp(d1 * 0.12, 1.2, 3.4) }, { from: relay, to: third, at: at3, t0: rel + d1 + 3, d: d2, h: 1.6 }];
+                relay.chase = { tx: cut.x, tz: cut.z, t0: fl.t0, arrive: fl.t0 + rel }; third.chase = { tx: at3.x, tz: at3.z, t0: fl.t0, arrive: fl.t0 + rel + d1 };
+            }
+        }
         fl.holder = f;
     }
 
@@ -1545,7 +1558,7 @@ const Stadium3D = (function () {
                 S.runnerObjs = newObjs;
                 // a base hit: run so as to beat the throw, not to stroll in after the ball is already at the bag
                 const hf = S.flight;
-                if (hf && (hf.type === '1B' || hf.type === '2B') && hf.legs && hf.legs.length) {
+                if (hf && (hf.type === '1B' || hf.type === '2B' || hf.type === '3B') && hf.legs && hf.legs.length) {
                     const lg = hf.legs[hf.legs.length - 1], target = Math.max(36, lg.t0 + lg.d - Math.max(0, G.frame - hf.t0) - 8);
                     pool.forEach(o => {
                         if (!o.root.visible || !o.path || !o.path.length || o.spd) return;
@@ -1618,7 +1631,7 @@ const Stadium3D = (function () {
             if (fl && G.frame - fl.t0 < fl.dur * 0.62) tgt = followCam(fl, G);
             else tgt = HRCAM;
         } else if (flying && G.phase === PH.RESULT) tgt = followCam(fl, G);
-        else if (G.phase === PH.RESULT && (G.resSub === 'HIT' || G.resSub === '2 BASE HIT' || G.resSub === 'OUT' || G.resSub === 'WALK')) tgt = flying ? followCam(fl, G) : (G.resSub === 'WALK' ? BAT_CAM : WIDE);
+        else if (G.phase === PH.RESULT && (G.resSub === 'HIT' || G.resSub === '2 BASE HIT' || G.resSub === '3 BASE HIT' || G.resSub === 'OUT' || G.resSub === 'WALK')) tgt = flying ? followCam(fl, G) : (G.resSub === 'WALK' ? BAT_CAM : WIDE);
         else if (G.phase === PH.STEAL) tgt = stealCam(G);
         else if (umpGestureCut(G, PH)) { UMP_CAM.pos.x = S.batLeft ? -4.2 : 4.2; UMP_CAM.look.x = S.batLeft ? 0.1 : -0.1; UMP_CAM.look.y = 2.7; tgt = UMP_CAM; }
         else if (G.phase === PH.INNING_START) tgt = WIDE;
@@ -1755,7 +1768,7 @@ const Stadium3D = (function () {
     api._ball = () => ({ v: hitBall.visible, x: +hitBall.position.x.toFixed(1), y: +hitBall.position.y.toFixed(1), z: +hitBall.position.z.toFixed(1) });
     api._probe = function (n) {
         const out = {}; const keep = S.flight;
-        const cases = [['OUT', 'ground'], ['OUT', 'fly'], ['OUT', 'pop'], ['OUT', 'line'], ['1B', 'ground'], ['1B', 'line'], ['1B', 'fly'], ['2B', 'line'], ['2B', 'fly']];
+        const cases = [['OUT', 'ground'], ['OUT', 'fly'], ['OUT', 'pop'], ['OUT', 'line'], ['1B', 'ground'], ['1B', 'line'], ['1B', 'fly'], ['2B', 'line'], ['2B', 'fly'], ['3B', 'line'], ['3B', 'fly']];
         for (const [type, hk] of cases) {
             let bad = 0, sl = 0;
             for (let i = 0; i < n; i++) {
@@ -1820,7 +1833,7 @@ const Stadium3D = (function () {
         setFlagTeam(info.homeTeam);
         drawScoreboard(info.hud || G, info);
         // batter hides once he becomes a runner
-        const hide = G.phase === info.PH.HR_RUN || (G.phase === info.PH.RESULT && ['OUT', 'HIT', '2 BASE HIT', 'WALK', 'HOMERUN'].includes(G.resSub));
+        const hide = G.phase === info.PH.HR_RUN || (G.phase === info.PH.RESULT && ['OUT', 'HIT', '2 BASE HIT', '3 BASE HIT', 'WALK', 'HOMERUN'].includes(G.resSub));
         actors.batterWrap.visible = !hide;
         if (G.phase === info.PH.INNING_START || (!G.ballActive && G.phase !== info.PH.RESULT)) { S.flight = null; }
         updateFlight(G, info, dt);

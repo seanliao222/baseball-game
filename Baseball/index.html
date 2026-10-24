@@ -293,7 +293,7 @@
         </div>
     </div>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-    <script src="stadium3d.js?v=20261024v"></script>
+    <script src="stadium3d.js?v=20261024w"></script>
     <script src="https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.js"></script>
     <script>
@@ -1739,7 +1739,9 @@
             let type;
             if (quality > 0.78) {
                 const hrChance = (batter.pow - 50) / 80;
-                type = Math.random() < hrChance ? 'HR' : (Math.random() < 0.5 ? '2B' : '1B');
+                if (Math.random() < hrChance) type = 'HR';
+                else if (Math.random() < clamp(0.03 + (batter.spd - 45) / 220, 0.03, 0.2)) type = '3B';      // a ball in the gap, legged out by a fast runner
+                else type = Math.random() < 0.5 ? '2B' : '1B';
             } else if (quality > 0.55) {
                 type = Math.random() < 0.72 ? '1B' : 'OUT';
             } else if (quality > 0.32) {
@@ -1758,12 +1760,13 @@
               if (type === 'OUT') kind = r < 0.40 ? 'ground' : r < 0.73 ? 'fly' : r < 0.85 ? 'pop' : 'line';
               else if (type === '1B') kind = r < 0.45 ? 'ground' : r < 0.80 ? 'line' : 'fly';
               else if (type === '2B') kind = r < 0.55 ? 'line' : 'fly';
+              else if (type === '3B') kind = r < 0.35 ? 'line' : 'fly';
               G.hitKind = kind;
               G.outKind = kind === 'ground' ? 'ground' : kind === 'fly' ? 'fly' : 'air';          // only 'fly' allows a sacrifice fly
               // a great defensive play: robbing a hard-hit ball far more often than a routine one
               G.nicePlay = type === 'OUT' && kind !== 'pop' && Math.random() < (quality >= 0.55 ? 0.5 : 0.12);
               G.dpPlay = false; }
-            if (type === 'HR' || type === '1B' || type === '2B' || type === 'OUT' || type === 'FOUL') {
+            if (type === 'HR' || type === '1B' || type === '2B' || type === '3B' || type === 'OUT' || type === 'FOUL') {
                 G.hitEffectFrame = G.frame;
                 G.hitType = type;
                 G.hitFlyDir = (Math.random() < 0.5 ? 1 : -1) * (type === 'FOUL' ? 1.5 + Math.random() * 0.7 : 0.6 + Math.random() * 0.8);
@@ -1875,8 +1878,10 @@
 
         // shared base-advancement rules (used by real at-bats and by the auto-simulated half inning)
         function advanceHit(r, type) {
-            const nr = type === '2B' ? [false, true, false] : [true, false, false]; let runs = 0;
-            if (type === '2B') {            // double: 2nd/3rd score; 1st scores ~55% else holds at 3rd
+            const nr = type === '3B' ? [false, false, true] : type === '2B' ? [false, true, false] : [true, false, false]; let runs = 0;
+            if (type === '3B') {            // triple: every runner scores
+                runs = (r[2] ? 1 : 0) + (r[1] ? 1 : 0) + (r[0] ? 1 : 0);
+            } else if (type === '2B') {            // double: 2nd/3rd score; 1st scores ~55% else holds at 3rd
                 runs = (r[2] ? 1 : 0) + (r[1] ? 1 : 0);
                 if (r[0]) { if (Math.random() < 0.55) runs++; else nr[2] = true; }
             } else {                         // single: 3rd scores; 2nd scores ~70% else to 3rd; 1st -> 2nd (sometimes 3rd)
@@ -1894,8 +1899,8 @@
             const slotIdx = G.batOrder[bat];
             const st = G.batStats[bat][slotIdx];
             if (type === 'OUT' && !G.nicePlay && G.hitKind !== 'pop' && Math.random() < 0.05 + 0.015 * dfPenalty(G.half === 0 ? 1 : 0)) type = 'ROE';       // fielding error: the batter reaches
-            if (type === 'HR' || type === '1B' || type === '2B') G.pApp[1 - bat].hits++;
-            addLoad(1 - bat, { HR: 5, '2B': 3, '1B': 2, BB: 1.5, HBP: 1.5, ROE: 0 }[type] || 0);
+            if (type === 'HR' || type === '1B' || type === '2B' || type === '3B') G.pApp[1 - bat].hits++;
+            addLoad(1 - bat, { HR: 5, '3B': 4, '2B': 3, '1B': 2, BB: 1.5, HBP: 1.5, ROE: 0 }[type] || 0);
             if (type === 'HR') {
                 logPitch('HOMERUN');
                 const runs = 1 + G.runners.filter(r => r).length; addLoad(1 - bat, runs * 2.5);
@@ -1917,11 +1922,12 @@
                 const r = G.runners; G.outs++; SFX.out(); sub = 'OUT'; col = '#FF6644'; if (G.outs >= 3) endHalf = true;
                 text = (r[0] || r[1] || r[2]) ? '犧牲觸擊成功！' : '觸擊出局！';
                 if (G.outs < 3) { const runs = r[2] ? 1 : 0; G.runners = [false, r[0], r[1]]; if (runs) { G.score[bat] += runs; G.scoreFlash[bat] = 35; st.rbi += runs; text = '擠回一分！犧牲觸擊'; col = '#FFD24A'; } }
-            } else if (type === '2B' || type === '1B') {
+            } else if (type === '3B' || type === '2B' || type === '1B') {
                 const { nr, runs } = G.hitKind === 'bunt' ? { nr: [true, G.runners[0], G.runners[1]], runs: G.runners[2] ? 1 : 0 } : advanceHit(G.runners, type);
                 G.score[bat] += runs; if (runs > 0) G.scoreFlash[bat] = 35;
                 G.runners = nr; col = '#44FF88'; SFX.crack();
-                if (type === '2B') { text = runs > 0 ? `二壘安打！${runs} 分` : '二壘安打！'; sub = '2 BASE HIT'; }
+                if (type === '3B') { text = runs > 0 ? `三壘安打！${runs} 分` : '三壘安打！'; sub = '3 BASE HIT'; }
+                else if (type === '2B') { text = runs > 0 ? `二壘安打！${runs} 分` : '二壘安打！'; sub = '2 BASE HIT'; }
                 else { text = G.hitKind === 'bunt' ? (runs > 0 ? `觸擊安打！${runs} 分` : '觸擊安打！') : runs > 0 ? `安打！${runs} 分` : '安打！'; sub = 'HIT'; }
                 st.ab++; st.h++; st.rbi += runs;
             } else if (type === 'BB' || type === 'HBP' || type === 'ROE') {
@@ -1965,12 +1971,12 @@
             }
             addLoad(1 - bat, 2.5 * Math.max(0, G.score[bat] - pre.score[bat]));       // every run allowed wears the pitcher down
             if (type !== 'BB' && type !== 'HBP' && !G._continueAtBat) G.batOrder[G.half] = (G.batOrder[G.half] + 1) % 9;
-            if (type === 'OUT' || type === 'SAC' || type === 'ROE' || type === '1B' || type === '2B') { G.resDelayNext = playDelay(type === 'ROE' || type === 'SAC' ? 'OUT' : type); G.hudHold = Object.assign(pre, { until: G.frame + G.resDelayNext }); }
+            if (type === 'OUT' || type === 'SAC' || type === 'ROE' || type === '1B' || type === '2B' || type === '3B') { G.resDelayNext = playDelay(type === 'ROE' || type === 'SAC' ? 'OUT' : type); G.hudHold = Object.assign(pre, { until: G.frame + G.resDelayNext }); }
             showRes(text, sub, col, endHalf);
         }
 
         // Pitch history for the current at-bat (shown in the right-hand tracker). One entry per pitch, written when its result is known.
-        const PITCH_RES = { 'STRIKE': ['好球', '#ff9a4a'], 'BALL': ['壞球', '#6aa8ff'], 'SWINGING STRIKE': ['揮空', '#ff6a5a'], 'FOUL BALL': ['界外', '#ffd23a'], 'HIT': ['安打', '#5dff9a'], '2 BASE HIT': ['二安', '#5dff9a'], 'OUT': ['出局', '#ff7a6a'], 'WALK': ['壞球', '#6aa8ff'], 'HOMERUN': ['全壘打', '#ffd700'], 'HIT BY PITCH': ['觸身', '#6aa8ff'], 'ERROR': ['失誤', '#ffaa44'] };
+        const PITCH_RES = { 'STRIKE': ['好球', '#ff9a4a'], 'BALL': ['壞球', '#6aa8ff'], 'SWINGING STRIKE': ['揮空', '#ff6a5a'], 'FOUL BALL': ['界外', '#ffd23a'], 'HIT': ['安打', '#5dff9a'], '2 BASE HIT': ['二安', '#5dff9a'], '3 BASE HIT': ['三安', '#5dff9a'], 'OUT': ['出局', '#ff7a6a'], 'WALK': ['壞球', '#6aa8ff'], 'HOMERUN': ['全壘打', '#ffd700'], 'HIT BY PITCH': ['觸身', '#6aa8ff'], 'ERROR': ['失誤', '#ffaa44'] };
         function logPitch(sub) {
             if (!G._pitchPending) return; G._pitchPending = false;
             let r = PITCH_RES[sub];
@@ -1996,6 +2002,7 @@
             }
             if (type === '1B') return k === 'ground' ? 96 : k === 'line' ? 84 : 90;
             if (type === '2B') return k === 'line' ? 112 : 126;
+            if (type === '3B') return k === 'line' ? 150 : 164;
             return 0;
         }
 
@@ -2043,6 +2050,7 @@
             if (r < kProb) return 'K';
             if (r < kProb + bbProb) return 'BB';
             if (r < kProb + bbProb + hrProb) return 'HR';
+            if (r < kProb + bbProb + hrProb + hitProb * 0.03 * (batter.spd / 50)) return '3B';
             if (r < kProb + bbProb + hrProb + hitProb * 0.28) return '2B';
             if (r < kProb + bbProb + hrProb + hitProb) return '1B';
             return 'OUT';
@@ -2055,7 +2063,7 @@
             while (outs < 3 && atBats < 27) {
                 const batIdx = (G.batOrder[bat] + atBats) % 9;
                 const result = simAtBat(batTeamInfo().roster.batters[G.lineups[bat][batIdx]], pitcher, effLoad(pSide));
-                addLoad(pSide, { '1B': 2, '2B': 3, HR: 5, BB: 1.5 }[result] || 0);
+                addLoad(pSide, { '1B': 2, '2B': 3, '3B': 4, HR: 5, BB: 1.5 }[result] || 0);
                 G.pitchCounts[pSide] += result === 'K' ? rndI(4, 7) : result === 'BB' ? rndI(5, 8) : rndI(2, 6); G.pApp[pSide].bf++;      // the pitcher still throws pitches in auto mode
                 const st = G.batStats[bat][batIdx];
                 atBats++;
@@ -2080,7 +2088,7 @@
                     if (runners[0]) runners[1] = true;
                     runners[0] = true;
                     st.bb++; st.rbi += rbi;
-                } else if (result === '1B' || result === '2B') {
+                } else if (result === '1B' || result === '2B' || result === '3B') {
                     const { nr, runs } = advanceHit(runners, result);
                     score += runs; runners = nr;
                     st.ab++; st.h++; st.rbi += runs;
