@@ -1543,6 +1543,17 @@ const Stadium3D = (function () {
                 });
                 for (let k = 0; k < 3; k++) if (now[k] && !newObjs[k]) newObjs[k] = spawn(0, k);
                 S.runnerObjs = newObjs;
+                // a base hit: run so as to beat the throw, not to stroll in after the ball is already at the bag
+                const hf = S.flight;
+                if (hf && (hf.type === '1B' || hf.type === '2B') && hf.legs && hf.legs.length) {
+                    const lg = hf.legs[hf.legs.length - 1], target = Math.max(36, lg.t0 + lg.d - Math.max(0, G.frame - hf.t0) - 8);
+                    pool.forEach(o => {
+                        if (!o.root.visible || !o.path || !o.path.length || o.spd) return;
+                        let len = 0, px = o.root.position.x, pz = o.root.position.z;
+                        o.path.forEach(q => { len += Math.hypot(q[0] - px, q[1] - pz); px = q[0]; pz = q[1]; });
+                        o.spd = clamp(len / target, 0.34, 0.9);
+                    });
+                }
             }
             S.runnersPrev = now;
         } else if (phaseHR && !S.hrHandled) {
@@ -1571,6 +1582,7 @@ const Stadium3D = (function () {
                 else { o.root.position.x += dx / d * step; o.root.position.z += dz / d * step; faceToward(o, tgt[0], tgt[1]); step = 0; }
             }
             o.phase += 0.62 * df; applyPose(o, runPose({}, o.phase, 1));
+            if (!o.path.length && !o.leaving) o.spd = 0;
             if (!o.path.length && o.leaving) releaseRunner(o);
         });
         // colours
