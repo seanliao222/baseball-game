@@ -43,3 +43,4 @@ music/          ← team song list
 ```
 
 Bump the `stadium3d.js?v=` cache-buster in `index.html` whenever the 3D file changes.
+- **New players / pitches** — 富邦 廖祐霆 (9 pitches: 直球, 滑球, 橫掃滑, 曲球, 變速球, 指叉球, 卡特球 plus the new 上升直球 — rises at the last moment — and 魔球 — a knuckle-like pitch whose break is different every time). 中信兄弟 廖奕翔 is a two-way player like 大谷 (bats 2nd as DH, also pitches).

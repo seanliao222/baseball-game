@@ -293,7 +293,7 @@
         </div>
     </div>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-    <script src="stadium3d.js?v=20261024D"></script>
+    <script src="stadium3d.js?v=20261025a"></script>
     <script src="https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.js"></script>
     <script>
@@ -341,10 +341,12 @@
             6: { name: '指叉球', mph: 89, bx: 0, by: 22, col: '#FFFF44', dir: Math.PI * 0.5 },
             7: { name: '卡特球', mph: 92, bx: -4, by: 2, col: '#AAFF00', dir: -Math.PI * 0.85 },
             8: { name: '伸卡球', mph: 93, bx: 8, by: 8, col: '#FF88AA', dir: Math.PI * 0.2 },
+            9: { name: '上升直球', mph: 99, bx: 0, by: -4.5, col: '#FFE066', dir: -Math.PI * 0.5 },          // backspin: it rises at the last moment
+            10: { name: '魔球', mph: 78, bx: -12, by: 11, col: '#C77DFF', dir: Math.PI * 0.75, wild: true },    // a knuckle-like pitch: the break is different every time
         };
 
         // How each pitch travels: `late` = how late the break happens (higher = more last-moment), `hump` = floats up before dropping.
-        const PITCH_FLIGHT = { 0: { late: 1.0, hump: 0 }, 1: { late: 1.7, hump: 0 }, 2: { late: 2.3, hump: 0 }, 3: { late: 2.1, hump: 0 }, 4: { late: 2.6, hump: 0.45 }, 5: { late: 2.3, hump: 0.16 }, 6: { late: 3.0, hump: 0.12 }, 7: { late: 2.5, hump: 0 }, 8: { late: 1.8, hump: 0 } };
+        const PITCH_FLIGHT = { 0: { late: 1.0, hump: 0 }, 1: { late: 1.7, hump: 0 }, 2: { late: 2.3, hump: 0 }, 3: { late: 2.1, hump: 0 }, 4: { late: 2.6, hump: 0.45 }, 5: { late: 2.3, hump: 0.16 }, 6: { late: 3.0, hump: 0.12 }, 7: { late: 2.5, hump: 0 }, 8: { late: 1.8, hump: 0 }, 9: { late: 2.6, hump: 0 }, 10: { late: 2.9, hump: 0.35 } };
         const BREAK_SCALE = 0.8;
         function breakPx(po) { const pd = PITCH_DICT[po.id]; return { cx: pd.bx * po.lv * BREAK_SCALE, cy: pd.by * po.lv * BREAK_SCALE }; }
         const isMobile = ('ontouchstart' in window || navigator.maxTouchPoints > 0);
@@ -413,6 +415,7 @@
             },
             'BRO': {
                 pitchers: [
+                    { name: '廖奕翔', throws: 'R', vel: 94, ctrl: 73, stm: 86, era: '1.79', k: 95, pitches: [{ id: 0, lv: 5 }, { id: 7, lv: 5 }, { id: 2, lv: 4 }, { id: 1, lv: 5 }], num: 11 },
                     { name: '勝騎士', throws: 'R', vel: 91, ctrl: 90, stm: 90, era: '3.08', k: 125, pitches: [{ id: 0, lv: 4 }, { id: 3, lv: 4 }, { id: 1, lv: 4 }, { id: 4, lv: 3 }], num: 30 },
                     { name: '羅戈', throws: 'R', vel: 90, ctrl: 78, stm: 86, era: '3.33', k: 104, pitches: [{ id: 0, lv: 3 }, { id: 8, lv: 3 }, { id: 3, lv: 4 }, { id: 5, lv: 4 }], num: 32 },
                     { name: '德保拉', throws: 'L', vel: 89, ctrl: 91, stm: 92, era: '3.16', k: 55, pitches: [{ id: 0, lv: 3 }, { id: 2, lv: 4 }, { id: 1, lv: 3 }, { id: 4, lv: 3 }], num: 46 },
@@ -428,7 +431,7 @@
                 ],
                 batters: [
                     { name: '江坤宇', def: 93, arm: 80, bats: 'R', throws: 'R', pos: 'SS', avg: '.283', hr: 2, rbi: 40, con: 73, pow: 54, spd: 76, obp: 0.363, slg: 0.350, num: 90 },
-                    { name: '張士綸', bats: 'L', throws: 'R', pos: 'SS', avg: '.327', hr: 2, rbi: 39, con: 89, pow: 54, spd: 76, obp: 0.388, slg: 0.392, num: 4 },
+                    { name: '廖奕翔', bats: 'L', throws: 'R', pos: 'TWP', avg: '.275', hr: 30, rbi: 81, con: 70, pow: 90, spd: 73, obp: 0.377, slg: 0.512, num: 11 },
                     { name: '張仁瑋', bats: 'R', throws: 'R', pos: '2B', avg: '.300', hr: 4, rbi: 53, con: 79, pow: 57, spd: 76, obp: 0.340, slg: 0.380, num: 28 },
                     { name: '宋晟睿', bats: 'R', throws: 'R', pos: 'LF', avg: '.256', hr: 5, rbi: 34, con: 63, pow: 69, spd: 76, obp: 0.329, slg: 0.392, num: 88 },
                     { name: '王威晨', def: 90, bats: 'L', throws: 'R', pos: '3B', avg: '.292', hr: 1, rbi: 47, con: 76, pow: 54, spd: 80, obp: 0.349, slg: 0.361, num: 9 },
@@ -436,6 +439,7 @@
                     { name: '岳東華', bats: 'L', throws: 'R', pos: '2B', avg: '.272', hr: 3, rbi: 35, con: 69, pow: 59, spd: 56, obp: 0.325, slg: 0.364, num: 98 },
                     { name: '高宇杰', bats: 'R', throws: 'R', pos: 'C', avg: '.286', hr: 2, rbi: 32, con: 74, pow: 51, spd: 48, obp: 0.327, slg: 0.338, num: 65 },
                     { name: '岳政華', def: 81, bats: 'L', throws: 'L', pos: 'CF', avg: '.221', hr: 6, rbi: 32, con: 50, pow: 64, spd: 60, obp: 0.297, slg: 0.333, num: 92 },
+                    { name: '張士綸', bats: 'L', throws: 'R', pos: 'SS', avg: '.327', hr: 2, rbi: 39, con: 89, pow: 54, spd: 76, obp: 0.388, slg: 0.392, num: 4 },
                     { name: '陳俊秀', def: 81, bats: 'R', throws: 'R', pos: '1B', avg: '.252', hr: 4, rbi: 31, con: 62, pow: 59, spd: 45, obp: 0.357, slg: 0.344, num: 29 },
                     { name: '曾頌恩', bats: 'R', throws: 'R', pos: 'CF', avg: '.284', hr: 6, rbi: 33, con: 73, pow: 71, spd: 47, obp: 0.361, slg: 0.431, num: 1 },
                     { name: '詹子賢', def: 81, bats: 'R', throws: 'R', pos: 'LF', avg: '.257', hr: 2, rbi: 19, con: 63, pow: 56, spd: 45, obp: 0.326, slg: 0.335, num: 39 },
@@ -506,6 +510,7 @@
             },
             'FUB': {
                 pitchers: [
+                    { name: '廖祐霆', throws: 'R', vel: 94, ctrl: 82, stm: 82, era: '2.20', k: 120, pitches: [{ id: 0, lv: 5 }, { id: 9, lv: 6 }, { id: 10, lv: 7 }, { id: 2, lv: 5 }, { id: 3, lv: 5 }, { id: 4, lv: 5 }, { id: 5, lv: 5 }, { id: 6, lv: 6 }, { id: 7, lv: 5 }], num: 17 },
                     { name: '魔力藍', throws: 'L', vel: 90, ctrl: 78, stm: 81, era: '3.04', k: 91, pitches: [{ id: 0, lv: 3 }, { id: 3, lv: 4 }, { id: 8, lv: 6 }, { id: 2, lv: 3 }], num: 44 },
                     { name: '鈴木駿輔', throws: 'R', vel: 92, ctrl: 78, stm: 85, era: '2.31', k: 101, pitches: [{ id: 0, lv: 4 }, { id: 7, lv: 4 }, { id: 5, lv: 6 }, { id: 2, lv: 5 }], num: 69 },
                     { name: '李東洺', throws: 'R', vel: 89, ctrl: 62, stm: 74, era: '2.53', k: 60, pitches: [{ id: 0, lv: 3 }, { id: 7, lv: 4 }, { id: 4, lv: 6 }, { id: 5, lv: 6 }], num: 66 },
@@ -1627,7 +1632,8 @@
         // Pitch-select wheel in the bottom-right corner (centre = the fastball, ring = the other pitches), so it never covers the pitcher.
         function getPitchWheel(pitcher) {
             const ci = pitcher.pitches.findIndex(p => PITCH_DICT[p.id].dir === 'center');
-            return { cx: W - 124, cy: H - 172, R: 106, r0: 40, ci, ring: pitcher.pitches.map((p, i) => i).filter(i => i !== ci) };
+            const big = pitcher.pitches.length >= 8;
+            return { cx: W - (big ? 140 : 124), cy: H - (big ? 188 : 172), R: big ? 124 : 106, r0: 40, ci, ring: pitcher.pitches.map((p, i) => i).filter(i => i !== ci) };
         }
         function wheelHover(pitcher, mx, my) {
             const w = getPitchWheel(pitcher), dx = mx - w.cx, dy = my - w.cy, dist = Math.hypot(dx, dy);
@@ -1669,6 +1675,7 @@
 
             G.ballSX = W / 2; G.ballSY = 230;
             const brk = breakPx(pitchObj), fl = PITCH_FLIGHT[pitchObj.id] || { late: 1, hump: 0 };
+            if (pDef.wild) { brk.cx *= rnd(-1, 1.2); brk.cy *= rnd(-0.3, 1.5); }          // 魔球: you never know which way it goes
             G.ballCX = brk.cx; G.ballCY = brk.cy; G.ballLate = fl.late; G.ballHump = fl.hump;
             const tgtX = SZcx + G.aimX * (SZw / 2) + devX, tgtY = SZcy + G.aimY * (SZh / 2) + devY;
             if (!MP.active && playerBatting()) {
