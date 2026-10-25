@@ -293,7 +293,7 @@
         </div>
     </div>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-    <script src="stadium3d.js?v=20261025a"></script>
+    <script src="stadium3d.js?v=20261025b"></script>
     <script src="https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.js"></script>
     <script>
@@ -415,7 +415,6 @@
             },
             'BRO': {
                 pitchers: [
-                    { name: '廖奕翔', throws: 'R', vel: 94, ctrl: 73, stm: 86, era: '1.79', k: 95, pitches: [{ id: 0, lv: 5 }, { id: 7, lv: 5 }, { id: 2, lv: 4 }, { id: 1, lv: 5 }], num: 11 },
                     { name: '勝騎士', throws: 'R', vel: 91, ctrl: 90, stm: 90, era: '3.08', k: 125, pitches: [{ id: 0, lv: 4 }, { id: 3, lv: 4 }, { id: 1, lv: 4 }, { id: 4, lv: 3 }], num: 30 },
                     { name: '羅戈', throws: 'R', vel: 90, ctrl: 78, stm: 86, era: '3.33', k: 104, pitches: [{ id: 0, lv: 3 }, { id: 8, lv: 3 }, { id: 3, lv: 4 }, { id: 5, lv: 4 }], num: 32 },
                     { name: '德保拉', throws: 'L', vel: 89, ctrl: 91, stm: 92, era: '3.16', k: 55, pitches: [{ id: 0, lv: 3 }, { id: 2, lv: 4 }, { id: 1, lv: 3 }, { id: 4, lv: 3 }], num: 46 },
@@ -427,11 +426,12 @@
                     { name: '蔡齊哲', throws: 'R', vel: 88, ctrl: 59, stm: 42, era: '2.83', k: 16, pitches: [{ id: 0, lv: 3 }, { id: 1, lv: 6 }, { id: 5, lv: 3 }], num: 50 },
                     { name: '陳琥', throws: 'R', vel: 90, ctrl: 57, stm: 51, era: '2.94', k: 37, pitches: [{ id: 0, lv: 3 }, { id: 4, lv: 5 }, { id: 8, lv: 5 }], num: 62 },
                     { name: '江忠城', throws: 'R', vel: 90, ctrl: 62, stm: 47, era: '2.34', k: 27, pitches: [{ id: 0, lv: 3 }, { id: 4, lv: 6 }, { id: 3, lv: 6 }], num: 20 },
-                    { name: '游竣宥', throws: 'L', vel: 87, ctrl: 58, stm: 60, era: '2.72', k: 14, pitches: [{ id: 0, lv: 3 }, { id: 2, lv: 5 }, { id: 8, lv: 3 }], num: 27 }
+                    { name: '游竣宥', throws: 'L', vel: 87, ctrl: 58, stm: 60, era: '2.72', k: 14, pitches: [{ id: 0, lv: 3 }, { id: 2, lv: 5 }, { id: 8, lv: 3 }], num: 27 },
+                    { name: '廖奕翔', throws: 'R', vel: 94, ctrl: 73, stm: 86, era: '1.79', k: 95, pitches: [{ id: 0, lv: 5 }, { id: 7, lv: 5 }, { id: 2, lv: 4 }, { id: 1, lv: 5 }], num: 11 }
                 ],
                 batters: [
                     { name: '江坤宇', def: 93, arm: 80, bats: 'R', throws: 'R', pos: 'SS', avg: '.283', hr: 2, rbi: 40, con: 73, pow: 54, spd: 76, obp: 0.363, slg: 0.350, num: 90 },
-                    { name: '廖奕翔', bats: 'L', throws: 'R', pos: 'TWP', avg: '.275', hr: 30, rbi: 81, con: 70, pow: 90, spd: 73, obp: 0.377, slg: 0.512, num: 11 },
+                    { name: '張士綸', bats: 'L', throws: 'R', pos: 'SS', avg: '.327', hr: 2, rbi: 39, con: 89, pow: 54, spd: 76, obp: 0.388, slg: 0.392, num: 4 },
                     { name: '張仁瑋', bats: 'R', throws: 'R', pos: '2B', avg: '.300', hr: 4, rbi: 53, con: 79, pow: 57, spd: 76, obp: 0.340, slg: 0.380, num: 28 },
                     { name: '宋晟睿', bats: 'R', throws: 'R', pos: 'LF', avg: '.256', hr: 5, rbi: 34, con: 63, pow: 69, spd: 76, obp: 0.329, slg: 0.392, num: 88 },
                     { name: '王威晨', def: 90, bats: 'L', throws: 'R', pos: '3B', avg: '.292', hr: 1, rbi: 47, con: 76, pow: 54, spd: 80, obp: 0.349, slg: 0.361, num: 9 },
@@ -439,11 +439,11 @@
                     { name: '岳東華', bats: 'L', throws: 'R', pos: '2B', avg: '.272', hr: 3, rbi: 35, con: 69, pow: 59, spd: 56, obp: 0.325, slg: 0.364, num: 98 },
                     { name: '高宇杰', bats: 'R', throws: 'R', pos: 'C', avg: '.286', hr: 2, rbi: 32, con: 74, pow: 51, spd: 48, obp: 0.327, slg: 0.338, num: 65 },
                     { name: '岳政華', def: 81, bats: 'L', throws: 'L', pos: 'CF', avg: '.221', hr: 6, rbi: 32, con: 50, pow: 64, spd: 60, obp: 0.297, slg: 0.333, num: 92 },
-                    { name: '張士綸', bats: 'L', throws: 'R', pos: 'SS', avg: '.327', hr: 2, rbi: 39, con: 89, pow: 54, spd: 76, obp: 0.388, slg: 0.392, num: 4 },
                     { name: '陳俊秀', def: 81, bats: 'R', throws: 'R', pos: '1B', avg: '.252', hr: 4, rbi: 31, con: 62, pow: 59, spd: 45, obp: 0.357, slg: 0.344, num: 29 },
                     { name: '曾頌恩', bats: 'R', throws: 'R', pos: 'CF', avg: '.284', hr: 6, rbi: 33, con: 73, pow: 71, spd: 47, obp: 0.361, slg: 0.431, num: 1 },
                     { name: '詹子賢', def: 81, bats: 'R', throws: 'R', pos: 'LF', avg: '.257', hr: 2, rbi: 19, con: 63, pow: 56, spd: 45, obp: 0.326, slg: 0.335, num: 39 },
-                    { name: '王政順', bats: 'L', throws: 'R', pos: '3B', avg: '.240', hr: 0, rbi: 12, con: 57, pow: 44, spd: 45, obp: 0.333, slg: 0.260, num: 61 }
+                    { name: '王政順', bats: 'L', throws: 'R', pos: '3B', avg: '.240', hr: 0, rbi: 12, con: 57, pow: 44, spd: 45, obp: 0.333, slg: 0.260, num: 61 },
+                    { name: '廖奕翔', bats: 'L', throws: 'R', pos: 'TWP', avg: '.275', hr: 30, rbi: 81, con: 70, pow: 90, spd: 73, obp: 0.377, slg: 0.512, num: 11 }
                 ]
             },
             'UNI': {
@@ -510,7 +510,6 @@
             },
             'FUB': {
                 pitchers: [
-                    { name: '廖祐霆', throws: 'R', vel: 94, ctrl: 82, stm: 82, era: '2.20', k: 120, pitches: [{ id: 0, lv: 5 }, { id: 9, lv: 6 }, { id: 10, lv: 7 }, { id: 2, lv: 5 }, { id: 3, lv: 5 }, { id: 4, lv: 5 }, { id: 5, lv: 5 }, { id: 6, lv: 6 }, { id: 7, lv: 5 }], num: 17 },
                     { name: '魔力藍', throws: 'L', vel: 90, ctrl: 78, stm: 81, era: '3.04', k: 91, pitches: [{ id: 0, lv: 3 }, { id: 3, lv: 4 }, { id: 8, lv: 6 }, { id: 2, lv: 3 }], num: 44 },
                     { name: '鈴木駿輔', throws: 'R', vel: 92, ctrl: 78, stm: 85, era: '2.31', k: 101, pitches: [{ id: 0, lv: 4 }, { id: 7, lv: 4 }, { id: 5, lv: 6 }, { id: 2, lv: 5 }], num: 69 },
                     { name: '李東洺', throws: 'R', vel: 89, ctrl: 62, stm: 74, era: '2.53', k: 60, pitches: [{ id: 0, lv: 3 }, { id: 7, lv: 4 }, { id: 4, lv: 6 }, { id: 5, lv: 6 }], num: 66 },
@@ -522,7 +521,8 @@
                     { name: '林栚呈', throws: 'R', vel: 88, ctrl: 59, stm: 48, era: '3.43', k: 18, pitches: [{ id: 0, lv: 3 }, { id: 5, lv: 6 }, { id: 8, lv: 3 }], num: 94 },
                     { name: '陳品宏', throws: 'L', vel: 90, ctrl: 58, stm: 60, era: '4.83', k: 27, pitches: [{ id: 0, lv: 3 }, { id: 4, lv: 4 }, { id: 7, lv: 5 }], num: 10 },
                     { name: '賴鴻誠', throws: 'L', vel: 88, ctrl: 63, stm: 44, era: '5.29', k: 14, pitches: [{ id: 0, lv: 3 }, { id: 2, lv: 4 }, { id: 1, lv: 6 }], num: 32 },
-                    { name: '威戈神', throws: 'R', vel: 90, ctrl: 76, stm: 60, era: '4.24', k: 24, pitches: [{ id: 0, lv: 3 }, { id: 3, lv: 6 }, { id: 7, lv: 5 }], num: 49 }
+                    { name: '威戈神', throws: 'R', vel: 90, ctrl: 76, stm: 60, era: '4.24', k: 24, pitches: [{ id: 0, lv: 3 }, { id: 3, lv: 6 }, { id: 7, lv: 5 }], num: 49 },
+                    { name: '廖祐霆', throws: 'R', vel: 94, ctrl: 82, stm: 82, era: '2.20', k: 120, pitches: [{ id: 0, lv: 5 }, { id: 9, lv: 6 }, { id: 10, lv: 7 }, { id: 2, lv: 5 }, { id: 3, lv: 5 }, { id: 4, lv: 5 }, { id: 5, lv: 5 }, { id: 6, lv: 6 }, { id: 7, lv: 5 }], num: 17 }
                 ],
                 batters: [
                     { name: '林澤彬', bats: 'L', throws: 'R', pos: '2B', avg: '.311', hr: 0, rbi: 41, con: 83, pow: 52, spd: 65, obp: 0.371, slg: 0.369, num: 2 },
