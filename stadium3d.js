@@ -912,14 +912,29 @@ const Stadium3D = (function () {
     const P_REL = { torsoX: 0.72, hipL: 0.95, kneeL: 0.35, hipR: -0.35, kneeR: 0.7, spreadL: 0.12, spreadR: 0.12, crouch: 0.1, handHigh: 3, rootZ: 0.85 };
     const P_FOLLOW = { torsoX: 0.95, hipL: 0.8, kneeL: 0.5, hipR: -0.1, kneeR: 0.9, spreadL: 0.12, spreadR: 0.12, crouch: 0.14, handHigh: 4, rootZ: 0.95 };
 
+    // arm slots (right-handed frame; lefties are mirrored): 上壓 overhand, 四分之三, 側投, 低肩側投 / 下勾
+    const ARM_SLOTS = {
+        over:  { cock: [-0.42, 1.55, -0.42], rel: [-0.25, 2.1, 0.55],  fol: [0.2, 0.95, 0.65],  lean: 0 },
+        three: { cock: [-0.62, 1.4, -0.4],   rel: [-0.5, 1.8, 0.55],   fol: [0.1, 0.9, 0.65],   lean: 0.12 },
+        side:  { cock: [-0.82, 1.15, -0.3],  rel: [-0.85, 1.35, 0.5],  fol: [0.0, 0.85, 0.7],   lean: 0.3 },
+        under: { cock: [-0.75, 0.75, -0.2],  rel: [-0.8, 0.85, 0.55],  fol: [0.05, 0.9, 0.75],  lean: 0.5 }
+    };
+    function armSlotOf(pt) {
+        if (!pt) return 'over';
+        if (pt.slot) return pt.slot;
+        let h = 11; const n = String(pt.name || ''); for (let i = 0; i < n.length; i++) h = (h * 33 + n.charCodeAt(i)) >>> 0;
+        const r = (h % 100) / 100;
+        return r < 0.38 ? 'over' : r < 0.82 ? 'three' : r < 0.95 ? 'side' : 'under';
+    }
     function pitcherHands(p, hh, t) {
         // returns [rightHandTarget, leftHandTarget] in pitcher-local coords (forward = +z)
         const lerpV = (a, b, t_) => [lerp(a[0], b[0], t_), lerp(a[1], b[1], t_), lerp(a[2], b[2], t_)];
         const setR = [-0.03, 1.28, 0.3], setL = [0.03, 1.3, 0.3];
         const high = [[-0.05, 1.95, 0.2], [0.05, 1.9, 0.2]];
-        const cock = [[-0.42, 1.55, -0.42], [0.32, 1.55, 0.55]];
-        const rel = [[-0.25, 2.1, 0.55], [0.3, 1.45, 0.5]];
-        const fol = [[0.2, 0.95, 0.65], [0.15, 1.35, 0.3]];
+        const sl = ARM_SLOTS[S.slot] || ARM_SLOTS.over;      // arm slot: how high the throwing hand cocks / releases
+        const cock = [sl.cock, [0.32, 1.55, 0.55]];
+        const rel = [sl.rel, [0.3, 1.45, 0.5]];
+        const fol = [sl.fol, [0.15, 1.35, 0.3]];
         if (hh <= 1) return [lerpV(setR, high[0], hh), lerpV(setL, high[1], hh)];
         if (hh <= 2) return [lerpV(high[0], cock[0], hh - 1), lerpV(high[1], cock[1], hh - 1)];
         if (hh <= 3) return [lerpV(cock[0], rel[0], hh - 2), lerpV(cock[1], rel[1], hh - 2)];
@@ -954,7 +969,9 @@ const Stadium3D = (function () {
             const t = ease((f - 28) / 42); P = lerpPose(P_FOLLOW, P_SET, t); hh = 4 - t * 4; rootZ = lerp(P_FOLLOW.rootZ, 0, t);
         } else { P = keyPose(P_WIND, wu); hh = (wu > 0) ? (wu <= 0.55 ? wu / 0.55 : 1 + (wu - 0.55) / 0.45) : 0; rootZ = P.rootZ || 0; S.lastWu = wu > 0 ? S.lastWu : 0; }
         const lefty = info.pitcher && info.pitcher.throws === 'L';
-        REL.x = lefty ? 0.28 : -0.28;                                      // release point is on the throwing-arm side
+        S.slot = armSlotOf(info.pitcher); const sl = ARM_SLOTS[S.slot];
+        REL.x = (lefty ? -1 : 1) * sl.rel[0]; REL.y = sl.rel[1] - 0.18;      // release point is on the throwing-arm side, at the arm slot's height
+        if (f >= 0 && f < 40) P = Object.assign({}, P, { torsoZ: (P.torsoZ || 0) + sl.lean * Math.sin(clamp(f / 14, 0, 1) * Math.PI / 2) * (f < 28 ? 1 : 1 - (f - 28) / 12) });      // lower slot leans the trunk away
         p.root.position.z = MOUND_Z + 0.1 + rootZ;
         if (lefty) P = mirrorPose(P);
         applyPose(p, P);
@@ -1389,20 +1406,31 @@ const Stadium3D = (function () {
         if (info.bunt) s = -1;
         // right-handed reference pose: front (pitcher-side) leg = left leg
         const stance = { crouch: 0.14, torsoX: 0.22, torsoY: 0.08, hipsY: 0.12, hipL: 0.42, hipR: 0.38, kneeL: 0.78, kneeR: 0.85, spreadL: 0.34, spreadR: 0.34, headY: 1.2, headX: 0.08 };
+        // each batter gets his own stance: archetype from stats, tweaked by a hash of his name so no two look quite alike
+        const bt = info.batter || {}, nm = String(bt.name || ''); let hh = 7; for (let i = 0; i < nm.length; i++) hh = (hh * 31 + nm.charCodeAt(i)) >>> 0;
+        const h1 = (hh % 97) / 97, h2 = ((hh >> 7) % 89) / 89, h3 = ((hh >> 13) % 83) / 83;
+        const arch = (bt.pow || 0) >= 80 ? (h1 < 0.5 ? 1 : 4) : ((bt.con || 0) >= 75 && (bt.pow || 0) < 70) ? (h1 < 0.6 ? 2 : 3) : Math.floor(h1 * 5);
+        const sty = { holdRz: 0, holdPy: 0, waggle: 1, kick: 0 };
+        if (arch === 1) { stance.crouch += 0.12; stance.kneeL += 0.12; stance.kneeR += 0.12; stance.spreadL += 0.14; stance.spreadR += 0.14; stance.torsoX += 0.1; sty.holdRz = 0.1; }      // deep, wide power stance
+        else if (arch === 2) { stance.crouch -= 0.08; stance.kneeL -= 0.2; stance.kneeR -= 0.2; stance.spreadL -= 0.08; stance.spreadR -= 0.08; stance.torsoX -= 0.08; sty.holdRz = -0.2; sty.holdPy = 0.08; }      // upright, bat held high
+        else if (arch === 3) { stance.spreadL -= 0.12; stance.spreadR -= 0.12; stance.torsoY += 0.12; stance.hipsY += 0.08; sty.waggle = 3.2; sty.holdRz = 0.05; }      // narrow, open, big bat waggle
+        else if (arch === 4) { sty.kick = 1; stance.crouch += 0.04; sty.waggle = 1.5; }      // leg kick timing mechanism
+        stance.crouch += (h2 - 0.5) * 0.06; stance.spreadL += (h3 - 0.5) * 0.08; stance.spreadR += (h3 - 0.5) * 0.08; sty.holdRz += (h3 - 0.5) * 0.14; stance.torsoY += (h2 - 0.5) * 0.08;
         let P, hold = { rx: -0.05, rz: 0.55, ry: 0.0, px: -0.1, py: 0.4, pz: 0.12 };
-        const wob = Math.sin(G.frame * 0.09) * 0.03;
+        const wob = Math.sin(G.frame * 0.09 * (sty.waggle > 1 ? 1.6 : 1)) * 0.03 * sty.waggle;
         if (s < 0) {
-            P = Object.assign({}, stance); P.torsoZ = wob; hold.rz += wob;
+            P = Object.assign({}, stance); P.torsoZ = wob; hold.rz += wob + sty.holdRz; hold.py += sty.holdPy;
+            if (sty.kick) { const ph = (G.frame % 150) / 150, k = ph > 0.7 ? Math.sin((ph - 0.7) / 0.3 * Math.PI) : 0; P.hipL += 0.55 * k; P.kneeL += 0.5 * k; }
             if (info.bunt) { P.torsoY = 1.0; P.hipsY = 0.85; P.headY = -1.0; P.torsoX = 0.3; P.torsoZ = 0; hold = { rx: -0.2, rz: -1.5, ry: 0.0, px: 0.0, py: 0.62, pz: 0.45 }; }       // squared around, bat held level in front
         } else {
             const T = clamp(s, 0, 1), e = ease(clamp(T / 0.9, 0, 1));
             P = Object.assign({}, stance);
-            P.hipsY = lerp(0.12, 1.15, ease(clamp(T / 0.7, 0, 1)));
-            P.torsoY = lerp(0.08, 1.3, e);
+            P.hipsY = lerp(stance.hipsY, 1.15, ease(clamp(T / 0.7, 0, 1)));
+            P.torsoY = lerp(stance.torsoY, 1.3, e);
             P.headY = clamp(1.2 - P.hipsY - P.torsoY, -0.9, 1.3);
-            P.hipL = lerp(0.42, 0.7, e); P.kneeL = lerp(0.78, 0.35, e); P.kneeR = lerp(0.85, 1.1, e); P.hipR = lerp(0.38, -0.1, e);
-            P.torsoX = lerp(0.22, 0.2, e);
-            hold = { rx: lerp(-0.05, -0.12, e), rz: lerp(0.55, -1.52, ease(clamp(T / 0.55, 0, 1))), ry: lerp(0, 0.25, e), px: lerp(-0.1, 0.0, e), py: lerp(0.4, 0.34, e), pz: lerp(0.12, 0.34, e) };
+            P.hipL = lerp(stance.hipL, 0.7, e); P.kneeL = lerp(stance.kneeL, 0.35, e); P.kneeR = lerp(stance.kneeR, 1.1, e); P.hipR = lerp(stance.hipR, -0.1, e);
+            P.torsoX = lerp(stance.torsoX, 0.2, e);
+            hold = { rx: lerp(-0.05, -0.12, e), rz: lerp(0.55 + sty.holdRz, -1.52, ease(clamp(T / 0.55, 0, 1))), ry: lerp(0, 0.25, e), px: lerp(-0.1, 0.0, e), py: lerp(0.4 + sty.holdPy, 0.34, e), pz: lerp(0.12, 0.34, e) };
         }
         if (left) { // mirror: swap legs, flip every lateral rotation
             [P.hipL, P.hipR] = [P.hipR, P.hipL]; [P.kneeL, P.kneeR] = [P.kneeR, P.kneeL];
