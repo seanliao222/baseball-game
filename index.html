@@ -293,7 +293,7 @@
         </div>
     </div>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-    <script src="stadium3d.js?v=20261026a"></script>
+    <script src="stadium3d.js?v=20261026b"></script>
     <script src="https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.js"></script>
     <script>
@@ -914,7 +914,7 @@
             team.roster.pitchers.push({ name: '廖宣瑜', vel: 82, ctrl: 80, stm: 75, era: '4.00', k: 6, pitches: [{ id: 0, lv: 4 }, { id: 2, lv: 4 }, { id: 5, lv: 3 }] });
         });
 
-        const SCR = { TITLE: 0, SELECT: 1, LINEUP: 4, GAME: 2, OVER: 3, HALF_END: 5 };
+        const SCR = { TITLE: 0, SELECT: 1, LINEUP: 4, GAME: 2, OVER: 3, HALF_END: 5, HISTORY: 6 };
         const PH = { INNING_START: 0, PITCH_SELECT: 1, AIM: 2, POWER_GAUGE: 3, WAIT_PITCH: 4, BALL_FLIGHT: 5, BATTING: 6, RESULT: 7, SUB_MENU: 8, HR_RUN: 9, STEAL_MENU: 10, STEAL: 11 };
         let G = {};
 
@@ -2136,18 +2136,131 @@
             showRes(`自動模擬 ${G.inning}局${bat === 0 ? '上' : '下'}`, scoreText, score > 0 ? '#44FF88' : '#AAAAAA', true);
         }
 
+
+        // ==========================================
+        // GAME RECORD: pitchers of record (W / L / SV / HLD / BS), winning RBI, HR log, MVP, history
+        // ==========================================
+        const HIST_KEY = 'baseball_history_v1';
+        function histLoad() { try { const a = JSON.parse(localStorage.getItem(HIST_KEY) || '[]'); return Array.isArray(a) ? a : []; } catch (e) { return []; } }
+        function histSave(a) { try { localStorage.setItem(HIST_KEY, JSON.stringify(a.slice(-200))); } catch (e) { } }
+        const teamOfSide = side => TEAMS[side === 0 ? G.awayIdx : G.homeIdx];
+        const batNameAt = (side, k) => { const b = teamOfSide(side).roster.batters[G.lineups[side][k]]; return b ? b.name : '?'; };
+        const pitNameAt = (side, idx) => { const q = teamOfSide(side).roster.pitchers[idx]; return q ? q.name : '?'; };
+        const ipStr = o => { const f = Math.floor(o.outs / 3), r = o.outs % 3; return `${f}${r ? '.' + r : ''}局`; };
+        function trackGame() {
+            if (G.scr !== SCR.GAME && G.scr !== SCR.HALF_END && G.scr !== SCR.OVER) return;
+            const T = G.tk || (G.tk = { sc: [0, 0], outs: 0, hk: -1, bs: [[], []], pit: [{}, {}], cur: [-1, -1], bx: [{}, {}], ev: [], hr: [], done: false });
+            if (T.done) return;
+            const lead = side => G.score[side] - G.score[1 - side];
+            for (let sd = 0; sd < 2; sd++) {          // pitchers: register, remember the lead on entering / leaving
+                const pi = G.pitchers[sd];
+                if (pi === T.cur[sd]) continue;
+                if (T.cur[sd] >= 0) T.pit[sd][T.cur[sd]].exitLead = lead(sd);
+                T.cur[sd] = pi;
+                if (!T.pit[sd][pi]) T.pit[sd][pi] = { idx: pi, outs: 0, runs: 0, entryLead: lead(sd), order: Object.keys(T.pit[sd]).length, blown: false, exitLead: null };
+            }
+            const key = G.inning * 2 + G.half;
+            if (key !== T.hk) { T.hk = key; T.outs = G.outs; }
+            else if (G.outs > T.outs) { const ps = G.half === 0 ? 1 : 0, o = T.pit[ps][T.cur[ps]]; if (o) o.outs += G.outs - T.outs; T.outs = G.outs; }
+            for (let sd = 0; sd < 2; sd++) for (let k = 0; k < 9; k++) {      // batter line deltas, attributed to whoever is in that lineup slot right now
+                const st = G.batStats[sd][k], pv = T.bs[sd][k] || (T.bs[sd][k] = { ab: 0, h: 0, bb: 0, hr: 0, rbi: 0, k: 0 });
+                if (st.ab === pv.ab && st.h === pv.h && st.bb === pv.bb && st.hr === pv.hr && st.rbi === pv.rbi && st.k === pv.k) continue;
+                const nm = batNameAt(sd, k), bx = T.bx[sd][nm] || (T.bx[sd][nm] = { ab: 0, h: 0, bb: 0, hr: 0, rbi: 0, k: 0 });
+                ['ab', 'h', 'bb', 'hr', 'rbi', 'k'].forEach(f => { bx[f] += st[f] - pv[f]; pv[f] = st[f]; });
+            }
+            // runs scored this frame
+            for (let sd = 0; sd < 2; sd++) {
+                const d = G.score[sd] - T.sc[sd]; if (d <= 0) continue;
+                T.sc[sd] = G.score[sd];
+                const ps = 1 - sd, o = T.pit[ps][T.cur[ps]]; if (o) o.runs += d;
+                const sm = batRbiGuess(T, sd);
+                T.ev.push({ inn: G.inning, half: G.half, side: sd, d, score: [G.score[0], G.score[1]], batter: sm, pit: [T.cur[0], T.cur[1]] });
+                if (o && o.entryLead > 0 && o.entryLead <= 3 && lead(ps) <= 0) o.blown = true;
+            }
+            // home-run log
+            for (let sd = 0; sd < 2; sd++) for (let k = 0; k < 9; k++) {
+                const st = G.batStats[sd][k], ph = (T.hrSeen || (T.hrSeen = [[], []]))[sd];
+                const before = ph[k] || 0; if (st.hr > before) { for (let n = before; n < st.hr; n++) T.hr.push({ side: sd, name: batNameAt(sd, k), inn: G.inning, half: G.half, runs: Math.max(1, st.rbi - (T.rbiHr ? (T.rbiHr[sd + ':' + k] || 0) : 0)) }); ph[k] = st.hr; }
+                (T.rbiHr || (T.rbiHr = {}))[sd + ':' + k] = st.rbi;
+            }
+        }
+        // who drove in the run: the batter whose RBI count rose since the last event
+        function batRbiGuess(T, sd) {
+            T.rbiMark = T.rbiMark || [[], []]; let who = null;
+            for (let k = 0; k < 9; k++) { const r = G.batStats[sd][k].rbi, was = T.rbiMark[sd][k] || 0; if (r > was) who = batNameAt(sd, k); T.rbiMark[sd][k] = r; }
+            return who;
+        }
+        function gameSummary() {
+            const T = G.tk; if (!T) return null;
+            if (T.sum) return T.sum;
+            for (let sd = 0; sd < 2; sd++) { const o = T.pit[sd][T.cur[sd]]; if (o && o.exitLead == null) o.exitLead = G.score[sd] - G.score[1 - sd]; }
+            const sm = { draw: G.score[0] === G.score[1], W: -1, L: -1, win: null, lose: null, sv: null, hld: [], bs: [], winRbi: null, hr: T.hr.slice(), mvp: null, lines: {} };
+            const line = (sd, idx) => { const o = T.pit[sd][idx]; return o ? `${pitNameAt(sd, idx)}（${ipStr(o)} 失${o.runs}分）` : pitNameAt(sd, idx); };
+            for (let sd = 0; sd < 2; sd++) Object.keys(T.pit[sd]).forEach(i => { if (T.pit[sd][i].blown) sm.bs.push(`${pitNameAt(sd, +i)}（${teamOfSide(sd).abbr}）`); });
+            if (!sm.draw) {
+                const W = G.score[0] > G.score[1] ? 0 : 1, L = 1 - W; sm.W = W; sm.L = L;
+                let prev = 0, go = null;
+                T.ev.forEach(e => { const dw = e.score[W] - e.score[L]; if (prev <= 0 && dw > 0) go = e; prev = dw; });
+                const pits = Object.values(T.pit[W]).sort((a, b) => a.order - b.order);
+                let winO = go ? T.pit[W][go.pit[W]] : pits[0]; if (!winO) winO = pits[0];
+                if (winO && winO.order === 0 && winO.outs < 15 && pits.length > 1) winO = pits.slice(1).sort((a, b) => b.outs - a.outs)[0];      // starter needs 5 innings, else the best reliever gets the win
+                let loseO = go ? T.pit[L][go.pit[L]] : null; if (!loseO) loseO = Object.values(T.pit[L]).sort((a, b) => a.order - b.order)[0];
+                if (winO) { sm.win = line(W, winO.idx); sm.winSide = W; sm.winName = pitNameAt(W, winO.idx); sm.winO = winO; }
+                if (loseO) { sm.lose = line(L, loseO.idx); sm.loseName = pitNameAt(L, loseO.idx); }
+                const fin = T.pit[W][T.cur[W]];
+                if (fin && winO && fin.idx !== winO.idx && fin.order > 0 && fin.outs >= 1 && !fin.blown && ((fin.entryLead > 0 && fin.entryLead <= 3) || fin.outs >= 9)) { sm.sv = line(W, fin.idx); sm.svName = pitNameAt(W, fin.idx); sm.svO = fin; }
+                pits.forEach(o => { if (o.order > 0 && o !== winO && o !== sm.svO && o !== fin && o.entryLead > 0 && (o.exitLead == null || o.exitLead > 0) && o.outs >= 1 && !o.blown) sm.hld.push(line(W, o.idx)); });
+                if (fin && fin !== winO && fin !== sm.svO && fin.order > 0 && fin.entryLead > 0 && fin.exitLead > 0 && fin.outs >= 1 && !fin.blown && G.score[W] - G.score[L] > 3) sm.hld.push(line(W, fin.idx));
+                if (go && go.batter) sm.winRbi = { name: go.batter, inn: go.inn, half: go.half, d: go.d };
+                // MVP: best line on the winning team
+                let best = null;
+                Object.keys(T.bx[W]).forEach(nm => {
+                    const b = T.bx[W][nm]; let sc = b.rbi * 3 + b.hr * 3 + b.h * 2 + b.bb * 0.7 - (b.ab - b.h) * 0.3 + (sm.winRbi && sm.winRbi.name === nm ? 3 : 0);
+                    const desc = `${b.ab}打${b.h}安` + (b.hr ? ` ${b.hr}轟` : '') + (b.rbi ? ` ${b.rbi}打點` : '');
+                    if (!best || sc > best.sc) best = { sc, name: nm, desc };
+                });
+                [[winO, 6], [sm.svO, 5]].forEach(([o, bonus]) => { if (!o) return; const sc = o.outs * 0.8 - o.runs * 2.5 + bonus; if (!best || sc > best.sc) best = { sc, name: pitNameAt(W, o.idx), desc: `${ipStr(o)} 失${o.runs}分` + (o === winO ? ' 勝投' : ' 救援成功') }; });
+                if (best) sm.mvp = { name: best.name, desc: best.desc, team: teamOfSide(W).abbr };
+            }
+            T.sum = sm; return sm;
+        }
+        function recordHistory() {
+            const T = G.tk; if (!T || T.done) return; T.done = true;
+            const sm = gameSummary(); if (!sm) return;
+            const me = MP.active ? mpMySide() : G.playerSide, aw = TEAMS[G.awayIdx], hw = TEAMS[G.homeIdx];
+            const res = sm.draw ? 'D' : (sm.W === me ? 'W' : 'L');
+            const a = histLoad();
+            a.push({ t: Date.now(), away: aw.abbr, home: hw.abbr, sc: [G.score[0], G.score[1]], me, res, diff: G.difficulty, mp: !!MP.active, inn: Math.max(G.innScores[0].length, G.innScores[1].length),
+                win: sm.winName || null, lose: sm.loseName || null, sv: sm.svName || null, hld: sm.hld.length, mvp: sm.mvp ? `${sm.mvp.name}（${sm.mvp.team}）` : null, hr: sm.hr.length });
+            histSave(a);
+        }
+
         function update() {
             mpSyncInput();
             G.frame++;
             G.runnerAnimPhase = (G.runnerAnimPhase + 0.12) % (Math.PI * 2);
+            trackGame();
             if (G.scoreFlash[0] > 0) G.scoreFlash[0]--;
             if (G.scoreFlash[1] > 0) G.scoreFlash[1]--;
             if (G.scr === SCR.TITLE) {
                 if (isMouseJustPressed) {
                     const bx = W / 2 - 140, by = H * 0.84 - 26, bw = 280, bh = 52;
                     if (mouseX >= bx && mouseX <= bx + bw && mouseY >= by && mouseY <= by + bh) { mpOpenMenu(); clearInput(); return; }
+                    if (mouseX >= W / 2 - 100 && mouseX <= W / 2 + 100 && mouseY >= 544 && mouseY <= 580) { G.scr = SCR.HISTORY; G.histPage = 0; G.histClear = 0; clearInput(); return; }
                 }
                 if (actionTrigger()) { G.scr = SCR.SELECT; G.selStep = 0; G.cursor = 0; } clearInput(); return;
+            }
+
+            if (G.scr === SCR.HISTORY) {
+                const n = histLoad().length, pages = Math.max(1, Math.ceil(n / 10));
+                if (isMouseJustPressed) {
+                    if (mouseX >= 30 && mouseX <= 150 && mouseY >= H - 50 && mouseY <= H - 14) { G.scr = SCR.TITLE; }
+                    else if (mouseX >= W / 2 - 130 && mouseX <= W / 2 - 50 && mouseY >= H - 50 && mouseY <= H - 14) G.histPage = Math.min(pages - 1, (G.histPage || 0) + 1);
+                    else if (mouseX >= W / 2 + 50 && mouseX <= W / 2 + 130 && mouseY >= H - 50 && mouseY <= H - 14) G.histPage = Math.max(0, (G.histPage || 0) - 1);
+                    else if (mouseX >= W - 150 && mouseX <= W - 30 && mouseY >= H - 50 && mouseY <= H - 14 && n) { if (G.histClear) { histSave([]); G.histClear = 0; G.histPage = 0; } else G.histClear = 1; }
+                }
+                if (J('Escape')) G.scr = SCR.TITLE;
+                clearInput(); return;
             }
 
             if (G.scr === SCR.SELECT) {
@@ -2195,6 +2308,7 @@
             }
 
             if (G.scr === SCR.OVER) {
+                recordHistory();
                 if (actionTrigger()) {
                     if (MP.active) { MP.active = false; MP.isHost = false; if (MP.conn) MP.conn.close(); if (MP.peer) MP.peer.destroy(); }
                     initState();
@@ -2367,6 +2481,7 @@
             else if (G.scr === SCR.GAME) renderGame();
             else if (G.scr === SCR.OVER) renderOver();
             else if (G.scr === SCR.HALF_END) renderHalfEnd();
+            else if (G.scr === SCR.HISTORY) renderHistory();
             if (G.scr === SCR.GAME) MUSIC.drawPrompt();
             if (isMobile && window.innerHeight > window.innerWidth * 1.2) {
                 ctx.fillStyle = 'rgba(0,0,0,0.82)'; ctx.fillRect(0, 0, W, H);
@@ -2710,6 +2825,7 @@
             ctx.fillStyle = 'rgba(20,40,70,0.6)'; drawRoundRect(ctx, -140, -26, 280, 52, 26); ctx.fill();
             txt('📱 雙人連線對戰', 0, 7, 18, '#88ddff');
             ctx.restore();
+            { const hov = mouseX >= W / 2 - 100 && mouseX <= W / 2 + 100 && mouseY >= 544 && mouseY <= 580; ctx.fillStyle = hov ? 'rgba(60,90,130,0.8)' : 'rgba(20,40,70,0.6)'; drawRoundRect(ctx, W / 2 - 100, 544, 200, 36, 18); ctx.fill(); ctx.strokeStyle = 'rgba(255,255,255,0.4)'; ctx.lineWidth = 1.5; drawRoundRect(ctx, W / 2 - 100, 544, 200, 36, 18); ctx.stroke(); txt('📊 歷史戰績', W / 2, 568, 16, '#ffd98a'); }
         }
 
         function renderSelect() {
@@ -4056,22 +4172,22 @@
 
         function renderOver() {
             const bg = ctx.createLinearGradient(0, 0, 0, H); bg.addColorStop(0, '#000000'); bg.addColorStop(1, '#110000'); ctx.fillStyle = bg; ctx.fillRect(0, 0, W, H);
-            ctx.shadowColor = '#FF0000'; ctx.shadowBlur = 20; txt('GAME OVER', W / 2, 55, 46, '#FF4444'); ctx.shadowBlur = 0;
+            ctx.shadowColor = '#FF0000'; ctx.shadowBlur = 20; txt('GAME OVER', W / 2, 38, 34, '#FF4444'); ctx.shadowBlur = 0;
             const aw = TEAMS[G.awayIdx], hw = TEAMS[G.homeIdx];
-            txt(`${aw.abbr} ${G.score[0]} - ${G.score[1]} ${hw.abbr}`, W / 2, 115, 44, '#FFD700');
+            txt(`${aw.abbr} ${G.score[0]} - ${G.score[1]} ${hw.abbr}`, W / 2, 84, 36, '#FFD700');
             const diff = G.score[1] - G.score[0];
             let msg = ''; let col = '';
             if (diff > 0) { msg = '恭喜獲勝！ YOU WIN!'; col = '#44FF88'; }
             else if (diff < 0) { msg = '挑戰失敗 YOU LOSE'; col = '#FF4444'; }
             else { msg = '平局 DRAW'; col = '#AAAAAA'; }
-            txt(msg, W / 2, 158, 28, col);
+            txt(msg, W / 2, 116, 22, col);
 
             // Box score table
             const innings = Math.max(G.innScores[0].length, G.innScores[1].length, 9);
             const colW = Math.min(36, Math.floor((W - 180) / Math.max(innings, 9)));
             const tX = W / 2 - (colW * innings + 100) / 2;
-            const tY = 185;
-            const rowH = 30;
+            const tY = 132;
+            const rowH = 28;
 
             // Header row
             ctx.font = 'bold 11px Arial'; ctx.textAlign = 'center'; ctx.fillStyle = 'rgba(180,200,255,0.6)';
@@ -4119,7 +4235,57 @@
             ctx.strokeStyle = 'rgba(180,200,255,0.25)'; ctx.lineWidth = 1;
             ctx.beginPath(); ctx.moveTo(divX + 4, tY + 8); ctx.lineTo(divX + 4, tY + rowH * 3); ctx.stroke();
 
-            if (Math.floor(G.frame / 20) % 2 === 0) txt('點擊畫面回主選單', W / 2, H - 35, 16, '#FFFFFF');
+            // game record
+            const sm = gameSummary();
+            if (sm) {
+                const x0 = 70, x1 = W / 2 + 20; let y = 252;
+                const row = (lab, val, colL, x, yy, maxW) => { ctx.font = 'bold 14px "PingFang TC","Microsoft JhengHei",Arial'; ctx.textAlign = 'left'; ctx.fillStyle = colL; ctx.fillText(lab, x, yy); ctx.fillStyle = '#fff'; ctx.font = '14px "PingFang TC","Microsoft JhengHei",Arial'; ctx.fillText(val, x + 78, yy, maxW || 250); };
+                ctx.fillStyle = 'rgba(15,25,45,0.75)'; drawRoundRect(ctx, 40, 232, W - 80, 226, 10); ctx.fill();
+                ctx.strokeStyle = 'rgba(120,160,220,0.3)'; ctx.lineWidth = 1; drawRoundRect(ctx, 40, 232, W - 80, 226, 10); ctx.stroke();
+                if (sm.mvp) { ctx.save(); ctx.shadowColor = '#ffcc00'; ctx.shadowBlur = 10; txt(`★ MVP  ${sm.mvp.name}（${sm.mvp.team}）  ${sm.mvp.desc}`, W / 2, y + 6, 20, '#FFD700'); ctx.restore(); y += 18; }
+                y += 20;
+                if (sm.draw) row('結果', '平局，沒有勝敗投手', '#aaa', x0, y, 600);
+                else {
+                    row('勝利投手', sm.win || '—', '#44ff88', x0, y, 290); row('敗戰投手', sm.lose || '—', '#ff6666', x1, y, 290); y += 24;
+                    row('救援成功', sm.sv || '—', '#66ccff', x0, y, 290);
+                    row('勝利打點', sm.winRbi ? `${sm.winRbi.name}（${sm.winRbi.inn}局${sm.winRbi.half === 0 ? '上' : '下'} ${sm.winRbi.d}分）` : '—', '#ffd24a', x1, y, 290); y += 24;
+                    row('中繼成功', sm.hld.length ? sm.hld.join('　') : '—', '#88ddaa', x0, y, 640); y += 24;
+                }
+                if (sm.bs.length) { row('救援失敗', sm.bs.join('　'), '#ff9944', x0, y, 640); y += 24; }
+                // home runs
+                ctx.font = 'bold 14px "PingFang TC","Microsoft JhengHei",Arial'; ctx.textAlign = 'left'; ctx.fillStyle = '#ff9bd0'; ctx.fillText('全壘打', x0, y);
+                if (!sm.hr.length) { ctx.fillStyle = '#aaa'; ctx.font = '14px Arial'; ctx.fillText('無', x0 + 78, y); }
+                else {
+                    ctx.font = '13px "PingFang TC","Microsoft JhengHei",Arial'; ctx.fillStyle = '#fff'; let hx = x0 + 78, hy = y;
+                    sm.hr.forEach(h => { const t = `${h.inn}局${h.half === 0 ? '上' : '下'} ${h.name}（${teamOfSide(h.side).abbr}）${h.runs > 1 ? h.runs + '分砲' : '陽春砲'}`, w = ctx.measureText(t).width + 18; if (hx + w > W - 60 && hx > x0 + 78) { hx = x0 + 78; hy += 21; } if (hy < 446) { ctx.fillText(t, hx, hy); } hx += w; });
+                }
+            }
+            if (Math.floor(G.frame / 20) % 2 === 0) txt('點擊畫面回主選單', W / 2, H - 28, 16, '#FFFFFF');
+        }
+
+        function renderHistory() {
+            const bg = ctx.createLinearGradient(0, 0, 0, H); bg.addColorStop(0, '#07141f'); bg.addColorStop(1, '#030c12'); ctx.fillStyle = bg; ctx.fillRect(0, 0, W, H);
+            const a = histLoad().slice().reverse(), pages = Math.max(1, Math.ceil(a.length / 10)); G.histPage = Math.min(G.histPage || 0, pages - 1);
+            txt('歷史戰績', W / 2, 44, 30, '#ffd98a');
+            const w = a.filter(g => g.res === 'W').length, l = a.filter(g => g.res === 'L').length, d = a.filter(g => g.res === 'D').length;
+            let rs = 0, ra = 0; a.forEach(g => { rs += g.sc[g.me]; ra += g.sc[1 - g.me]; });
+            let streak = 0, sk = ''; if (a.length) { sk = a[0].res; for (const g of a) { if (g.res === sk) streak++; else break; } }
+            txt(a.length ? `${a.length}場　${w}勝 ${l}敗 ${d}和　勝率 ${(w + l ? w / (w + l) : 0).toFixed(3).replace(/^0/, '')}　得${rs}失${ra}　${sk === 'W' ? streak + '連勝' : sk === 'L' ? streak + '連敗' : ''}` : '還沒有比賽紀錄，打完一場就會記在這裡', W / 2, 78, 16, '#bcd');
+            const rows = a.slice((G.histPage || 0) * 10, (G.histPage || 0) * 10 + 10);
+            rows.forEach((g, i) => {
+                const y = 100 + i * 42, col = g.res === 'W' ? '#44ff88' : g.res === 'L' ? '#ff6666' : '#aaa';
+                ctx.fillStyle = 'rgba(20,35,55,0.75)'; drawRoundRect(ctx, 30, y, W - 60, 38, 7); ctx.fill();
+                const dt = new Date(g.t); ctx.font = '11px Arial'; ctx.textAlign = 'left'; ctx.fillStyle = '#789'; ctx.fillText(`${dt.getMonth() + 1}/${dt.getDate()} ${String(dt.getHours()).padStart(2, '0')}:${String(dt.getMinutes()).padStart(2, '0')}`, 40, y + 15);
+                ctx.fillStyle = '#789'; ctx.fillText(`${['簡單', '普通', '困難'][g.diff] || ''}${g.mp ? ' 連線' : ''}`, 40, y + 30);
+                txt(g.res === 'W' ? '勝' : g.res === 'L' ? '敗' : '和', 118, y + 26, 22, col);
+                txt(`${g.away} ${g.sc[0]} - ${g.sc[1]} ${g.home}`, 215, y + 26, 18, '#fff', 'center', '', false);
+                ctx.font = '12px "PingFang TC","Microsoft JhengHei",Arial'; ctx.textAlign = 'left'; ctx.fillStyle = '#cde';
+                ctx.fillText(`勝 ${g.win || '—'}　敗 ${g.lose || '—'}${g.sv ? '　救 ' + g.sv : ''}`, 320, y + 15, W - 360);
+                ctx.fillStyle = '#ffd24a'; ctx.fillText(`${g.mvp ? 'MVP ' + g.mvp : ''}${g.hr ? '　全壘打 ' + g.hr : ''}`, 320, y + 31, W - 360);
+            });
+            const btn = (x, lab, on) => { const hov = mouseX >= x && mouseX <= x + (on === 2 ? 120 : 80) && mouseY >= H - 50 && mouseY <= H - 14; ctx.fillStyle = hov ? 'rgba(70,100,150,0.9)' : 'rgba(25,45,75,0.9)'; drawRoundRect(ctx, x, H - 50, on === 2 ? 120 : 80, 36, 8); ctx.fill(); txt(lab, x + (on === 2 ? 60 : 40), H - 26, 15, '#fff', 'center', '', false); };
+            btn(30, '返回', 2); btn(W / 2 - 130, '◀ 較舊', 1); btn(W / 2 + 50, '較新 ▶', 1); if (a.length) btn(W - 150, G.histClear ? '再按確認清除' : '清除紀錄', 2);
+            txt(`${(G.histPage || 0) + 1} / ${pages}`, W / 2, H - 26, 14, '#9ab', 'center', '', false);
         }
 
         // ==========================================
