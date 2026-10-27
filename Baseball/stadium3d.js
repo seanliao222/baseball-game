@@ -1100,7 +1100,7 @@ const Stadium3D = (function () {
             else { kind = 'fly'; dist = 36 + R() * 14; apex = 9; dur = 40; roll = 28; rollDist = 14; }
         } else if (G.hitKind === 'bunt') {                // a bunt dribbles into the infield grass
             th = clamp(G.hitFlyDir * 0.55, -0.55, 0.55); dir.set(Math.sin(th), 0, -Math.cos(th));
-            kind = 'grounder'; dist = 9 + R() * 5; apex = 0.3; dur = 24; roll = type === '1B' ? 16 : 0; rollDist = type === '1B' ? 5 : 0;
+            kind = 'grounder'; dist = 5 + R() * 4; apex = 0.25; dur = 22; roll = 26; rollDist = 3 + R() * 2;      // deadened off the bat: a soft tap that dribbles to a stop
         } else { // OUT
             if (G.hitKind === 'ground') { kind = 'grounder'; dist = 26 + R() * 8; apex = 0.7; dur = 30; }
             else if (G.hitKind === 'pop') { kind = 'fly'; dist = 13 + R() * 6; apex = 26; dur = 68; }
@@ -1141,11 +1141,24 @@ const Stadium3D = (function () {
         let best = null, bd = 1e9;
         actors.fielders.forEach(f => { const d = Math.hypot(f.cur.x - rest.x, f.cur.z - rest.z); if (d < bd) { bd = d; best = f; } });
         if (pickWho) best = pickWho;
-        if (G.hitKind === 'bunt' && type !== 'FOUL') best = actors.fielders.find(f => f.pos === (end.x > 3 ? '1B' : '3B')) || best;      // the corner men charge
+        if (G.hitKind === 'bunt' && type !== 'FOUL') {          // whoever is closest of pitcher / catcher / corner men charges in
+            let bb = null, bdd = 1e9; actors.fielders.forEach(f => { if (!/^(P|C|1B|3B)$/.test(f.pos)) return; const d = Math.hypot(f.cur.x - rest.x, f.cur.z - rest.z); if (d < bdd) { bdd = d; bb = f; } });
+            if (bb) best = bb;
+        }
         if (type !== 'HR' && type !== 'FOUL') {
             fl.fielder = best; fl.rest = rest;
-            const react = kind === 'grounder' ? 12 : kind === 'line' ? 10 : 8;           // he breaks after this many frames, then runs flat out (same numbers as fieldReach)
-            if (fl.catch) best.chase = { tx: end.x, tz: end.z, t0: G.frame, arrive: G.frame + (G.hitKind === 'bunt' ? dur + 2 : dur - 2), react };
+            const isBunt = G.hitKind === 'bunt', react = isBunt ? 3 : kind === 'grounder' ? 12 : kind === 'line' ? 10 : 8;           // he breaks after this many frames, then runs flat out (same numbers as fieldReach)
+            if (isBunt) {                                       // charges in at running pace and scoops it up where it stopped
+                fl.pickT = dur + Math.round(roll * 0.7); flightPos(fl, G.frame + fl.pickT, _fp);
+                for (let it = 0; it < 4; it++) {
+                    const need = Math.ceil(react + Math.hypot(_fp.x - best.cur.x, _fp.z - best.cur.z) / 0.26);
+                    if (need <= fl.pickT) break;
+                    fl.pickT = need; flightPos(fl, G.frame + fl.pickT, _fp);
+                }
+                best.chase = { tx: _fp.x, tz: _fp.z, t0: G.frame, arrive: G.frame + fl.pickT, react };
+                fl.hold = Math.max(0, fl.pickT - dur - 5);        // the throw waits until he has it
+            }
+            else if (fl.catch) best.chase = { tx: end.x, tz: end.z, t0: G.frame, arrive: G.frame + (G.hitKind === 'bunt' ? dur + 2 : dur - 2), react };
             else {                                             // a base hit: he reaches it while it is still rolling, as late as his legs make it
                 fl.pickT = dur + Math.round(roll * 0.55); flightPos(fl, G.frame + fl.pickT, _fp);
                 for (let it = 0; it < 4; it++) {
@@ -1156,14 +1169,14 @@ const Stadium3D = (function () {
                 best.chase = { tx: _fp.x, tz: _fp.z, t0: G.frame, arrive: G.frame + fl.pickT, react };
             }
             fl.nice = !!G.nicePlay && type === 'OUT'; fl.dp = !!G.dpPlay && type === 'OUT';
-            fl.hold = fl.nice && kind === 'grounder' ? 12 : 0;                          // a diving stop takes a moment to get up and throw
+            if (!isBunt) fl.hold = fl.nice && kind === 'grounder' ? 12 : 0;                          // a diving stop takes a moment to get up and throw
             if (type === 'OUT' && kind === 'grounder') setupLegs(fl, best, G);
             else setupAirLegs(fl, best);
         }
         S.flight = fl;
         // contact flash + shake
         flashSprite.position.copy(start); flashSprite.material.opacity = 1; S.flashT = 0;
-        S.shake = type === 'HR' ? 0.9 : 0.5;
+        S.shake = type === 'HR' ? 0.9 : G.hitKind === 'bunt' ? 0.12 : 0.5;
         if (type === 'HR') S.celebrate = 1;
     }
 
@@ -1276,7 +1289,7 @@ const Stadium3D = (function () {
         hitBall.rotation.x += 0.4; hitBall.rotation.z += 0.2;
         hitBall.scale.setScalar(0.06 * clamp(hitBall.position.distanceTo(camera.position) / 11, 1, 4.5));      // keep it readable when the camera is far away
         // catch: ball sticks to the fielder's glove
-        if ((fl.catch ? t >= fl.dur - 1 : (fl.pickT !== undefined && t >= fl.pickT)) && fl.fielder) {
+        if (((fl.catch && fl.pickT === undefined) ? t >= fl.dur - 1 : (fl.pickT !== undefined && t >= fl.pickT)) && fl.fielder) {
             const st = updateLegs(G, fl, t), f = (st && st.holder) || fl.fielder;
             if (st && st.pos) { /* ball already positioned mid-throw */ }
             else { f.gloveG.getWorldPosition(v1); hitBall.position.copy(v1); }
@@ -1422,7 +1435,7 @@ const Stadium3D = (function () {
         if (s < 0) {
             P = Object.assign({}, stance); P.torsoZ = wob; hold.rz += wob + sty.holdRz; hold.py += sty.holdPy;
             if (sty.kick) { const ph = (G.frame % 150) / 150, k = ph > 0.7 ? Math.sin((ph - 0.7) / 0.3 * Math.PI) : 0; P.hipL += 0.55 * k; P.kneeL += 0.5 * k; }
-            if (info.bunt || buntAct) { P.torsoY = 1.3; P.hipsY = 1.0; P.headY = -1.1; P.torsoX = 0.35; P.torsoZ = 0; P.crouch = 0.3; P.kneeL = 1.0; P.kneeR = 1.0; P.hipL = 0.6; P.hipR = 0.55; P.spreadL = 0.5; P.spreadR = 0.5; hold = { rx: -0.35, rz: 1.35, ry: 0.0, px: 0.0, py: 0.6, pz: 0.72 };      // like a real bunt stance: squared to the pitcher, bat flat across the front, barrel over the plate }       // squared around, bat held level in front
+            if (info.bunt || buntAct) { P.torsoY = 1.3; P.hipsY = 1.0; P.headY = -1.1; P.torsoX = 0.35; P.torsoZ = 0; P.crouch = 0.3; P.kneeL = 1.0; P.kneeR = 1.0; P.hipL = 0.6; P.hipR = 0.55; P.spreadL = 0.5; P.spreadR = 0.5; hold = { rx: -0.35, rz: 1.35, ry: 0.0, px: 0.0, py: 0.6, pz: 0.72 };      }       // squared to the pitcher, bat flat across the front with the barrel over the plate
             if (buntAct) {
                 const push = bunT < 9 ? Math.sin(bunT / 9 * Math.PI / 2) : Math.max(0, 1 - (bunT - 9) / 14), hit = bunT < 9 ? 0 : Math.max(0, 1 - (bunT - 9) / 8);
                 hold.pz = 0.72 + 0.28 * push; hold.py = 0.6 - 0.08 * push; hold.rx = -0.35 - 0.2 * push + 0.15 * hit;      // reach out, then cushion back on contact

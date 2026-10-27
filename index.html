@@ -293,7 +293,7 @@
         </div>
     </div>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-    <script src="stadium3d.js?v=20261027b"></script>
+    <script src="stadium3d.js?v=20261027c"></script>
     <script src="https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.js"></script>
     <script>
@@ -2024,7 +2024,7 @@
         function playDelay(type) {
             const k = G.hitKind, nice = G.nicePlay ? 26 : 0;
             if (type === 'FOUL') return 30;
-            if (k === 'bunt') return 72;
+            if (k === 'bunt') return 118;      // the fielder charges in from his position, scoops it and throws
             if (type === 'OUT') {
                 if (k === 'ground') return (G.dpPlay ? 74 : 50) + nice;
                 return ({ fly: 112, pop: 92, line: 84 }[k] || 84) + nice;
