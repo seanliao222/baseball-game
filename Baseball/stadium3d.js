@@ -1403,7 +1403,8 @@ const Stadium3D = (function () {
         if (G.batSwingFrame >= 0 && G.frame - G.batSwingFrame < 60) s = (G.frame - G.batSwingFrame) / 20 + 0.28;
         else if (!info.humanBatting && G.aiSwing && G.frame >= G.aiSwingFrame - 8 && G.ballActive) s = (G.frame - (G.aiSwingFrame - 8)) / 20 + 0.28;
         s = s >= 0 ? Math.min(s, 1.4) : -1;
-        if (info.bunt) s = -1;
+        const bunT = info.buntT, buntAct = bunT >= 0 && bunT < 34;      // the bunt itself: bat pushed out to meet the ball, then pulled back
+        if (info.bunt || buntAct) s = -1;
         // right-handed reference pose: front (pitcher-side) leg = left leg
         const stance = { crouch: 0.14, torsoX: 0.22, torsoY: 0.08, hipsY: 0.12, hipL: 0.42, hipR: 0.38, kneeL: 0.78, kneeR: 0.85, spreadL: 0.34, spreadR: 0.34, headY: 1.2, headX: 0.08 };
         // each batter gets his own stance: archetype from stats, tweaked by a hash of his name so no two look quite alike
@@ -1421,7 +1422,12 @@ const Stadium3D = (function () {
         if (s < 0) {
             P = Object.assign({}, stance); P.torsoZ = wob; hold.rz += wob + sty.holdRz; hold.py += sty.holdPy;
             if (sty.kick) { const ph = (G.frame % 150) / 150, k = ph > 0.7 ? Math.sin((ph - 0.7) / 0.3 * Math.PI) : 0; P.hipL += 0.55 * k; P.kneeL += 0.5 * k; }
-            if (info.bunt) { P.torsoY = 1.0; P.hipsY = 0.85; P.headY = -1.0; P.torsoX = 0.3; P.torsoZ = 0; hold = { rx: -0.2, rz: -1.5, ry: 0.0, px: 0.0, py: 0.62, pz: 0.45 }; }       // squared around, bat held level in front
+            if (info.bunt || buntAct) { P.torsoY = 1.0; P.hipsY = 0.85; P.headY = -1.0; P.torsoX = 0.3; P.torsoZ = 0; hold = { rx: -0.2, rz: -1.5, ry: 0.0, px: 0.0, py: 0.62, pz: 0.45 }; }       // squared around, bat held level in front
+            if (buntAct) {
+                const push = bunT < 9 ? Math.sin(bunT / 9 * Math.PI / 2) : Math.max(0, 1 - (bunT - 9) / 14), hit = bunT < 9 ? 0 : Math.max(0, 1 - (bunT - 9) / 8);
+                hold.pz = 0.45 + 0.34 * push; hold.py = 0.62 - 0.1 * push; hold.rx = -0.2 - 0.18 * push + 0.12 * hit;      // reach out, then cushion back on contact
+                P.torsoX += 0.2 * push; P.kneeL += 0.22 * push; P.kneeR += 0.22 * push; P.crouch += 0.1 * push;
+            }
         } else {
             const T = clamp(s, 0, 1), e = ease(clamp(T / 0.9, 0, 1));
             P = Object.assign({}, stance);

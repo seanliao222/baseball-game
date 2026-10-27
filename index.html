@@ -293,7 +293,7 @@
         </div>
     </div>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-    <script src="stadium3d.js?v=20261026b"></script>
+    <script src="stadium3d.js?v=20261027a"></script>
     <script src="https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.js"></script>
     <script>
@@ -1718,7 +1718,7 @@
 
         // ── bunting: the batter squares around and pushes the ball into the infield ──
         function resolveBunt(phVal, cx, cy) {
-            G.bunt = false; SFX.crack();
+            G.bunt = false; G.buntFrame = G.frame; SFX.crack();
             const batter = getBatter(), _pt = getPitcher();
             const timing = clamp(1 - Math.abs(phVal - 0.50) * 1.2, 0, 1);
             const dist = Math.hypot(cx - G._actualAimX, cy - G._actualAimY), contact = clamp(1 - dist / (1.6 + batter.con / 100), 0, 1);
@@ -2934,7 +2934,7 @@
         function stage3DInfo() {
             const aw = TEAMS[G.awayIdx], hw = TEAMS[G.homeIdx];
             return {
-                PH, batTeam: batTeamInfo(), pitTeam: pitTeamInfo(), batter: getBatter(), pitcher: getPitcher(), batSide: batSideOf(getBatter(), getPitcher()), bunt: !!G.bunt && G.batSwingFrame < 0 && G.hitEffectFrame < 0,
+                PH, batTeam: batTeamInfo(), pitTeam: pitTeamInfo(), batter: getBatter(), pitcher: getPitcher(), batSide: batSideOf(getBatter(), getPitcher()), bunt: !!G.bunt && G.batSwingFrame < 0 && G.hitEffectFrame < 0, buntT: G.buntFrame ? G.frame - G.buntFrame : -1,
                 humanPitching: MP.active || !playerBatting(), humanBatting: MP.active || playerBatting(),
                 pitchView: uiPitching(),                 // single player: you pitch -> view from behind the mound
                 ballProgress: G.ballActive ? ballProgress() : 0, ballR: BALL_R,
