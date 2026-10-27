@@ -302,7 +302,7 @@
         </div>
     </div>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-    <script src="stadium3d.js?v=20261027e"></script>
+    <script src="stadium3d.js?v=20261027f"></script>
     <script src="https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.js"></script>
     <script>
@@ -3885,7 +3885,7 @@
             const diffMult = [1.3, 1.0, 0.7][G.difficulty];
             const bs = contactScale(batter), rx = 40 * bs * diffMult, ry = 24 * bs * diffMult;      // the contact box grows with 巧打
             if (G.power) {                                 // power swing: the bat is a small circle
-                const rr = Math.min(rx, ry) * 1.0 * 0.78;
+                const rr = Math.min(rx, ry) * 0.78 * (G.difficulty === 0 ? 0.5 : 1);      // easy mode's circle is the biggest (diffMult 1.3), so halve it there
                 ctx.fillStyle = 'rgba(255, 90, 40, 0.2)'; ctx.beginPath(); ctx.arc(cx, cy, rr, 0, Math.PI * 2); ctx.fill();
                 ctx.strokeStyle = 'rgba(255,120,60,0.98)'; ctx.lineWidth = 3; ctx.stroke();
                 ctx.fillStyle = '#FFFFFF'; ctx.beginPath(); ctx.arc(cx, cy, 3, 0, Math.PI * 2); ctx.fill();
