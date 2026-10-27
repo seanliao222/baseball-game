@@ -1750,6 +1750,7 @@
         function canBunt() { return !MP.active && playerBatting() && G.phase === PH.WAIT_PITCH; }
         function toggleBunt() { if (canBunt()) G.bunt = !G.bunt; }
 
+        function contactScale(b) { return clamp(0.7 + (b.con - 45) * 0.014, 0.6, 1.5); }      // 巧打 → size of the contact box (0.7 at con 45, 1.0 at 66, 1.4 at 95)
         function resolveSwing(phVal, cx, cy) {
             if (G.bunt) return resolveBunt(phVal, cx, cy);
             G.batSwingFrame = G.frame;
@@ -1758,7 +1759,7 @@
             const timingScore = clamp(1 - timingDist * 1.4, 0, 1);
             const batter = getBatter();
             const contactDist = Math.sqrt(Math.pow(cx - G._actualAimX, 2) + Math.pow(cy - G._actualAimY, 2));
-            const contactScore = clamp(1 - contactDist / (1.3 + (batter.con / 100) * 0.9), 0, 1);
+            const contactScore = clamp(1 - contactDist / (1.1 + 0.9 * contactScale(batter)), 0, 1);
             const qualAdj = playerBatting() ? [0.20, 0, -0.20][G.difficulty] : [-0.20, 0, 0.20][G.difficulty];
             const _pt = getPitcher(), platoon = (batSideOf(batter, _pt) === (_pt.throws || 'R')) ? -0.03 : 0.015;      // same-handed matchups favour the pitcher
             const quality = clamp(timingScore * 0.55 + contactScore * 0.45 + qualAdj + platoon - (G.pitchGreat ? 0.12 : 0), 0, 1);
@@ -3862,7 +3863,7 @@
         function renderBatCursor() {
             const batter = getBatter(); const cx = SZcx + G.curX * (SZw / 2), cy = SZcy + G.curY * (SZh / 2);
             const diffMult = [1.3, 1.0, 0.7][G.difficulty];
-            const rx = (30 + (batter.con / 100) * 20) * diffMult, ry = (18 + (batter.con / 100) * 12) * diffMult;
+            const bs = contactScale(batter), rx = 40 * bs * diffMult, ry = 24 * bs * diffMult;      // the contact box grows with 巧打
             ctx.fillStyle = 'rgba(255, 235, 60, 0.16)'; ctx.beginPath(); ctx.ellipse(cx, cy, rx, ry, 0, 0, Math.PI * 2); ctx.fill();
             ctx.strokeStyle = 'rgba(255,238,90,0.95)'; ctx.lineWidth = 2; ctx.stroke();
             ctx.fillStyle = '#FFFFFF'; ctx.beginPath(); ctx.arc(cx, cy, 3, 0, Math.PI * 2); ctx.fill();
