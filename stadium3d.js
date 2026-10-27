@@ -1422,10 +1422,10 @@ const Stadium3D = (function () {
         if (s < 0) {
             P = Object.assign({}, stance); P.torsoZ = wob; hold.rz += wob + sty.holdRz; hold.py += sty.holdPy;
             if (sty.kick) { const ph = (G.frame % 150) / 150, k = ph > 0.7 ? Math.sin((ph - 0.7) / 0.3 * Math.PI) : 0; P.hipL += 0.55 * k; P.kneeL += 0.5 * k; }
-            if (info.bunt || buntAct) { P.torsoY = 1.0; P.hipsY = 0.85; P.headY = -1.0; P.torsoX = 0.3; P.torsoZ = 0; hold = { rx: -0.2, rz: -1.5, ry: 0.0, px: 0.0, py: 0.62, pz: 0.45 }; }       // squared around, bat held level in front
+            if (info.bunt || buntAct) { P.torsoY = 1.3; P.hipsY = 1.0; P.headY = -1.1; P.torsoX = 0.35; P.torsoZ = 0; P.crouch = 0.3; P.kneeL = 1.0; P.kneeR = 1.0; P.hipL = 0.6; P.hipR = 0.55; P.spreadL = 0.5; P.spreadR = 0.5; hold = { rx: -0.35, rz: 1.35, ry: 0.0, px: 0.0, py: 0.6, pz: 0.72 };      // like a real bunt stance: squared to the pitcher, bat flat across the front, barrel over the plate }       // squared around, bat held level in front
             if (buntAct) {
                 const push = bunT < 9 ? Math.sin(bunT / 9 * Math.PI / 2) : Math.max(0, 1 - (bunT - 9) / 14), hit = bunT < 9 ? 0 : Math.max(0, 1 - (bunT - 9) / 8);
-                hold.pz = 0.45 + 0.34 * push; hold.py = 0.62 - 0.1 * push; hold.rx = -0.2 - 0.18 * push + 0.12 * hit;      // reach out, then cushion back on contact
+                hold.pz = 0.72 + 0.28 * push; hold.py = 0.6 - 0.08 * push; hold.rx = -0.35 - 0.2 * push + 0.15 * hit;      // reach out, then cushion back on contact
                 P.torsoX += 0.2 * push; P.kneeL += 0.22 * push; P.kneeR += 0.22 * push; P.crouch += 0.1 * push;
             }
         } else {
