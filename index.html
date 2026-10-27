@@ -1616,7 +1616,7 @@
             if (MP.active || !playerBatting()) {
                 G.phase = PH.PITCH_SELECT; G.pitchChoice = 0; G.aimX = 0; G.aimY = 0; G.gaugePos = 0; G.gaugeDir = 1;
             } else {
-                G.phase = PH.WAIT_PITCH; G.phaseTimer = 170; G.curX = 0; G.curY = 0;
+                G.phase = PH.WAIT_PITCH; G.phaseTimer = 280; G._wpLast = 0; G.curX = 0; G.curY = 0;
                 G.phPos = 0; G.phPressed = false; G.phDone = false; G.phValue = 0;
             }
         }
@@ -2421,7 +2421,7 @@
                         const stx = W - 130, sty = H - 100;
                         if (canSteal() && mouseX >= stx && mouseX <= stx + 120 && mouseY >= sty && mouseY <= sty + 38) { attemptSteal(); break; }
                     }
-                    if (mouseY < H - 80 || !playerBatting()) { G.phaseTimer--; }
+                    if (mouseY < H - 80 || !playerBatting()) { const _n = performance.now(), _dt = G._wpLast ? clamp((_n - G._wpLast) / 16.667, 0.25, 2) : 1; G._wpLast = _n; G.phaseTimer -= _dt; } else G._wpLast = 0;      // counted in real time, so a 120 Hz screen doesn't halve the wait
                     if (G.phaseTimer <= 0) {
                         G.pitchChoice = rndI(0, getPitcher().pitches.length - 1);
                         G.aimX = rnd(-0.82, 0.82); G.aimY = rnd(-0.82, 0.82); G._actualAimX = G.aimX; G._actualAimY = G.aimY;
