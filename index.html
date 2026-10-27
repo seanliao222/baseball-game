@@ -302,7 +302,7 @@
         </div>
     </div>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-    <script src="stadium3d.js?v=20261027d"></script>
+    <script src="stadium3d.js?v=20261027e"></script>
     <script src="https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.js"></script>
     <script>
@@ -1793,6 +1793,12 @@
                 type = Math.random() < 0.6 ? 'FOUL' : 'MISS';  // tipped / glanced
             } else {
                 type = 'MISS';                                 // clean swing and miss
+            }
+
+            if (G.power) {                                 // a power swing is all-or-nothing: weaker 巧 / 力 hitters make an out (or miss) far more often
+                const skill = batter.con * 0.5 + batter.pow * 0.5, pOut = clamp(0.30 - (skill - 50) / 150, 0.03, 0.6);
+                if (type === '1B' || type === '2B' || type === '3B' || type === 'HR') { if (Math.random() < pOut * (type === 'HR' ? 0.5 : 1)) type = 'OUT'; }
+                else if (type === 'FOUL' && Math.random() < pOut * 0.6) type = 'MISS';
             }
 
             // What kind of ball is it? (drives the 3D flight, the on-screen label, sacrifice flies and double plays)
