@@ -302,7 +302,7 @@
         </div>
     </div>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-    <script src="stadium3d.js?v=20261028b"></script>
+    <script src="stadium3d.js?v=20261028c"></script>
     <script src="https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.js"></script>
     <script>
@@ -1806,7 +1806,7 @@
                 else if (type === 'FOUL' && Math.random() < pOut * 0.6) type = 'MISS';
             }
 
-            if (chase > 0 && type === '1B' && Math.random() < Math.min(0.85, 0.4 + chase * 0.9)) type = 'OUT';      // a ball out of the zone rarely falls in for a hit
+            if (chase > 0 && type === '1B' && Math.random() < Math.min(0.9, 0.59 + chase * 0.82)) type = 'OUT';      // a ball out of the zone rarely falls in for a hit
             // What kind of ball is it? (drives the 3D flight, the on-screen label, sacrifice flies and double plays)
             { const r = Math.random(); let kind = 'fly';
               const tj = ratingsOf(batter).traj, gnd = g0 => clamp(g0 + (2.5 - tj) * 0.08, 0.12, 0.7), up = g => (r - g) / (1 - g);      // 彈道: a high-trajectory hitter hits fewer grounders
