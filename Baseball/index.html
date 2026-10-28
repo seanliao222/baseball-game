@@ -305,7 +305,7 @@
         </div>
     </div>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-    <script src="stadium3d.js?v=20261028h"></script>
+    <script src="stadium3d.js?v=20261029a"></script>
     <script src="https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.js"></script>
     <script>
@@ -1781,12 +1781,14 @@
             const _pt = getPitcher(), platoon = (batSideOf(batter, _pt) === (_pt.throws || 'R')) ? -0.03 : 0.015;      // same-handed matchups favour the pitcher
             const zoneFar = Math.max(Math.abs(G._actualAimX), Math.abs(G._actualAimY)), chase = Math.max(0, zoneFar - (1 + BALL_R));      // how far outside the zone the pitch is
             let quality = clamp(timingScore * 0.55 + contactScore * 0.45 + qualAdj + platoon - (G.pitchGreat ? 0.12 : 0), 0, 1);
+            if (!MP.active && !playerBatting()) quality = clamp(quality - (0.68 - (batter.con - 50) * 0.003) + rnd(-0.12, 0.12), 0, 1);      // computer batters are not perfect: how often they square a pitch up depends on their 巧打
             if (chase > 0) quality = Math.min(quality - Math.min(0.32, chase * 0.5), 0.55 - Math.min(0.25, chase * 0.5));      // chasing a ball: weak contact, rarely a hit, never a long one
 
             let type;
             if (quality > 0.78) {
                 const hrChance = (batter.pow - 50) / 80 + (G.power ? 0.16 + (batter.pow - 50) / 300 : 0);
                 if (Math.random() < hrChance) type = 'HR';
+                else if (Math.random() < 0.2) type = 'OUT';      // even a well-struck ball is sometimes hit right at a fielder
                 else if (Math.random() < clamp(0.03 + (batter.spd - 45) / 220, 0.03, 0.2)) type = '3B';      // a ball in the gap, legged out by a fast runner
                 else type = Math.random() < (G.power ? 0.78 : 0.5) ? '2B' : '1B';
             } else if (quality > 0.55) {
@@ -2069,22 +2071,23 @@
         function gameDecided() {
             const [aw, hm] = G.score;
             if (G.inning >= G.maxInn && G.half === 0 && hm > aw) return true;      // home already ahead after the top half: no bottom half
-            if (G.inning >= G.maxInn && G.half === 1 && aw !== hm) return true;   // after the bottom half of the last scheduled inning or later with a winner
+            if (G.inning >= G.maxInn && G.half === 1 && (aw !== hm || G.maxInn < 9)) return true;      // only a full 9-inning game goes to extra innings; shorter games end in a draw   // after the bottom half of the last scheduled inning or later with a winner
             if (G.half === 1) { const d = Math.abs(aw - hm); if (G.maxInn >= 7 && ((G.inning >= 5 && d >= 15) || (G.inning >= 7 && d >= 10))) return true; }   // mercy (call-game) rule
             return false;
         }
+        function lastInn() { return (G.maxInn || 9) === 9 ? 12 : G.maxInn; }      // last inning that can be played (a 9-inning game may run to 12)
         function walkOff() { return G.inning >= G.maxInn && G.half === 1 && G.score[1] > G.score[0]; }   // home takes the lead in the bottom half
 
         function endHalf() {
             const p0 = G.innScores[0].reduce((a, b) => a + b, 0), p1 = G.innScores[1].reduce((a, b) => a + b, 0);
             if (G.half === 0) G.innScores[0].push(G.score[0] - p0); else G.innScores[1].push(G.score[1] - p1);
-            if (gameDecided() || (G.inning >= G.maxInn + 3 && G.half === 1)) { G.scr = SCR.OVER; return; }
+            if (gameDecided() || (G.inning >= lastInn() && G.half === 1)) { G.scr = SCR.OVER; return; }
             G.scr = SCR.HALF_END; G.halfEndTimer = 0;
         }
 
         function _doNextHalf() {
             G.half++; if (G.half > 1) { G.half = 0; G.inning++; }
-            if (G.inning > G.maxInn + 3) { G.scr = SCR.OVER; return; }
+            if (G.inning > lastInn()) { G.scr = SCR.OVER; return; }
             G.runners = [false, false, false]; G.outs = 0; G.balls = 0; G.strikes = 0;
             G.scr = SCR.GAME; G.phase = PH.INNING_START; G.phaseTimer = 100;
         }
@@ -2878,7 +2881,7 @@
                     ctx.strokeStyle = on ? '#fff' : 'rgba(150,180,230,0.6)'; ctx.lineWidth = on ? 2.5 : 1.2; drawRoundRect(ctx, bx, by, bw, bh, 9); ctx.stroke();
                     txt(n === 9 ? '9局 完整' : n + '局', bx + bw / 2, by + 29, 18, on ? '#222' : '#fff', 'center', '', false);
                 });
-                txt('平手會延長加賽', W / 2, 360, 12, 'rgba(160,190,255,0.6)', 'center', '', false);
+                txt((G.maxInn || 9) === 9 ? '完整比賽：平手會延長加賽（最多到 12 局）' : '平手打完規定局數即為和局', W / 2, 360, 12, 'rgba(160,190,255,0.6)', 'center', '', false);
 
                 const aw = TEAMS[G.awayIdx], hw = TEAMS[G.homeIdx];
                 const mY = 195;
