@@ -302,7 +302,7 @@
         </div>
     </div>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-    <script src="stadium3d.js?v=20261028c"></script>
+    <script src="stadium3d.js?v=20261028d"></script>
     <script src="https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.js"></script>
     <script>
@@ -4222,24 +4222,26 @@
             const innings = Math.max(G.innScores[0].length, G.innScores[1].length, 9);
             const colW = Math.min(36, Math.floor((W - 180) / Math.max(innings, 9)));
             const tX = W / 2 - (colW * innings + 100) / 2;
-            const tY = 132;
+            const tY = 128;
             const rowH = 28;
 
             // Header row
-            ctx.font = 'bold 11px Arial'; ctx.textAlign = 'center'; ctx.fillStyle = 'rgba(180,200,255,0.6)';
-            ctx.fillText('', tX + 45, tY + 18);
+            const tW = 90 + innings * colW + 36, hdrH = 22;
+            ctx.fillStyle = 'rgba(40,60,100,0.8)'; ctx.fillRect(tX, tY, tW, hdrH);
+            ctx.strokeStyle = 'rgba(120,160,220,0.35)'; ctx.lineWidth = 1; ctx.strokeRect(tX, tY, tW, hdrH);
+            ctx.font = 'bold 12px Arial'; ctx.textAlign = 'center'; ctx.fillStyle = 'rgba(200,215,255,0.9)';
             for (let i = 0; i < innings; i++) {
-                ctx.fillText(i + 1, tX + 90 + i * colW + colW / 2, tY + 18);
+                ctx.fillText(i + 1, tX + 90 + i * colW + colW / 2, tY + 15);
             }
-            ctx.fillText('R', tX + 90 + innings * colW + 18, tY + 18);
+            ctx.fillText('R', tX + 90 + innings * colW + 18, tY + 15);
 
             [aw, hw].forEach((team, si) => {
-                const rowY = tY + rowH + si * rowH;
+                const rowY = tY + hdrH + rowH * (si + 1) - 9;
                 // Row background
                 ctx.fillStyle = `rgba(${si === 0 ? '20,35,55' : '35,20,20'},0.7)`;
-                ctx.fillRect(tX, rowY - rowH + 6, 90 + innings * colW + 36, rowH);
+                ctx.fillRect(tX, tY + hdrH + si * rowH, tW, rowH);
                 ctx.strokeStyle = si === 0 ? 'rgba(100,150,220,0.3)' : 'rgba(220,100,100,0.3)';
-                ctx.lineWidth = 1; ctx.strokeRect(tX, rowY - rowH + 6, 90 + innings * colW + 36, rowH);
+                ctx.lineWidth = 1; ctx.strokeRect(tX, tY + hdrH + si * rowH, tW, rowH);
 
                 // Team name
                 const abbrSz = team.abbr.length <= 2 ? 15 : 11;
@@ -4269,15 +4271,17 @@
             // Divider line between innings and total
             const divX = tX + 90 + innings * colW;
             ctx.strokeStyle = 'rgba(180,200,255,0.25)'; ctx.lineWidth = 1;
-            ctx.beginPath(); ctx.moveTo(divX + 4, tY + 8); ctx.lineTo(divX + 4, tY + rowH * 3); ctx.stroke();
+            ctx.beginPath(); ctx.moveTo(divX, tY); ctx.lineTo(divX, tY + hdrH + rowH * 2); ctx.stroke();
 
             // game record
             const sm = gameSummary();
             if (sm) {
                 const x0 = 70, x1 = W / 2 + 20; let y = 252;
                 const row = (lab, val, colL, x, yy, maxW) => { ctx.font = 'bold 14px "PingFang TC","Microsoft JhengHei",Arial'; ctx.textAlign = 'left'; ctx.fillStyle = colL; ctx.fillText(lab, x, yy); ctx.fillStyle = '#fff'; ctx.font = '14px "PingFang TC","Microsoft JhengHei",Arial'; ctx.fillText(val, x + 78, yy, maxW || 250); };
-                ctx.fillStyle = 'rgba(15,25,45,0.75)'; drawRoundRect(ctx, 40, 232, W - 80, 226, 10); ctx.fill();
-                ctx.strokeStyle = 'rgba(120,160,220,0.3)'; ctx.lineWidth = 1; drawRoundRect(ctx, 40, 232, W - 80, 226, 10); ctx.stroke();
+                let hrLines = 1; if (sm.hr.length) { ctx.font = '13px "PingFang TC","Microsoft JhengHei",Arial'; let hx = x0 + 78; sm.hr.forEach(h => { const w = ctx.measureText(`${h.inn}局${h.half === 0 ? '上' : '下'} ${h.name}（${teamOfSide(h.side).abbr}）${h.runs > 1 ? h.runs + '分砲' : '陽春砲'}`).width + 18; if (hx + w > W - 60 && hx > x0 + 78) { hx = x0 + 78; hrLines++; } hx += w; }); }
+                const panH = Math.min(226, 30 + (sm.mvp ? 38 : 20) + (sm.draw ? 24 : 72) + (sm.bs.length ? 24 : 0) + 21 * hrLines);
+                ctx.fillStyle = 'rgba(15,25,45,0.75)'; drawRoundRect(ctx, 40, 232, W - 80, panH, 10); ctx.fill();
+                ctx.strokeStyle = 'rgba(120,160,220,0.3)'; ctx.lineWidth = 1; drawRoundRect(ctx, 40, 232, W - 80, panH, 10); ctx.stroke();
                 if (sm.mvp) { ctx.save(); ctx.shadowColor = '#ffcc00'; ctx.shadowBlur = 10; txt(`★ MVP  ${sm.mvp.name}（${sm.mvp.team}）  ${sm.mvp.desc}`, W / 2, y + 6, 20, '#FFD700'); ctx.restore(); y += 18; }
                 y += 20;
                 if (sm.draw) row('結果', '平局，沒有勝敗投手', '#aaa', x0, y, 600);
