@@ -283,6 +283,9 @@
                     <button class="mp-btn" id="mp-side-home" style="padding:8px 16px;font-size:14px;">主場（後攻）</button>
                     <button class="mp-btn" id="mp-side-away" style="padding:8px 16px;font-size:14px;">客場（先攻）</button>
                 </div>
+                <div class="mp-row"><span>局數：</span>
+                    <button class="mp-btn mp-inn" data-n="3" style="padding:6px 12px;font-size:13px;">3局</button><button class="mp-btn mp-inn" data-n="5" style="padding:6px 12px;font-size:13px;">5局</button><button class="mp-btn mp-inn" data-n="7" style="padding:6px 12px;font-size:13px;">7局</button><button class="mp-btn mp-inn sel" data-n="9" style="padding:6px 12px;font-size:13px;">9局</button>
+                </div>
                 <div class="mp-sub">選擇你的隊伍：</div>
                 <div id="mp-team-grid-host" class="mp-grid"></div>
                 <div id="mp-opp-pick" class="mp-sub">對手：尚未選擇隊伍</div>
@@ -302,7 +305,7 @@
         </div>
     </div>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-    <script src="stadium3d.js?v=20261028e"></script>
+    <script src="stadium3d.js?v=20261028f"></script>
     <script src="https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.js"></script>
     <script>
@@ -933,7 +936,7 @@
             G = {
                 scr: SCR.TITLE, selStep: 0, cursor: 0, awayIdx: 0, homeIdx: 1,
                 inning: 1, half: 0, outs: 0, balls: 0, strikes: 0,
-                score: [0, 0], runners: [false, false, false], innScores: [[], []],
+                score: [0, 0], maxInn: 9, runners: [false, false, false], innScores: [[], []],
                 playerSide: 1, difficulty: 1,
                 batOrder: [0, 0],
                 lineups: [[0, 1, 2, 3, 4, 5, 6, 7, 8], [0, 1, 2, 3, 4, 5, 6, 7, 8]],
@@ -2062,23 +2065,23 @@
         // returns true when the game is decided at this point
         function gameDecided() {
             const [aw, hm] = G.score;
-            if (G.inning >= 9 && G.half === 0 && hm > aw) return true;      // home already ahead after the top half: no bottom half
-            if (G.inning >= 9 && G.half === 1 && aw !== hm) return true;   // after the bottom half of 9th+ with a winner
-            if (G.half === 1) { const d = Math.abs(aw - hm); if ((G.inning >= 5 && d >= 15) || (G.inning >= 7 && d >= 10)) return true; }   // mercy (call-game) rule
+            if (G.inning >= G.maxInn && G.half === 0 && hm > aw) return true;      // home already ahead after the top half: no bottom half
+            if (G.inning >= G.maxInn && G.half === 1 && aw !== hm) return true;   // after the bottom half of the last scheduled inning or later with a winner
+            if (G.half === 1) { const d = Math.abs(aw - hm); if (G.maxInn >= 7 && ((G.inning >= 5 && d >= 15) || (G.inning >= 7 && d >= 10))) return true; }   // mercy (call-game) rule
             return false;
         }
-        function walkOff() { return G.inning >= 9 && G.half === 1 && G.score[1] > G.score[0]; }   // home takes the lead in the bottom half
+        function walkOff() { return G.inning >= G.maxInn && G.half === 1 && G.score[1] > G.score[0]; }   // home takes the lead in the bottom half
 
         function endHalf() {
             const p0 = G.innScores[0].reduce((a, b) => a + b, 0), p1 = G.innScores[1].reduce((a, b) => a + b, 0);
             if (G.half === 0) G.innScores[0].push(G.score[0] - p0); else G.innScores[1].push(G.score[1] - p1);
-            if (gameDecided() || (G.inning >= 12 && G.half === 1)) { G.scr = SCR.OVER; return; }
+            if (gameDecided() || (G.inning >= G.maxInn + 3 && G.half === 1)) { G.scr = SCR.OVER; return; }
             G.scr = SCR.HALF_END; G.halfEndTimer = 0;
         }
 
         function _doNextHalf() {
             G.half++; if (G.half > 1) { G.half = 0; G.inning++; }
-            if (G.inning > 12) { G.scr = SCR.OVER; return; }
+            if (G.inning > G.maxInn + 3) { G.scr = SCR.OVER; return; }
             G.runners = [false, false, false]; G.outs = 0; G.balls = 0; G.strikes = 0;
             G.scr = SCR.GAME; G.phase = PH.INNING_START; G.phaseTimer = 100;
         }
@@ -2151,7 +2154,7 @@
                     st.ab++; st.h++; st.hr++; st.rbi += runs;
                 }
                 // walk-off: the home team takes the lead in the bottom of the 9th or later
-                if (bat === 1 && G.inning >= 9 && G.score[1] + score > G.score[0]) break;
+                if (bat === 1 && G.inning >= G.maxInn && G.score[1] + score > G.score[0]) break;
             }
             G.score[bat] += score; addLoad(pSide, score * 2.5);
             G.runners = runners;
@@ -2300,6 +2303,7 @@
                             }
                         });
                     } else if (G.selStep === 2) {
+                        [3, 5, 7, 9].forEach((n, i) => { const bx = W / 2 - 215 + i * 110, by = 292; if (mouseX >= bx && mouseX <= bx + 100 && mouseY >= by && mouseY <= by + 44) G.maxInn = n; });
                         const diffs = ['簡單', '普通', '困難'];
                         diffs.forEach((_, di) => {
                             const bx = W / 2 - 195 + di * 135, by = 400;
@@ -2864,7 +2868,14 @@
             if (G.selStep === 2) {
                 ctx.fillStyle = 'rgba(0,0,0,0.45)'; drawRoundRect(ctx, W / 2 - 265, 22, 530, 68, 12); ctx.fill();
                 ctx.strokeStyle = 'rgba(255,255,255,0.15)'; ctx.lineWidth = 1; drawRoundRect(ctx, W / 2 - 265, 22, 530, 68, 12); ctx.stroke();
-                txt('選擇難易度', W / 2, 66, 30, '#ffeeaa');
+                txt('選擇局數與難易度', W / 2, 66, 30, '#ffeeaa');
+                [3, 5, 7, 9].forEach((n, i) => {
+                    const bx = W / 2 - 215 + i * 110, by = 292, bw = 100, bh = 44, on = (G.maxInn || 9) === n, hov = mouseX >= bx && mouseX <= bx + bw && mouseY >= by && mouseY <= by + bh;
+                    ctx.fillStyle = on ? 'rgba(255,200,60,0.9)' : hov ? 'rgba(90,120,170,0.9)' : 'rgba(25,45,75,0.9)'; drawRoundRect(ctx, bx, by, bw, bh, 9); ctx.fill();
+                    ctx.strokeStyle = on ? '#fff' : 'rgba(150,180,230,0.6)'; ctx.lineWidth = on ? 2.5 : 1.2; drawRoundRect(ctx, bx, by, bw, bh, 9); ctx.stroke();
+                    txt(n === 9 ? '9局 完整' : n + '局', bx + bw / 2, by + 29, 18, on ? '#222' : '#fff', 'center', '', false);
+                });
+                txt('平手會延長加賽', W / 2, 360, 12, 'rgba(160,190,255,0.6)', 'center', '', false);
 
                 const aw = TEAMS[G.awayIdx], hw = TEAMS[G.homeIdx];
                 const mY = 195;
@@ -4219,7 +4230,7 @@
             txt(msg, W / 2, 116, 22, col);
 
             // Box score table
-            const innings = Math.max(G.innScores[0].length, G.innScores[1].length, 9);
+            const innings = Math.max(G.innScores[0].length, G.innScores[1].length, G.maxInn || 9);
             const colW = Math.min(36, Math.floor((W - 180) / Math.max(innings, 9)));
             const tX = W / 2 - (colW * innings + 100) / 2;
             const tY = 128;
@@ -4486,7 +4497,7 @@
             const hostSide = MP.hostSide, hp = MP.hostPick, gp = MP.guestPick;
             if (hp < 0 || gp < 0 || hp === gp) return;
             initState();
-            G.playerSide = hostSide; G.difficulty = 1;
+            G.playerSide = hostSide; G.difficulty = 1; G.maxInn = MP.innings || 9;
             G.awayIdx = hostSide === 0 ? hp : gp; G.homeIdx = hostSide === 1 ? hp : gp;
             G.usedBatters = [Array(TEAMS[G.awayIdx].roster.batters.length).fill(false), Array(TEAMS[G.homeIdx].roster.batters.length).fill(false)];
             G.usedPitchers = [Array(TEAMS[G.awayIdx].roster.pitchers.length).fill(false), Array(TEAMS[G.homeIdx].roster.pitchers.length).fill(false)];
@@ -4501,6 +4512,7 @@
             mpCloseOverlay();
         }
 
+        document.querySelectorAll('.mp-inn').forEach(b => b.addEventListener('click', () => { MP.innings = +b.dataset.n; document.querySelectorAll('.mp-inn').forEach(x => x.classList.toggle('sel', x === b)); }));
         document.getElementById('mp-create-btn').addEventListener('click', mpStartHost);
         document.getElementById('mp-close-btn').addEventListener('click', mpCloseOverlay);
         document.getElementById('mp-host-cancel').addEventListener('click', () => {
