@@ -302,7 +302,7 @@
         </div>
     </div>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-    <script src="stadium3d.js?v=20261028d"></script>
+    <script src="stadium3d.js?v=20261028e"></script>
     <script src="https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.js"></script>
     <script>
@@ -1968,7 +1968,7 @@
                 if (preRunners[2]) G.hrRunners.push({ startBase: 3 });
                 if (preRunners[1]) G.hrRunners.push({ startBase: 2 });
                 if (preRunners[0]) G.hrRunners.push({ startBase: 1 });
-                G.hrRunFrame = G.frame;
+                G.hrRunFrame = G.frame; G.hrRuns = runs;
                 G.phase = PH.HR_RUN;
                 return; // skip showRes – fired later when animation ends
             } else if (type === 'SAC') {
@@ -2480,7 +2480,7 @@
                     const hrElapsed = G.frame - G.hrRunFrame;
                     const HR_LEG = 45; // frames per base leg
                     if (hrElapsed >= 4 * HR_LEG + 18) {
-                        showRes('全壘打！', 'HOMERUN', '#FFD700', false);
+                        { const n = G.hrRuns || 1; showRes(n >= 4 ? '滿貫全壘打！4 分' : n === 1 ? '1 分全壘打！' : `${n} 分全壘打！`, 'HOMERUN', '#FFD700', false); }
                     }
                     break;
                 }

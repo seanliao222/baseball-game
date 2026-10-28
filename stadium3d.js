@@ -1581,6 +1581,13 @@ const Stadium3D = (function () {
         if (!st) { S.stealRun = null; pool.forEach(o => o.stealing = false); } else stealRunners(G, st, holdPos, pool);
         if (!phaseHR && !st) {
             let changed = false; for (let k = 0; k < 3; k++) if (prev[k] !== now[k]) changed = true;
+            // bases loaded + a walk / hit-by-pitch: everyone is forced up a base and the runner from third walks home
+            if (!changed && prev[0] && prev[1] && prev[2] && S.runnerObjs[2] && G.score[G.half] > (S.prevScore ? S.prevScore[G.half] : 0) && G.phase !== info.PH.HR_RUN) {
+                const o3 = S.runnerObjs[2];
+                o3.path = [BASES[0]]; o3.arrived = false; o3.leaving = true; o3.fast = false;
+                for (const k of [1, 0]) { const o = S.runnerObjs[k]; if (!o) continue; const hp = holdPos(k + 1); o.path = [BASES[k + 2], [hp.x, hp.z]]; o.arrived = false; o.slot = k + 1; S.runnerObjs[k + 1] = o; }
+                S.runnerObjs[0] = spawn(0, 0);
+            }
             if (changed) {
                 const used = [false, false, false];
                 const newObjs = [null, null, null];
