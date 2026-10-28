@@ -305,7 +305,7 @@
         </div>
     </div>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-    <script src="stadium3d.js?v=20261028g"></script>
+    <script src="stadium3d.js?v=20261028h"></script>
     <script src="https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.js"></script>
     <script>
@@ -1810,6 +1810,9 @@
             }
 
             if (chase > 0 && type === '1B' && Math.random() < Math.min(0.9, 0.59 + chase * 0.82)) type = 'OUT';      // a ball out of the zone rarely falls in for a hit
+            { const dd = (fieldDef() - 65) / 100;      // a good defence turns some would-be singles into outs; a poor one lets some outs drop in
+              if (dd > 0 && type === '1B' && Math.random() < dd * 0.5) type = 'OUT';
+              else if (dd < 0 && type === 'OUT' && quality > 0.32 && Math.random() < -dd * 0.5) type = '1B'; }
             // What kind of ball is it? (drives the 3D flight, the on-screen label, sacrifice flies and double plays)
             { const r = Math.random(); let kind = 'fly';
               const tj = ratingsOf(batter).traj, gnd = g0 => clamp(g0 + (2.5 - tj) * 0.08, 0.12, 0.7), up = g => (r - g) / (1 - g);      // 彈道: a high-trajectory hitter hits fewer grounders
@@ -2969,12 +2972,18 @@
             });
         }
 
+        // each fielder's 守備 rating by position (an out-of-position fielder is worse), which sets how much ground he covers
+        function fieldDefByPos() {
+            ensureLineupPos(); const sd = G.half === 0 ? 1 : 0, bs = TEAMS[sd === 0 ? G.awayIdx : G.homeIdx].roster.batters, out = {};
+            for (let i = 0; i < 9; i++) { const ps = G.lineupPos[sd][i]; if (ps && ps !== 'DH') out[ps] = ratingsOf(bs[G.lineups[sd][i]]).def - (dfNatural(sd, i) ? 0 : 12); }
+            return out;
+        }
         function stage3DInfo() {
             const aw = TEAMS[G.awayIdx], hw = TEAMS[G.homeIdx];
             return {
                 PH, batTeam: batTeamInfo(), pitTeam: pitTeamInfo(), batter: getBatter(), pitcher: getPitcher(), batSide: batSideOf(getBatter(), getPitcher()), bunt: !!G.bunt && G.batSwingFrame < 0 && G.hitEffectFrame < 0, buntT: G.buntFrame ? G.frame - G.buntFrame : -1,
                 humanPitching: MP.active || !playerBatting(), humanBatting: MP.active || playerBatting(),
-                pitchView: uiPitching(),                 // single player: you pitch -> view from behind the mound
+                defByPos: fieldDefByPos(), pitchView: uiPitching(),                 // single player: you pitch -> view from behind the mound
                 ballProgress: G.ballActive ? ballProgress() : 0, ballR: BALL_R,
                 awayAbbr: aw.abbr, homeAbbr: hw.abbr, awayCol: aw.c1, homeCol: hw.c1, homeTeam: hw, hud: hudView()
             };
