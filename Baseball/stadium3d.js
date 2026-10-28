@@ -1116,7 +1116,7 @@ const Stadium3D = (function () {
             for (let tries = 0; tries < 90 && !pick; tries++) {
                 let th2, d2;
                 if (!hit) {
-                    const pool = fs.filter(f => (kind === 'grounder' || G.hitKind === 'pop') ? !/^(LF|CF|RF)$/.test(f.pos) : true);
+                    const pool = fs.filter(f => (kind === 'grounder' || G.hitKind === 'pop') ? !/^(LF|CF|RF)$/.test(f.pos) : G.hitKind === 'fly' ? /^(LF|CF|RF)$/.test(f.pos) : true);      // a fly ball (sacrifice fly) is an outfield catch; an infielder's is a pop-up
                     const f = pool[Math.floor(R() * pool.length)], rr = fieldReach(kind, dur) * 0.75;
                     const x = f.cur.x + (R() - 0.5) * 2 * rr, z = f.cur.z + (R() - 0.5) * 2 * rr;
                     d2 = Math.hypot(x, z); th2 = Math.atan2(x, -z);
@@ -1841,6 +1841,11 @@ const Stadium3D = (function () {
             }
             out[type + '/' + hk] = { bad, avgSlack: +(sl / n).toFixed(2), maxV: +mx.toFixed(2), avgV: +(vs / n).toFixed(2), late };
         }
+        S.flight = keep; return out;
+    };
+    api._who = function (type, hk, n) {       // test hook: who plays a batted ball of this kind
+        const out = {}, keep = S.flight;
+        for (let i = 0; i < n; i++) { startFlight({ hitType: type, hitKind: hk, hitFlyDir: (Math.random() < 0.5 ? 1 : -1) * (0.6 + Math.random() * 0.8), curX: 0, frame: 0, nicePlay: false, dpPlay: false }, {}); const f = S.flight.fielder; const k = f ? f.pos : '-'; out[k] = (out[k] || 0) + 1; }
         S.flight = keep; return out;
     };
     api.debugCam = function (pos, look, fov) { S.dbgCam = pos ? { pos: new THREE.Vector3(...pos), look: new THREE.Vector3(...look), fov: fov || 30, shift: 0 } : null; };
