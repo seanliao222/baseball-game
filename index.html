@@ -302,7 +302,7 @@
         </div>
     </div>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-    <script src="stadium3d.js?v=20261027f"></script>
+    <script src="stadium3d.js?v=20261028b"></script>
     <script src="https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.js"></script>
     <script>
@@ -1297,6 +1297,7 @@
         ['pointerdown', 'pointerup', 'touchend', 'click', 'keydown'].forEach(ev => document.addEventListener(ev, () => MUSIC.unlockPlay(), { passive: true }));
 
         const keys = {}, jp = {};
+        let realMX = W / 2, realMY = H / 2;      // this machine's own pointer (mouseX/Y are overwritten by the remote player's pointer while it is their turn)
         let mouseX = W / 2, mouseY = H / 2, isMouseJustPressed = false, isMouseJustReleased = false;
 
         document.addEventListener('keydown', e => { if (!keys[e.code]) jp[e.code] = true; keys[e.code] = true; });
@@ -1304,8 +1305,8 @@
 
         function updatePointerPos(clientX, clientY) {
             const rect = canvas.getBoundingClientRect();
-            mouseX = (clientX - rect.left) * (W / rect.width);
-            mouseY = (clientY - rect.top) * (H / rect.height);
+            mouseX = realMX = (clientX - rect.left) * (W / rect.width);
+            mouseY = realMY = (clientY - rect.top) * (H / rect.height);
         }
 
         canvas.addEventListener('mousemove', e => updatePointerPos(e.clientX, e.clientY));
@@ -1547,6 +1548,8 @@
         }
         // what THIS screen shows: in versus mode each player sees only their own role (pitch wheel for the pitcher, timing bar for the batter)
         function uiPitching() { if (!MP.active) return !playerBatting(); const m = mpMySide(); return m != null && G.half !== m; }
+        // versus mode: the batter's box is up while the other player is still choosing / aiming the pitch
+        function mpBatterWaiting() { return MP.active && (G.phase === PH.PITCH_SELECT || G.phase === PH.AIM || G.phase === PH.POWER_GAUGE); }
         function uiBatting() { if (!MP.active) return playerBatting(); const m = mpMySide(); return m != null && G.half === m; }
         function playerBatting() { return G.half === G.playerSide; }
         function batTeamInfo() { return TEAMS[G.half === 0 ? G.awayIdx : G.homeIdx]; }
@@ -1623,7 +1626,7 @@
             if (!isContinue) { G.balls = 0; G.strikes = 0; G.pickoffs = 0; G.pitchLog = []; aiPitchingChange(); const ps = G.half === 0 ? 1 : 0; G.pApp[ps].bf++; }
             G.ballActive = false; G.batSwingFrame = -999; G._pitchPending = false; G.bunt = false; G.power = false;
             if (MP.active || !playerBatting()) {
-                G.phase = PH.PITCH_SELECT; G.pitchChoice = 0; G.aimX = 0; G.aimY = 0; G.gaugePos = 0; G.gaugeDir = 1;
+                G.phase = PH.PITCH_SELECT; G.pitchChoice = 0; G.aimX = 0; G.aimY = 0; G.gaugePos = 0; G.gaugeDir = 1; if (MP.active && uiBatting()) { G.curX = 0; G.curY = 0; }
             } else {
                 G.phase = PH.WAIT_PITCH; G.phaseTimer = 280; G._wpLast = 0; G.curX = 0; G.curY = 0;
                 G.phPos = 0; G.phPressed = false; G.phDone = false; G.phValue = 0;
@@ -1773,7 +1776,9 @@
             const contactScore = clamp(1 - contactDist / ((1.1 + 0.9 * contactScale(batter)) * (G.power ? 0.6 : 1)), 0, 1);      // power swing: a much smaller contact circle
             const qualAdj = playerBatting() ? [0.20, 0, -0.20][G.difficulty] : [-0.20, 0, 0.20][G.difficulty];
             const _pt = getPitcher(), platoon = (batSideOf(batter, _pt) === (_pt.throws || 'R')) ? -0.03 : 0.015;      // same-handed matchups favour the pitcher
-            const quality = clamp(timingScore * 0.55 + contactScore * 0.45 + qualAdj + platoon - (G.pitchGreat ? 0.12 : 0), 0, 1);
+            const zoneFar = Math.max(Math.abs(G._actualAimX), Math.abs(G._actualAimY)), chase = Math.max(0, zoneFar - (1 + BALL_R));      // how far outside the zone the pitch is
+            let quality = clamp(timingScore * 0.55 + contactScore * 0.45 + qualAdj + platoon - (G.pitchGreat ? 0.12 : 0), 0, 1);
+            if (chase > 0) quality = Math.min(quality - Math.min(0.32, chase * 0.5), 0.55 - Math.min(0.25, chase * 0.5));      // chasing a ball: weak contact, rarely a hit, never a long one
 
             let type;
             if (quality > 0.78) {
@@ -1801,6 +1806,7 @@
                 else if (type === 'FOUL' && Math.random() < pOut * 0.6) type = 'MISS';
             }
 
+            if (chase > 0 && type === '1B' && Math.random() < Math.min(0.85, 0.4 + chase * 0.9)) type = 'OUT';      // a ball out of the zone rarely falls in for a hit
             // What kind of ball is it? (drives the 3D flight, the on-screen label, sacrifice flies and double plays)
             { const r = Math.random(); let kind = 'fly';
               const tj = ratingsOf(batter).traj, gnd = g0 => clamp(g0 + (2.5 - tj) * 0.08, 0.12, 0.7), up = g => (r - g) / (1 - g);      // 彈道: a high-trajectory hitter hits fewer grounders
@@ -2353,6 +2359,7 @@
                 }
             }
 
+            if (mpBatterWaiting()) { if (MP.isHost && !(isMobile && playerBatting())) { const bx = playerBatting() ? realMX : MP.remoteX, by = playerBatting() ? realMY : MP.remoteY; G.curX = clamp((bx - SZcx) / (SZw / 2), -1.5, 1.5); G.curY = clamp((by - SZcy) / (SZh / 2), -1.5, 1.5); } }
             switch (G.phase) {
                 case PH.SUB_MENU:
                     if (G.subType === 'D') { if (isMouseJustPressed) defMenuClick(); break; }
@@ -3228,7 +3235,7 @@
             S3D.frame(G, stage3DInfo());
             { const zb = S3D.aimBox(); SZcx = zb.cx; SZcy = zb.cy; SZw = zb.hw * 2; SZh = zb.hh * 2; }
             if (G.phase !== PH.HR_RUN) { renderZone3D(); renderPitchPreview(); }
-            if (S3D.isBatCam() && uiBatting() && (G.phase === PH.WAIT_PITCH || G.phase === PH.BATTING)) renderBatCursor();
+            if (S3D.isBatCam() && uiBatting() && (G.phase === PH.WAIT_PITCH || G.phase === PH.BATTING || mpBatterWaiting())) renderBatCursor();
             renderHitFlash();
             renderBroadcastHUD();
             renderHitKindChip();
@@ -3266,7 +3273,7 @@
                 if (fieldingPhase) { renderPitchingZone(); renderPitchPreview(); } else renderBattingZone();
             }
             if (G.ballActive) renderBall();
-            if (uiBatting() && (G.phase === PH.WAIT_PITCH || G.phase === PH.BATTING)) renderBatCursor();
+            if (uiBatting() && (G.phase === PH.WAIT_PITCH || G.phase === PH.BATTING || mpBatterWaiting())) renderBatCursor();
 
             renderHitEffect();
             renderClassicUI();
@@ -4348,7 +4355,7 @@
                 isMouseJustPressed = MP.remoteDown; isMouseJustReleased = MP.remoteUp;
                 MP.remoteDown = false; MP.remoteUp = false;
             }
-            else if (G.scr === SCR.GAME) { MP.remoteDown = false; MP.remoteUp = false; }   // taps made when it is not their turn must not fire later
+            else if (G.scr === SCR.GAME) { mouseX = realMX; mouseY = realMY; MP.remoteDown = false; MP.remoteUp = false; }   // taps made when it is not their turn must not fire later
         }
 
         function mpBroadcastState() { mpSend({ t: 'state', g: G }); }
