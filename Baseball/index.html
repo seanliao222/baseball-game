@@ -305,7 +305,7 @@
         </div>
     </div>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-    <script src="stadium3d.js?v=20261029c"></script>
+    <script src="stadium3d.js?v=20261029d"></script>
     <script src="https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.js"></script>
     <script>
@@ -1953,6 +1953,10 @@
             return { nr, runs };
         }
 
+        // per-batter record of today's plate appearances, shown when the batter steps in again
+        const HIST_LBL = { HR: '全壘打', '3B': '三壘安', '2B': '二壘安', '1B': '安打', BB: '四壞', HBP: '死球', ROE: '失誤', SAC: '犧打', K: '三振' };
+        function pushHist(st, type, outKind) { (st.hist || (st.hist = [])).push(type === 'OUT' ? (outKind === 'ground' ? '滾地出局' : '飛球出局') : (HIST_LBL[type] || type)); }
+
         function applyPlay(type) {
             G._continueAtBat = false; const bat = G.half;
             const pre = { outs: G.outs, runners: [...G.runners], score: [...G.score] };      // what the scoreboard shows until the play is finished
@@ -1960,6 +1964,7 @@
             const slotIdx = G.batOrder[bat];
             const st = G.batStats[bat][slotIdx];
             if (type === 'OUT' && !G.nicePlay && G.hitKind !== 'pop' && Math.random() < Math.max(0.02, 0.05 + 0.015 * dfPenalty(G.half === 0 ? 1 : 0) + (62 - fieldDef()) * 0.0012)) type = 'ROE';       // fielding error: the batter reaches
+            if (type !== 'FOUL' && type !== 'MISS') pushHist(st, type, G.outKind);
             if (type === 'HR' || type === '1B' || type === '2B' || type === '3B') G.pApp[1 - bat].hits++;
             addLoad(1 - bat, { HR: 5, '3B': 4, '2B': 3, '1B': 2, BB: 1.5, HBP: 1.5, ROE: 0 }[type] || 0);
             if (type === 'HR') {
@@ -2129,6 +2134,7 @@
                 G.pitchCounts[pSide] += result === 'K' ? rndI(4, 7) : result === 'BB' ? rndI(5, 8) : rndI(2, 6); G.pApp[pSide].bf++;      // the pitcher still throws pitches in auto mode
                 const st = G.batStats[bat][batIdx];
                 atBats++;
+                pushHist(st, result, Math.random() < 0.55 ? 'fly' : 'ground');
                 if (result === 'K') {
                     outs++; st.ab++; st.k++;
                 } else if (result === 'OUT') {
@@ -2387,7 +2393,7 @@
                                     G.pitchers[sideIdx] = rIdx; G.pitchCounts[sideIdx] = G.pcBy[sideIdx][rIdx] || 0; G.usedPitchers[sideIdx][rIdx] = true;
                                     G.pApp[sideIdx] = { runs0: G.score[1 - sideIdx], hits: 0, bf: 0 };
                                 }
-                                else { let curOrder = G.batOrder[sideIdx]; G.lineups[sideIdx][curOrder] = rIdx; G.usedBatters[sideIdx][rIdx] = true; }
+                                else { let curOrder = G.batOrder[sideIdx]; G.lineups[sideIdx][curOrder] = rIdx; G.usedBatters[sideIdx][rIdx] = true; G.batStats[sideIdx][curOrder].hist = []; }
                                 G.phase = G.prevPhase; break;
                             }
                         }
@@ -3822,6 +3828,16 @@
             rDia(rdX + rdW / 2, rdY + 14, G.runners[1]); rDia(rdX + rdW - 14, rdY + rdH / 2, G.runners[0]); rDia(rdX + 14, rdY + rdH / 2, G.runners[2]);
 
             const bpX = 8, bpY = H - 122, bpW = 236, bpH = 114;
+            {   // earlier at-bats today (only when this isn't the batter's first)
+                const hist = (G.batStats[G.half][G.batOrder[G.half]] || {}).hist;
+                if (hist && hist.length) {
+                    const shown = hist.slice(-4), n = hist.length;
+                    ctx.fillStyle = 'rgba(4,10,18,0.88)'; drawRoundRect(ctx, bpX, bpY - 26, bpW, 22, 7); ctx.fill();
+                    ctx.font = 'bold 11px "PingFang TC", "Microsoft JhengHei", Arial'; ctx.textAlign = 'left'; ctx.fillStyle = '#9fb4d4'; ctx.fillText('今日', bpX + 8, bpY - 11);
+                    const cw = (bpW - 44) / shown.length;
+                    shown.forEach((t, i) => { const hit = /安|全壘/.test(t); ctx.fillStyle = hit ? '#ffd23a' : /三振/.test(t) ? '#ff7766' : '#dfe8f5'; ctx.fillText((n - shown.length + i + 1) + '.' + t, bpX + 38 + i * cw, bpY - 11); });
+                }
+            }
             const bpBg = ctx.createLinearGradient(bpX, bpY, bpX, bpY + bpH);
             bpBg.addColorStop(0, batTeam.c1 + '3a'); bpBg.addColorStop(1, 'rgba(4,10,18,0.93)');
             ctx.fillStyle = bpBg; drawRoundRect(ctx, bpX, bpY, bpW, bpH, 9); ctx.fill();
