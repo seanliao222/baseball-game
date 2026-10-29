@@ -1776,8 +1776,8 @@
             const timingScore = clamp(1 - timingDist * 1.4, 0, 1);
             const batter = getBatter();
             const contactDist = Math.sqrt(Math.pow(cx - G._actualAimX, 2) + Math.pow(cy - G._actualAimY, 2));
-            const contactScore = clamp(1 - contactDist / ((1.1 + 0.9 * contactScale(batter)) * (G.power ? 0.6 : 1)), 0, 1);      // power swing: a much smaller contact circle
-            const qualAdj = playerBatting() ? [0.20, 0, -0.20][G.difficulty] : [-0.20, 0, 0.20][G.difficulty];
+            const contactScore = clamp(1 - contactDist / ((1.1 + 0.9 * contactScale(batter)) * (G.power ? 0.6 : 1) * [1.15, 1, 0.8][G.difficulty]), 0, 1);      // power swing: a much smaller contact circle
+            const qualAdj = playerBatting() ? [0.20, 0, -0.22][G.difficulty] : [-0.20, 0, 0.20][G.difficulty];
             const _pt = getPitcher(), platoon = (batSideOf(batter, _pt) === (_pt.throws || 'R')) ? -0.03 : 0.015;      // same-handed matchups favour the pitcher
             const zoneFar = Math.max(Math.abs(G._actualAimX), Math.abs(G._actualAimY)), chase = Math.max(0, zoneFar - (1 + BALL_R));      // how far outside the zone the pitch is
             let quality = clamp(timingScore * 0.55 + contactScore * 0.45 + qualAdj + platoon - (G.pitchGreat ? 0.12 : 0), 0, 1);
@@ -1788,11 +1788,11 @@
             if (quality > 0.78) {
                 const hrChance = (batter.pow - 50) / 80 + (G.power ? 0.16 + (batter.pow - 50) / 300 : 0);
                 if (Math.random() < hrChance) type = 'HR';
-                else if (Math.random() < 0.2) type = 'OUT';      // even a well-struck ball is sometimes hit right at a fielder
+                else if (Math.random() < [0.14, 0.2, 0.28][G.difficulty]) type = 'OUT';      // even a well-struck ball is sometimes hit right at a fielder
                 else if (Math.random() < clamp(0.03 + (batter.spd - 45) / 220, 0.03, 0.2)) type = '3B';      // a ball in the gap, legged out by a fast runner
                 else type = Math.random() < (G.power ? 0.78 : 0.5) ? '2B' : '1B';
             } else if (quality > 0.55) {
-                type = Math.random() < 0.72 ? '1B' : 'OUT';
+                type = Math.random() < [0.78, 0.72, 0.62][G.difficulty] ? '1B' : 'OUT';
                 if (G.power && type === '1B') { const r2 = Math.random(); if (r2 < 0.12 + (batter.pow - 50) / 300) type = 'HR'; else if (r2 < 0.42) type = '2B'; }      // a solid power swing carries
             } else if (quality > 0.32) {
                 type = Math.random() < 0.42 ? '1B' : 'OUT';
