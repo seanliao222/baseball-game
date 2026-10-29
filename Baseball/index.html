@@ -305,7 +305,7 @@
         </div>
     </div>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-    <script src="stadium3d.js?v=20261029b"></script>
+    <script src="stadium3d.js?v=20261029c"></script>
     <script src="https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.js"></script>
     <script>
@@ -1707,8 +1707,8 @@
             if (!MP.active && !playerBatting()) {
                 const batter = getBatter();
                 const inZone = isStrikePos(G._actualAimX, G._actualAimY);
-                const aiSwingMult = [0.75, 1.0, 1.2][G.difficulty];
-                const aiErrMult = [2.2, 1.0, 0.45][G.difficulty];
+                const aiSwingMult = [0.75, 1.2, 1.4][G.difficulty];
+                const aiErrMult = [2.2, 0.45, 0.25][G.difficulty];
                 // the batter decides on where the pitch *looks* to be (eye-dependent noise), never on the true ball/strike call
                 const eyeR = ratingsOf(batter).eye, pn = (100 - eyeR) / 100 * 0.45 + 0.08;
                 const far = Math.max(Math.abs(G._actualAimX + rnd(-pn, pn)), Math.abs(G._actualAimY + rnd(-pn, pn))), prot = G.strikes >= 2 ? 1.35 : 1;
@@ -1724,8 +1724,8 @@
                 G.phase = PH.BALL_FLIGHT;
             } else {
                 G.phase = PH.BATTING; G.phPos = 0; G.phPressed = false; G.phDone = false; G.phValue = 0;
-                const phMult = [0.55, 0.80, 1.20][G.difficulty];
-                G.phSpeed = (0.008 + speedMult * 0.005) * phMult; G.phW = [0.7, 1.0, 1.4][G.difficulty];
+                const phMult = [0.55, 1.20, 1.5][G.difficulty];
+                G.phSpeed = (0.008 + speedMult * 0.005) * phMult; G.phW = [0.7, 1.4, 1.8][G.difficulty];
             }
         }
 
@@ -1737,7 +1737,7 @@
             const batter = getBatter(), _pt = getPitcher();
             const timing = clamp(1 - Math.abs(phVal - 0.50) * 1.2, 0, 1);
             const dist = Math.hypot(cx - G._actualAimX, cy - G._actualAimY), contact = clamp(1 - dist / (1.6 + batter.con / 100), 0, 1);
-            const qualAdj = playerBatting() ? [0.12, 0, -0.12][G.difficulty] : [-0.12, 0, 0.12][G.difficulty];
+            const qualAdj = playerBatting() ? [0.12, -0.12, -0.20][G.difficulty] : [-0.12, 0.12, 0.20][G.difficulty];
             const q = clamp(timing * 0.6 + contact * 0.4 + qualAdj - (G.pitchGreat ? 0.1 : 0), 0, 1);
             const spd = ((batter.spd || 60) - 60) / 400, r = Math.random();
             let type;
@@ -1776,8 +1776,8 @@
             const timingScore = clamp(1 - timingDist * 1.4, 0, 1);
             const batter = getBatter();
             const contactDist = Math.sqrt(Math.pow(cx - G._actualAimX, 2) + Math.pow(cy - G._actualAimY, 2));
-            const contactScore = clamp(1 - contactDist / ((1.1 + 0.9 * contactScale(batter)) * (G.power ? 0.6 : 1) * [1.15, 1, 0.8][G.difficulty]), 0, 1);      // power swing: a much smaller contact circle
-            const qualAdj = playerBatting() ? [0.20, 0, -0.22][G.difficulty] : [-0.20, 0, 0.20][G.difficulty];
+            const contactScore = clamp(1 - contactDist / ((1.1 + 0.9 * contactScale(batter)) * (G.power ? 0.6 : 1) * [1.15, 0.8, 0.65][G.difficulty]), 0, 1);      // power swing: a much smaller contact circle
+            const qualAdj = playerBatting() ? [0.20, -0.22, -0.30][G.difficulty] : [-0.20, 0.20, 0.28][G.difficulty];
             const _pt = getPitcher(), platoon = (batSideOf(batter, _pt) === (_pt.throws || 'R')) ? -0.03 : 0.015;      // same-handed matchups favour the pitcher
             const zoneFar = Math.max(Math.abs(G._actualAimX), Math.abs(G._actualAimY)), chase = Math.max(0, zoneFar - (1 + BALL_R));      // how far outside the zone the pitch is
             let quality = clamp(timingScore * 0.55 + contactScore * 0.45 + qualAdj + platoon - (G.pitchGreat ? 0.12 : 0), 0, 1);
@@ -1788,11 +1788,11 @@
             if (quality > 0.78) {
                 const hrChance = (batter.pow - 50) / 80 + (G.power ? 0.16 + (batter.pow - 50) / 300 : 0);
                 if (Math.random() < hrChance) type = 'HR';
-                else if (Math.random() < [0.14, 0.2, 0.28][G.difficulty]) type = 'OUT';      // even a well-struck ball is sometimes hit right at a fielder
+                else if (Math.random() < [0.14, 0.28, 0.36][G.difficulty]) type = 'OUT';      // even a well-struck ball is sometimes hit right at a fielder
                 else if (Math.random() < clamp(0.03 + (batter.spd - 45) / 220, 0.03, 0.2)) type = '3B';      // a ball in the gap, legged out by a fast runner
                 else type = Math.random() < (G.power ? 0.78 : 0.5) ? '2B' : '1B';
             } else if (quality > 0.55) {
-                type = Math.random() < [0.78, 0.72, 0.62][G.difficulty] ? '1B' : 'OUT';
+                type = Math.random() < [0.78, 0.62, 0.52][G.difficulty] ? '1B' : 'OUT';
                 if (G.power && type === '1B') { const r2 = Math.random(); if (r2 < 0.12 + (batter.pow - 50) / 300) type = 'HR'; else if (r2 < 0.42) type = '2B'; }      // a solid power swing carries
             } else if (quality > 0.32) {
                 type = Math.random() < 0.42 ? '1B' : 'OUT';
@@ -1872,7 +1872,7 @@
         function startSteal(opt) {
             const bat = G.half, roster = batTeamInfo().roster.batters;
             const spdAvg = G.lineups[bat].reduce((a, i) => a + roster[i].spd, 0) / 9;
-            const dm = [0.10, 0, -0.08][G.difficulty];
+            const dm = [0.10, -0.08, -0.14][G.difficulty];
             // chance a runner beats the throw: 2nd is easiest, 3rd harder, home very hard
             const pOf = k => clamp([0.7, 0.46, 0.14][k] + (spdAvg - 60) / 220 + dm, 0.05, 0.88);
             const moves = opt.moves.map(k => ({ k, res: 'out' })); let leadK;
@@ -2099,7 +2099,7 @@
         function tiredness(pitcher, pc) { return clamp((pc - pitcher.stm * 0.5) / (pitcher.stm * 0.7), 0, 1.2); }
         function simAtBat(batter, pitcher, pc = 0) {
             const tire = tiredness(pitcher, pc);
-            const diffPitchAdj = [0.7, 1.0, 1.3][G.difficulty];
+            const diffPitchAdj = [0.7, 1.3, 1.6][G.difficulty];
             const ctrl = clamp(pitcher.ctrl / 100 * diffPitchAdj * (1 - tire * 0.18), 0.3, 1.0);
             const vel = clamp(pitcher.vel / 100 * diffPitchAdj * (1 - tire * 0.12), 0.5, 1.0);
             const con = batter.con / 100;
@@ -3912,7 +3912,7 @@
 
         function renderBatCursor() {
             const batter = getBatter(); const cx = SZcx + G.curX * (SZw / 2), cy = SZcy + G.curY * (SZh / 2);
-            const diffMult = [1.3, 1.0, 0.7][G.difficulty];
+            const diffMult = [1.3, 0.7, 0.5][G.difficulty];
             const bs = contactScale(batter), rx = 40 * bs * diffMult, ry = 24 * bs * diffMult;      // the contact box grows with 巧打
             if (G.power) {                                 // power swing: the bat is a small circle
                 const rr = Math.min(rx, ry) * 0.78 * (G.difficulty === 0 ? 0.5 : 1);      // easy mode's circle is the biggest (diffMult 1.3), so halve it there
