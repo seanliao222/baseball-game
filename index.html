@@ -305,7 +305,7 @@
         </div>
     </div>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-    <script src="stadium3d.js?v=20261030c"></script>
+    <script src="stadium3d.js?v=20261030e"></script>
     <script src="https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.js"></script>
     <script>
@@ -2210,6 +2210,16 @@
             team.roster.pitchers.push({ name: '廖宣瑜', throws: 'R', vel: 92, ctrl: 85, stm: 78, era: '2.70', k: 140, pitches: [{ id: 0, lv: 5 }, { id: 2, lv: 5 }, { id: 5, lv: 5 }, { id: 4, lv: 4 }] });
         });
 
+        // 特殊打者：阪神專屬的廖輝明（右打，平均 B 級；對上 MLB 球隊時打擊能力大幅提升）。開賽時依對手聯盟套用
+        TEAMS.find(t => t.abbr === '阪神').roster.batters.push({ name: '廖輝明', bats: 'R', throws: 'R', pos: 'DH', avg: '.285', hr: 20, rbi: 70, con: 74, pow: 72, spd: 70, arm: 74, def: 72, obp: 0.385, slg: 0.470 });
+        function applyLiaoBoost() {
+            const hit = TEAMS.find(t => t.abbr === '阪神'), b = hit.roster.batters.find(x => x.name === '廖輝明'); if (!b) return;
+            const opp = TEAMS[G.awayIdx] === hit ? TEAMS[G.homeIdx] : TEAMS[G.homeIdx] === hit ? TEAMS[G.awayIdx] : null;
+            const mlb = !!opp && opp.lg === 'MLB';
+            Object.assign(b, mlb ? { con: 90, pow: 90, spd: 76, avg: '.335', hr: 38, rbi: 105, obp: 0.440, slg: 0.640 } : { con: 74, pow: 72, spd: 70, avg: '.285', hr: 20, rbi: 70, obp: 0.385, slg: 0.470 });
+            delete b._r;
+        }
+
         const SCR = { TITLE: 0, SELECT: 1, LINEUP: 4, GAME: 2, OVER: 3, HALF_END: 5, HISTORY: 6 };
         const PH = { INNING_START: 0, PITCH_SELECT: 1, AIM: 2, POWER_GAUGE: 3, WAIT_PITCH: 4, BALL_FLIGHT: 5, BATTING: 6, RESULT: 7, SUB_MENU: 8, HR_RUN: 9, STEAL_MENU: 10, STEAL: 11 };
         let G = {};
@@ -3609,6 +3619,7 @@
                                 G.inning = 1; G.half = 0; G.outs = 0; G.balls = 0; G.strikes = 0; G.score = [0, 0]; G.batOrder = [0, 0];
                                 G.lineups = [[0, 1, 2, 3, 4, 5, 6, 7, 8], [0, 1, 2, 3, 4, 5, 6, 7, 8]];
                                 G.pitchers = [0, 0]; G.lineupPos = null; G.lnSel = null; G.lnPick = null;
+                                applyLiaoBoost();
                                 G.usedBatters = [Array(TEAMS[G.awayIdx].roster.batters.length).fill(false), Array(TEAMS[G.homeIdx].roster.batters.length).fill(false)];
                                 G.usedPitchers = [Array(TEAMS[G.awayIdx].roster.pitchers.length).fill(false), Array(TEAMS[G.homeIdx].roster.pitchers.length).fill(false)];
 
@@ -5830,6 +5841,7 @@
             initState();
             G.playerSide = hostSide; G.difficulty = 1; G.maxInn = MP.innings || 9;
             G.awayIdx = hostSide === 0 ? hp : gp; G.homeIdx = hostSide === 1 ? hp : gp;
+            applyLiaoBoost();
             G.usedBatters = [Array(TEAMS[G.awayIdx].roster.batters.length).fill(false), Array(TEAMS[G.homeIdx].roster.batters.length).fill(false)];
             G.usedPitchers = [Array(TEAMS[G.awayIdx].roster.pitchers.length).fill(false), Array(TEAMS[G.homeIdx].roster.pitchers.length).fill(false)];
             for (let i = 0; i < 9; i++) { G.usedBatters[0][i] = true; G.usedBatters[1][i] = true; }
