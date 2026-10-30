@@ -305,7 +305,7 @@
         </div>
     </div>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-    <script src="stadium3d.js?v=20261030b"></script>
+    <script src="stadium3d.js?v=20261030c"></script>
     <script src="https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.js"></script>
     <script>
@@ -4259,12 +4259,12 @@
 
         // team-select screen: one tab per league; each tab lays its teams out in columns (divisions) or a grid
         const LEAGUE_TABS = [
+            { id: 'CPBL', label: '🇹🇼 CPBL 中華職棒', col: '#FF9944', groups: [['', ['兄弟', '統一', '樂天', '富邦', '味全', '台鋼']]] },
+            { id: 'NPB', label: '🇯🇵 NPB 日本職棒', col: '#FF6688', groups: [
+                ['中央聯盟', ['讀賣', '阪神', '中日', '廣島', '養樂多', '橫濱']], ['太平洋聯盟', ['軟銀', '日本火腿', '歐力士', '羅德', '西武', '金鷲']]] },
             { id: 'MLB', label: '⚾ MLB 美國職棒', col: '#88AAFF', groups: [
                 ['美聯東區', ['洋基', '紅襪', '藍鳥', '金鶯', '光芒']], ['美聯中區', ['守護者', '老虎', '皇家', '雙城', '白襪']], ['美聯西區', ['太空人', '運動家', '水手', '遊騎兵', '天使']],
                 ['國聯東區', ['大都會', '費城人', '勇士', '馬林魚', '國民']], ['國聯中區', ['小熊', '釀酒人', '紅雀', '紅人', '海盜']], ['國聯西區', ['道奇', '教士', '巨人', '響尾蛇', '洛磯']]] },
-            { id: 'NPB', label: '🇯🇵 NPB 日本職棒', col: '#FF6688', groups: [
-                ['中央聯盟', ['讀賣', '阪神', '中日', '廣島', '養樂多', '橫濱']], ['太平洋聯盟', ['軟銀', '日本火腿', '歐力士', '羅德', '西武', '金鷲']]] },
-            { id: 'CPBL', label: '🇹🇼 CPBL 中華職棒', col: '#FF9944', groups: [['', ['兄弟', '統一', '樂天', '富邦', '味全', '台鋼']]] },
             { id: 'WBC', label: '🌏 WBC 經典賽', col: '#44FFCC', groups: [['', ['中華', '日本', '韓國', '澳洲', '美國', '多明尼加', '波多黎各', '墨西哥', '義大利']]] }
         ];
         function selTabLayout() {
