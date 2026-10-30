@@ -305,7 +305,7 @@
         </div>
     </div>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-    <script src="stadium3d.js?v=20261029d"></script>
+    <script src="stadium3d.js?v=20261030b"></script>
     <script src="https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.js"></script>
     <script>
@@ -895,35 +895,1319 @@
             }
         };
 
+        // ── 新增球隊名單（MLB 全 30 隊 / NPB 全 12 隊；能力值為估算，est:1）──
+        Object.assign(ROSTERS, {
+            'BOS': {
+                pitchers: [
+                    { name: 'G.Crochet', throws: 'L', vel: 98, ctrl: 72, stm: 85, era: '4.17', k: 122, pitches: [{ id: 0, lv: 6 }, { id: 3, lv: 5 }, { id: 4, lv: 5 }, { id: 5, lv: 4 }], est: 1 },
+                    { name: 'B.Bello', throws: 'R', vel: 95, ctrl: 70, stm: 78, era: '4.39', k: 107, pitches: [{ id: 0, lv: 5 }, { id: 2, lv: 5 }, { id: 5, lv: 5 }, { id: 4, lv: 4 }], est: 1 },
+                    { name: 'L.Giolito', throws: 'R', vel: 93, ctrl: 70, stm: 80, era: '4.48', k: 103, pitches: [{ id: 0, lv: 4 }, { id: 2, lv: 5 }, { id: 5, lv: 5 }, { id: 4, lv: 4 }, { id: 7, lv: 4 }], est: 1 },
+                    { name: 'K.Bryan', throws: 'R', vel: 94, ctrl: 68, stm: 70, era: '4.51', k: 98, pitches: [{ id: 0, lv: 4 }, { id: 2, lv: 5 }, { id: 4, lv: 5 }, { id: 5, lv: 4 }], est: 1 },
+                    { name: 'A.Chapman', throws: 'L', vel: 100, ctrl: 55, stm: 45, era: '4.57', k: 75, pitches: [{ id: 0, lv: 6 }, { id: 2, lv: 6 }], est: 1 },
+                    { name: 'G.Whitlock', throws: 'R', vel: 96, ctrl: 72, stm: 50, era: '4.41', k: 63, pitches: [{ id: 0, lv: 5 }, { id: 2, lv: 6 }, { id: 5, lv: 4 }], est: 1 },
+                    { name: 'J.Slaten', throws: 'R', vel: 96, ctrl: 66, stm: 45, era: '4.55', k: 63, pitches: [{ id: 0, lv: 5 }, { id: 2, lv: 6 }, { id: 4, lv: 4 }], est: 1 },
+                    { name: 'L.Weissert', throws: 'R', vel: 93, ctrl: 70, stm: 50, era: '4.60', k: 54, pitches: [{ id: 0, lv: 4 }, { id: 2, lv: 6 }, { id: 4, lv: 4 }], est: 1 },
+                    { name: 'J.Winckowski', throws: 'R', vel: 94, ctrl: 66, stm: 60, era: '4.59', k: 90, pitches: [{ id: 0, lv: 4 }, { id: 2, lv: 5 }, { id: 4, lv: 5 }], est: 1 },
+                    { name: 'Z.Kelly', throws: 'R', vel: 96, ctrl: 64, stm: 75, era: '4.47', k: 108, pitches: [{ id: 0, lv: 5 }, { id: 2, lv: 5 }, { id: 4, lv: 5 }], est: 1 },
+                    { name: 'Q.Priester', throws: 'R', vel: 95, ctrl: 66, stm: 72, era: '4.49', k: 103, pitches: [{ id: 0, lv: 5 }, { id: 2, lv: 5 }, { id: 4, lv: 5 }], est: 1 },
+                    { name: 'R.Houck', throws: 'R', vel: 95, ctrl: 66, stm: 72, era: '4.49', k: 103, pitches: [{ id: 0, lv: 5 }, { id: 2, lv: 5 }, { id: 4, lv: 5 }, { id: 5, lv: 4 }], est: 1 }
+                ],
+                batters: [
+                    { name: 'J.Duran', bats: 'L', throws: 'R', pos: 'CF', avg: '.276', hr: 22, rbi: 66, con: 70, pow: 72, spd: 82, obp: 0.342, slg: 0.480, est: 1 },
+                    { name: 'A.Bregman', bats: 'R', throws: 'R', pos: '3B', avg: '.280', hr: 21, rbi: 64, con: 72, pow: 70, spd: 50, obp: 0.346, slg: 0.475, est: 1 },
+                    { name: 'W.Contreras', bats: 'R', throws: 'R', pos: 'C', avg: '.272', hr: 27, rbi: 76, con: 68, pow: 78, spd: 50, obp: 0.338, slg: 0.503, est: 1 },
+                    { name: 'T.Story', bats: 'R', throws: 'R', pos: 'SS', avg: '.258', hr: 22, rbi: 66, con: 60, pow: 72, spd: 68, obp: 0.320, slg: 0.462, est: 1 },
+                    { name: 'R.Devers', bats: 'L', throws: 'R', pos: '3B', avg: '.290', hr: 32, rbi: 86, con: 78, pow: 86, spd: 40, obp: 0.360, slg: 0.557, est: 1 },
+                    { name: 'M.Yoshida', bats: 'L', throws: 'R', pos: 'LF', avg: '.283', hr: 13, rbi: 48, con: 74, pow: 58, spd: 45, obp: 0.351, slg: 0.424, est: 1 },
+                    { name: 'R.Gonzalez', bats: 'R', throws: 'R', pos: '1B', avg: '.262', hr: 18, rbi: 58, con: 62, pow: 66, spd: 50, obp: 0.324, slg: 0.439, est: 1 },
+                    { name: 'T.Anthony', bats: 'L', throws: 'R', pos: 'RF', avg: '.262', hr: 17, rbi: 56, con: 62, pow: 64, spd: 66, obp: 0.324, slg: 0.430, est: 1 },
+                    { name: 'C.Campbell', bats: 'R', throws: 'R', pos: '2B', avg: '.262', hr: 14, rbi: 50, con: 62, pow: 60, spd: 60, obp: 0.324, slg: 0.412, est: 1 },
+                    { name: 'R.Refsnyder', bats: 'R', throws: 'R', pos: '1B', avg: '.269', hr: 15, rbi: 52, con: 66, pow: 62, spd: 50, obp: 0.333, slg: 0.428, est: 1 },
+                    { name: 'C.Wong', bats: 'R', throws: 'R', pos: 'C', avg: '.254', hr: 14, rbi: 50, con: 58, pow: 60, spd: 45, obp: 0.316, slg: 0.404, est: 1 },
+                    { name: 'Z.Dalbec', bats: 'R', throws: 'R', pos: 'IF', avg: '.240', hr: 21, rbi: 64, con: 50, pow: 70, spd: 45, obp: 0.298, slg: 0.435, est: 1 },
+                    { name: 'B.Hamilton', bats: 'R', throws: 'R', pos: 'CF', avg: '.254', hr: 7, rbi: 36, con: 58, pow: 50, spd: 80, obp: 0.316, slg: 0.359, est: 1 }
+                ]
+            },
+            'TOR': {
+                pitchers: [
+                    { name: 'K.Gausman', throws: 'R', vel: 95, ctrl: 80, stm: 84, era: '4.16', k: 112, pitches: [{ id: 0, lv: 5 }, { id: 5, lv: 5 }, { id: 6, lv: 5 }], est: 1 },
+                    { name: 'J.Berrios', throws: 'R', vel: 93, ctrl: 70, stm: 82, era: '4.47', k: 105, pitches: [{ id: 0, lv: 4 }, { id: 4, lv: 5 }, { id: 5, lv: 5 }, { id: 2, lv: 4 }], est: 1 },
+                    { name: 'C.Bassitt', throws: 'R', vel: 92, ctrl: 78, stm: 85, era: '4.35', k: 104, pitches: [{ id: 0, lv: 3 }, { id: 5, lv: 5 }, { id: 4, lv: 5 }, { id: 2, lv: 4 }, { id: 7, lv: 4 }], est: 1 },
+                    { name: 'S.Gray', throws: 'R', vel: 94, ctrl: 75, stm: 80, era: '4.33', k: 106, pitches: [{ id: 0, lv: 4 }, { id: 2, lv: 5 }, { id: 4, lv: 5 }, { id: 5, lv: 4 }], est: 1 },
+                    { name: 'J.Romano', throws: 'R', vel: 96, ctrl: 62, stm: 45, era: '4.63', k: 63, pitches: [{ id: 0, lv: 5 }, { id: 2, lv: 6 }, { id: 7, lv: 4 }], est: 1 },
+                    { name: 'C.Green', throws: 'R', vel: 98, ctrl: 58, stm: 45, era: '4.61', k: 69, pitches: [{ id: 0, lv: 6 }, { id: 2, lv: 6 }, { id: 6, lv: 4 }], est: 1 },
+                    { name: 'Y.Kikuchi', throws: 'L', vel: 95, ctrl: 60, stm: 70, era: '4.62', k: 101, pitches: [{ id: 0, lv: 5 }, { id: 2, lv: 5 }, { id: 4, lv: 5 }, { id: 5, lv: 4 }], est: 1 },
+                    { name: 'E.Rom', throws: 'L', vel: 94, ctrl: 62, stm: 74, era: '4.61', k: 101, pitches: [{ id: 0, lv: 4 }, { id: 2, lv: 5 }, { id: 4, lv: 5 }, { id: 5, lv: 4 }], est: 1 },
+                    { name: 'B.Little', throws: 'L', vel: 95, ctrl: 64, stm: 50, era: '4.62', k: 60, pitches: [{ id: 0, lv: 5 }, { id: 2, lv: 6 }, { id: 4, lv: 4 }], est: 1 },
+                    { name: 'N.Pearson', throws: 'R', vel: 99, ctrl: 60, stm: 55, era: '4.48', k: 72, pitches: [{ id: 0, lv: 6 }, { id: 2, lv: 6 }, { id: 4, lv: 4 }], est: 1 },
+                    { name: 'J.Francis', throws: 'R', vel: 96, ctrl: 64, stm: 50, era: '4.57', k: 63, pitches: [{ id: 0, lv: 5 }, { id: 2, lv: 6 }, { id: 4, lv: 4 }], est: 1 },
+                    { name: 'B.Bassitt', throws: 'R', vel: 91, ctrl: 76, stm: 60, era: '4.54', k: 81, pitches: [{ id: 0, lv: 3 }, { id: 2, lv: 5 }, { id: 4, lv: 5 }], est: 1 }
+                ],
+                batters: [
+                    { name: 'G.Springer', bats: 'R', throws: 'R', pos: 'DH', avg: '.265', hr: 24, rbi: 70, con: 64, pow: 74, spd: 62, obp: 0.329, slg: 0.478, est: 1 },
+                    { name: 'V.Guerrero Jr.', bats: 'R', throws: 'R', pos: '1B', avg: '.294', hr: 31, rbi: 84, con: 80, pow: 84, spd: 42, obp: 0.364, slg: 0.552, est: 1 },
+                    { name: 'B.Bichette', bats: 'R', throws: 'R', pos: 'SS', avg: '.294', hr: 18, rbi: 58, con: 80, pow: 66, spd: 58, obp: 0.364, slg: 0.471, est: 1 },
+                    { name: 'D.Varsho', bats: 'L', throws: 'R', pos: 'CF', avg: '.254', hr: 20, rbi: 62, con: 58, pow: 68, spd: 82, obp: 0.316, slg: 0.440, est: 1 },
+                    { name: 'A.Kirk', bats: 'R', throws: 'R', pos: 'C', avg: '.283', hr: 14, rbi: 50, con: 74, pow: 60, spd: 40, obp: 0.351, slg: 0.433, est: 1 },
+                    { name: 'A.Gimenez', bats: 'L', throws: 'R', pos: '2B', avg: '.265', hr: 13, rbi: 48, con: 64, pow: 58, spd: 78, obp: 0.329, slg: 0.406, est: 1 },
+                    { name: 'D.Schneider', bats: 'R', throws: 'R', pos: 'LF', avg: '.258', hr: 18, rbi: 58, con: 60, pow: 66, spd: 72, obp: 0.320, slg: 0.435, est: 1 },
+                    { name: 'A.Barger', bats: 'L', throws: 'R', pos: 'RF', avg: '.262', hr: 20, rbi: 62, con: 62, pow: 68, spd: 55, obp: 0.324, slg: 0.448, est: 1 },
+                    { name: 'E.Clement', bats: 'R', throws: 'R', pos: '3B', avg: '.272', hr: 7, rbi: 36, con: 68, pow: 50, spd: 58, obp: 0.338, slg: 0.377, est: 1 },
+                    { name: 'N.Lukes', bats: 'L', throws: 'R', pos: 'IF', avg: '.254', hr: 11, rbi: 44, con: 58, pow: 56, spd: 60, obp: 0.316, slg: 0.386, est: 1 },
+                    { name: 'T.Heineman', bats: 'S', throws: 'R', pos: 'C', avg: '.254', hr: 3, rbi: 28, con: 58, pow: 44, spd: 50, obp: 0.316, slg: 0.332, est: 1 },
+                    { name: 'J.Sanchez', bats: 'L', throws: 'R', pos: 'OF', avg: '.247', hr: 13, rbi: 48, con: 54, pow: 58, spd: 62, obp: 0.307, slg: 0.388, est: 1 },
+                    { name: 'R.Tellez', bats: 'R', throws: 'R', pos: 'OF', avg: '.254', hr: 14, rbi: 50, con: 58, pow: 60, spd: 68, obp: 0.316, slg: 0.404, est: 1 }
+                ]
+            },
+            'BAL': {
+                pitchers: [
+                    { name: 'C.Burnes', throws: 'R', vel: 96, ctrl: 78, stm: 84, era: '4.15', k: 115, pitches: [{ id: 0, lv: 5 }, { id: 7, lv: 5 }, { id: 4, lv: 5 }, { id: 2, lv: 4 }], est: 1 },
+                    { name: 'Z.Eflin', throws: 'R', vel: 92, ctrl: 88, stm: 82, era: '4.16', k: 102, pitches: [{ id: 0, lv: 3 }, { id: 7, lv: 5 }, { id: 4, lv: 5 }, { id: 5, lv: 4 }], est: 1 },
+                    { name: 'K.Bradish', throws: 'R', vel: 97, ctrl: 72, stm: 78, era: '4.25', k: 113, pitches: [{ id: 0, lv: 5 }, { id: 2, lv: 5 }, { id: 4, lv: 5 }, { id: 5, lv: 4 }], est: 1 },
+                    { name: 'T.Rogers', throws: 'L', vel: 94, ctrl: 70, stm: 70, era: '4.47', k: 98, pitches: [{ id: 0, lv: 4 }, { id: 2, lv: 5 }, { id: 4, lv: 5 }, { id: 5, lv: 4 }], est: 1 },
+                    { name: 'F.Bautista', throws: 'R', vel: 100, ctrl: 60, stm: 45, era: '4.47', k: 75, pitches: [{ id: 0, lv: 6 }, { id: 2, lv: 6 }], est: 1 },
+                    { name: 'S.Armstrong', throws: 'R', vel: 95, ctrl: 65, stm: 45, era: '4.62', k: 60, pitches: [{ id: 0, lv: 5 }, { id: 2, lv: 6 }, { id: 4, lv: 4 }], est: 1 },
+                    { name: 'D.Rogers', throws: 'R', vel: 93, ctrl: 66, stm: 45, era: '4.70', k: 54, pitches: [{ id: 0, lv: 4 }, { id: 2, lv: 6 }, { id: 4, lv: 4 }], est: 1 },
+                    { name: 'D.Kremer', throws: 'R', vel: 92, ctrl: 70, stm: 70, era: '4.57', k: 92, pitches: [{ id: 0, lv: 3 }, { id: 2, lv: 5 }, { id: 4, lv: 5 }, { id: 5, lv: 4 }], est: 1 },
+                    { name: 'C.Povich', throws: 'L', vel: 94, ctrl: 66, stm: 66, era: '4.57', k: 95, pitches: [{ id: 0, lv: 4 }, { id: 2, lv: 5 }, { id: 4, lv: 5 }, { id: 5, lv: 4 }], est: 1 },
+                    { name: 'B.Baumann', throws: 'R', vel: 95, ctrl: 62, stm: 60, era: '4.62', k: 93, pitches: [{ id: 0, lv: 5 }, { id: 2, lv: 5 }, { id: 4, lv: 5 }], est: 1 },
+                    { name: 'S.Domínguez', throws: 'R', vel: 98, ctrl: 60, stm: 50, era: '4.55', k: 69, pitches: [{ id: 0, lv: 6 }, { id: 2, lv: 6 }], est: 1 },
+                    { name: 'A.Kittredge', throws: 'R', vel: 95, ctrl: 66, stm: 50, era: '4.58', k: 60, pitches: [{ id: 0, lv: 5 }, { id: 2, lv: 6 }, { id: 4, lv: 4 }], est: 1 }
+                ],
+                batters: [
+                    { name: 'G.Henderson', bats: 'L', throws: 'R', pos: 'SS', avg: '.283', hr: 29, rbi: 80, con: 74, pow: 82, spd: 72, obp: 0.351, slg: 0.532, est: 1 },
+                    { name: 'A.Rutschman', bats: 'S', throws: 'R', pos: 'C', avg: '.280', hr: 21, rbi: 64, con: 72, pow: 70, spd: 45, obp: 0.346, slg: 0.475, est: 1 },
+                    { name: 'J.Westburg', bats: 'R', throws: 'R', pos: '2B', avg: '.276', hr: 13, rbi: 48, con: 70, pow: 58, spd: 58, obp: 0.342, slg: 0.417, est: 1 },
+                    { name: 'C.Mullins', bats: 'L', throws: 'R', pos: 'CF', avg: '.258', hr: 15, rbi: 52, con: 60, pow: 62, spd: 70, obp: 0.320, slg: 0.417, est: 1 },
+                    { name: 'R.Mountcastle', bats: 'R', throws: 'R', pos: '1B', avg: '.269', hr: 18, rbi: 58, con: 66, pow: 66, spd: 48, obp: 0.333, slg: 0.446, est: 1 },
+                    { name: 'H.Ramirez', bats: 'R', throws: 'R', pos: 'DH', avg: '.262', hr: 22, rbi: 66, con: 62, pow: 72, spd: 62, obp: 0.324, slg: 0.466, est: 1 },
+                    { name: 'C.Kjerstad', bats: 'L', throws: 'R', pos: 'RF', avg: '.258', hr: 18, rbi: 58, con: 60, pow: 66, spd: 58, obp: 0.320, slg: 0.435, est: 1 },
+                    { name: 'J.Holliday', bats: 'L', throws: 'R', pos: 'LF', avg: '.258', hr: 15, rbi: 52, con: 60, pow: 62, spd: 66, obp: 0.320, slg: 0.417, est: 1 },
+                    { name: 'J.Urias', bats: 'R', throws: 'R', pos: '3B', avg: '.265', hr: 15, rbi: 52, con: 64, pow: 62, spd: 52, obp: 0.329, slg: 0.424, est: 1 },
+                    { name: "T.O'Hearn", bats: 'L', throws: 'R', pos: 'IF', avg: '.272', hr: 17, rbi: 56, con: 68, pow: 64, spd: 45, obp: 0.338, slg: 0.440, est: 1 },
+                    { name: 'C.Cowser', bats: 'L', throws: 'R', pos: 'OF', avg: '.258', hr: 22, rbi: 66, con: 60, pow: 72, spd: 60, obp: 0.320, slg: 0.462, est: 1 },
+                    { name: 'M.Sandlin', bats: 'R', throws: 'R', pos: 'C', avg: '.240', hr: 7, rbi: 36, con: 50, pow: 50, spd: 45, obp: 0.298, slg: 0.345, est: 1 },
+                    { name: 'D.Hall', bats: 'L', throws: 'R', pos: 'OF', avg: '.254', hr: 14, rbi: 50, con: 58, pow: 60, spd: 66, obp: 0.316, slg: 0.404, est: 1 }
+                ]
+            },
+            'TB': {
+                pitchers: [
+                    { name: 'S.McClanahan', throws: 'L', vel: 96, ctrl: 78, stm: 82, era: '4.16', k: 114, pitches: [{ id: 0, lv: 5 }, { id: 4, lv: 5 }, { id: 5, lv: 5 }, { id: 2, lv: 4 }], est: 1 },
+                    { name: 'R.Pepiot', throws: 'R', vel: 94, ctrl: 72, stm: 74, era: '4.41', k: 101, pitches: [{ id: 0, lv: 4 }, { id: 4, lv: 5 }, { id: 5, lv: 5 }, { id: 2, lv: 4 }], est: 1 },
+                    { name: 'Z.Littell', throws: 'R', vel: 93, ctrl: 86, stm: 78, era: '4.17', k: 101, pitches: [{ id: 0, lv: 4 }, { id: 2, lv: 5 }, { id: 5, lv: 5 }, { id: 4, lv: 4 }], est: 1 },
+                    { name: 'S.Baz', throws: 'R', vel: 97, ctrl: 60, stm: 76, era: '4.50', k: 112, pitches: [{ id: 0, lv: 5 }, { id: 2, lv: 5 }, { id: 4, lv: 5 }, { id: 5, lv: 4 }], est: 1 },
+                    { name: 'P.Fairbanks', throws: 'R', vel: 98, ctrl: 66, stm: 45, era: '4.45', k: 69, pitches: [{ id: 0, lv: 6 }, { id: 2, lv: 6 }, { id: 7, lv: 4 }], est: 1 },
+                    { name: 'Z.Eflin', throws: 'R', vel: 92, ctrl: 88, stm: 75, era: '4.19', k: 96, pitches: [{ id: 0, lv: 3 }, { id: 7, lv: 5 }, { id: 4, lv: 5 }, { id: 5, lv: 4 }], est: 1 },
+                    { name: 'J.Cleavinger', throws: 'L', vel: 96, ctrl: 60, stm: 45, era: '4.67', k: 63, pitches: [{ id: 0, lv: 5 }, { id: 2, lv: 6 }, { id: 4, lv: 4 }], est: 1 },
+                    { name: 'T.Alexander', throws: 'L', vel: 93, ctrl: 66, stm: 50, era: '4.68', k: 54, pitches: [{ id: 0, lv: 4 }, { id: 2, lv: 6 }, { id: 4, lv: 4 }], est: 1 },
+                    { name: 'E.Uceta', throws: 'R', vel: 96, ctrl: 64, stm: 45, era: '4.59', k: 63, pitches: [{ id: 0, lv: 5 }, { id: 2, lv: 6 }, { id: 4, lv: 4 }], est: 1 },
+                    { name: 'H.Bigge', throws: 'R', vel: 95, ctrl: 62, stm: 60, era: '4.62', k: 93, pitches: [{ id: 0, lv: 5 }, { id: 2, lv: 5 }, { id: 4, lv: 5 }], est: 1 },
+                    { name: 'M.Montgomery', throws: 'L', vel: 94, ctrl: 64, stm: 45, era: '4.69', k: 57, pitches: [{ id: 0, lv: 4 }, { id: 2, lv: 6 }, { id: 4, lv: 4 }], est: 1 },
+                    { name: 'C.Poche', throws: 'L', vel: 96, ctrl: 62, stm: 45, era: '4.63', k: 63, pitches: [{ id: 0, lv: 5 }, { id: 2, lv: 6 }, { id: 4, lv: 4 }], est: 1 }
+                ],
+                batters: [
+                    { name: 'Y.Diaz', bats: 'R', throws: 'R', pos: '1B', avg: '.280', hr: 21, rbi: 64, con: 72, pow: 70, spd: 45, obp: 0.346, slg: 0.475, est: 1 },
+                    { name: 'J.Caballero', bats: 'R', throws: 'R', pos: 'SS', avg: '.265', hr: 11, rbi: 44, con: 64, pow: 56, spd: 84, obp: 0.329, slg: 0.397, est: 1 },
+                    { name: 'B.Lowe', bats: 'L', throws: 'R', pos: '2B', avg: '.280', hr: 24, rbi: 70, con: 72, pow: 74, spd: 50, obp: 0.346, slg: 0.493, est: 1 },
+                    { name: 'J.Siri', bats: 'R', throws: 'R', pos: 'CF', avg: '.244', hr: 18, rbi: 58, con: 52, pow: 66, spd: 80, obp: 0.302, slg: 0.421, est: 1 },
+                    { name: 'J.Lowe', bats: 'L', throws: 'R', pos: '2B', avg: '.254', hr: 15, rbi: 52, con: 58, pow: 62, spd: 60, obp: 0.316, slg: 0.413, est: 1 },
+                    { name: 'A.Aranda', bats: 'L', throws: 'R', pos: 'DH', avg: '.272', hr: 11, rbi: 44, con: 68, pow: 56, spd: 45, obp: 0.338, slg: 0.404, est: 1 },
+                    { name: 'C.Morel', bats: 'R', throws: 'R', pos: '3B', avg: '.244', hr: 24, rbi: 70, con: 52, pow: 74, spd: 52, obp: 0.302, slg: 0.457, est: 1 },
+                    { name: 'J.Aranda', bats: 'L', throws: 'R', pos: '1B', avg: '.269', hr: 14, rbi: 50, con: 66, pow: 60, spd: 50, obp: 0.333, slg: 0.419, est: 1 },
+                    { name: 'K.Kiermaier', bats: 'L', throws: 'R', pos: 'CF', avg: '.251', hr: 8, rbi: 38, con: 56, pow: 52, spd: 66, obp: 0.311, slg: 0.365, est: 1 },
+                    { name: 'D.Walls', bats: 'L', throws: 'R', pos: 'SS', avg: '.258', hr: 21, rbi: 64, con: 60, pow: 70, spd: 58, obp: 0.320, slg: 0.453, est: 1 },
+                    { name: 'N.Fortes', bats: 'R', throws: 'R', pos: 'C', avg: '.258', hr: 7, rbi: 36, con: 60, pow: 50, spd: 42, obp: 0.320, slg: 0.363, est: 1 },
+                    { name: 'R.Palacios', bats: 'L', throws: 'R', pos: 'OF', avg: '.251', hr: 10, rbi: 42, con: 56, pow: 54, spd: 68, obp: 0.311, slg: 0.374, est: 1 },
+                    { name: 'C.Sanchez', bats: 'R', throws: 'R', pos: 'C', avg: '.247', hr: 7, rbi: 36, con: 54, pow: 50, spd: 42, obp: 0.307, slg: 0.352, est: 1 }
+                ]
+            },
+            'CLE': {
+                pitchers: [
+                    { name: 'T.Bibee', throws: 'R', vel: 95, ctrl: 78, stm: 80, era: '4.22', k: 109, pitches: [{ id: 0, lv: 5 }, { id: 5, lv: 5 }, { id: 2, lv: 5 }, { id: 4, lv: 4 }], est: 1 },
+                    { name: 'G.Williams', throws: 'R', vel: 93, ctrl: 72, stm: 78, era: '4.45', k: 101, pitches: [{ id: 0, lv: 4 }, { id: 4, lv: 5 }, { id: 5, lv: 5 }, { id: 2, lv: 4 }], est: 1 },
+                    { name: 'S.Cecconi', throws: 'R', vel: 95, ctrl: 70, stm: 72, era: '4.41', k: 103, pitches: [{ id: 0, lv: 5 }, { id: 2, lv: 5 }, { id: 4, lv: 5 }, { id: 5, lv: 4 }], est: 1 },
+                    { name: 'L.Allen', throws: 'R', vel: 93, ctrl: 74, stm: 74, era: '4.42', k: 98, pitches: [{ id: 0, lv: 4 }, { id: 5, lv: 5 }, { id: 2, lv: 5 }, { id: 4, lv: 4 }], est: 1 },
+                    { name: 'E.Clase', throws: 'R', vel: 100, ctrl: 70, stm: 45, era: '4.27', k: 75, pitches: [{ id: 0, lv: 6 }, { id: 7, lv: 6 }], est: 1 },
+                    { name: 'H.Gaddis', throws: 'R', vel: 96, ctrl: 65, stm: 45, era: '4.57', k: 63, pitches: [{ id: 0, lv: 5 }, { id: 2, lv: 6 }], est: 1 },
+                    { name: 'C.Smith', throws: 'L', vel: 93, ctrl: 68, stm: 55, era: '4.62', k: 54, pitches: [{ id: 0, lv: 4 }, { id: 2, lv: 6 }, { id: 4, lv: 4 }], est: 1 },
+                    { name: 'J.Herrin', throws: 'R', vel: 95, ctrl: 64, stm: 45, era: '4.64', k: 60, pitches: [{ id: 0, lv: 5 }, { id: 2, lv: 6 }, { id: 4, lv: 4 }], est: 1 },
+                    { name: 'C.Gordon', throws: 'R', vel: 97, ctrl: 62, stm: 45, era: '4.58', k: 66, pitches: [{ id: 0, lv: 5 }, { id: 2, lv: 6 }, { id: 4, lv: 4 }], est: 1 },
+                    { name: 'N.Sandlin', throws: 'R', vel: 95, ctrl: 66, stm: 50, era: '4.58', k: 60, pitches: [{ id: 0, lv: 5 }, { id: 2, lv: 6 }, { id: 4, lv: 4 }], est: 1 },
+                    { name: 'J.Hentges', throws: 'L', vel: 94, ctrl: 64, stm: 45, era: '4.69', k: 57, pitches: [{ id: 0, lv: 4 }, { id: 2, lv: 6 }, { id: 4, lv: 4 }], est: 1 },
+                    { name: 'M.Festa', throws: 'R', vel: 96, ctrl: 64, stm: 50, era: '4.57', k: 63, pitches: [{ id: 0, lv: 5 }, { id: 2, lv: 6 }, { id: 4, lv: 4 }], est: 1 }
+                ],
+                batters: [
+                    { name: 'S.Kwan', bats: 'L', throws: 'R', pos: 'LF', avg: '.298', hr: 8, rbi: 38, con: 82, pow: 52, spd: 78, obp: 0.368, slg: 0.412, est: 1 },
+                    { name: 'J.Ramirez', bats: 'S', throws: 'R', pos: '3B', avg: '.283', hr: 34, rbi: 90, con: 74, pow: 88, spd: 74, obp: 0.351, slg: 0.559, est: 1 },
+                    { name: 'J.Naylor', bats: 'L', throws: 'R', pos: '1B', avg: '.272', hr: 22, rbi: 66, con: 68, pow: 72, spd: 52, obp: 0.338, slg: 0.476, est: 1 },
+                    { name: 'A.Gimenez', bats: 'S', throws: 'R', pos: '2B', avg: '.269', hr: 14, rbi: 50, con: 66, pow: 60, spd: 84, obp: 0.333, slg: 0.419, est: 1 },
+                    { name: 'B.Rocchio', bats: 'S', throws: 'R', pos: 'SS', avg: '.265', hr: 17, rbi: 56, con: 64, pow: 64, spd: 78, obp: 0.329, slg: 0.433, est: 1 },
+                    { name: 'L.Arias', bats: 'R', throws: 'R', pos: 'SS', avg: '.265', hr: 11, rbi: 44, con: 64, pow: 56, spd: 60, obp: 0.329, slg: 0.397, est: 1 },
+                    { name: 'D.Fry', bats: 'R', throws: 'R', pos: 'RF', avg: '.262', hr: 17, rbi: 56, con: 62, pow: 64, spd: 58, obp: 0.324, slg: 0.430, est: 1 },
+                    { name: 'A.Bibee', bats: 'R', throws: 'R', pos: 'DH', avg: '.254', hr: 15, rbi: 52, con: 58, pow: 62, spd: 50, obp: 0.316, slg: 0.413, est: 1 },
+                    { name: 'B.Freeman', bats: 'R', throws: 'R', pos: '1B', avg: '.262', hr: 13, rbi: 48, con: 62, pow: 58, spd: 55, obp: 0.324, slg: 0.403, est: 1 },
+                    { name: 'C.Santana', bats: 'R', throws: 'R', pos: 'C', avg: '.251', hr: 13, rbi: 48, con: 56, pow: 58, spd: 45, obp: 0.311, slg: 0.392, est: 1 },
+                    { name: 'B.Gonzalez', bats: 'R', throws: 'R', pos: 'C', avg: '.244', hr: 6, rbi: 34, con: 52, pow: 48, spd: 40, obp: 0.302, slg: 0.340, est: 1 },
+                    { name: 'A.Valencia', bats: 'L', throws: 'R', pos: 'OF', avg: '.251', hr: 7, rbi: 36, con: 56, pow: 50, spd: 66, obp: 0.311, slg: 0.356, est: 1 },
+                    { name: 'G.Arias', bats: 'R', throws: 'R', pos: 'IF', avg: '.254', hr: 4, rbi: 30, con: 58, pow: 46, spd: 60, obp: 0.316, slg: 0.341, est: 1 }
+                ]
+            },
+            'DET': {
+                pitchers: [
+                    { name: 'T.Skubal', throws: 'L', vel: 98, ctrl: 88, stm: 88, era: '3.84', k: 124, pitches: [{ id: 0, lv: 6 }, { id: 5, lv: 5 }, { id: 2, lv: 5 }, { id: 4, lv: 4 }], est: 1 },
+                    { name: 'J.Flaherty', throws: 'R', vel: 93, ctrl: 70, stm: 78, era: '4.49', k: 101, pitches: [{ id: 0, lv: 4 }, { id: 2, lv: 5 }, { id: 4, lv: 5 }, { id: 5, lv: 4 }], est: 1 },
+                    { name: 'R.Montero', throws: 'R', vel: 96, ctrl: 68, stm: 60, era: '4.45', k: 96, pitches: [{ id: 0, lv: 5 }, { id: 2, lv: 5 }, { id: 4, lv: 5 }, { id: 5, lv: 4 }], est: 1 },
+                    { name: 'C.Mize', throws: 'R', vel: 93, ctrl: 82, stm: 72, era: '4.27', k: 97, pitches: [{ id: 0, lv: 4 }, { id: 6, lv: 5 }, { id: 5, lv: 5 }, { id: 2, lv: 4 }], est: 1 },
+                    { name: 'W.Vest', throws: 'L', vel: 94, ctrl: 70, stm: 65, era: '4.49', k: 94, pitches: [{ id: 0, lv: 4 }, { id: 2, lv: 5 }, { id: 5, lv: 5 }], est: 1 },
+                    { name: 'B.Hurter', throws: 'R', vel: 97, ctrl: 62, stm: 50, era: '4.56', k: 66, pitches: [{ id: 0, lv: 5 }, { id: 2, lv: 6 }], est: 1 },
+                    { name: 'T.Holton', throws: 'R', vel: 96, ctrl: 68, stm: 50, era: '4.49', k: 63, pitches: [{ id: 0, lv: 5 }, { id: 2, lv: 6 }, { id: 4, lv: 4 }], est: 1 },
+                    { name: 'K.Montero', throws: 'R', vel: 97, ctrl: 62, stm: 45, era: '4.58', k: 66, pitches: [{ id: 0, lv: 5 }, { id: 2, lv: 6 }, { id: 4, lv: 4 }], est: 1 },
+                    { name: 'J.Foley', throws: 'R', vel: 95, ctrl: 66, stm: 50, era: '4.58', k: 60, pitches: [{ id: 0, lv: 5 }, { id: 2, lv: 6 }, { id: 4, lv: 4 }], est: 1 },
+                    { name: 'J.Brebbia', throws: 'R', vel: 93, ctrl: 66, stm: 45, era: '4.70', k: 54, pitches: [{ id: 0, lv: 4 }, { id: 2, lv: 6 }, { id: 4, lv: 4 }], est: 1 },
+                    { name: 'B.Hurter Jr.', throws: 'R', vel: 96, ctrl: 64, stm: 60, era: '4.53', k: 96, pitches: [{ id: 0, lv: 5 }, { id: 2, lv: 5 }, { id: 4, lv: 5 }], est: 1 },
+                    { name: 'K.Finnegan', throws: 'R', vel: 96, ctrl: 62, stm: 50, era: '4.61', k: 63, pitches: [{ id: 0, lv: 5 }, { id: 2, lv: 6 }, { id: 4, lv: 4 }], est: 1 }
+                ],
+                batters: [
+                    { name: 'R.Greene', bats: 'L', throws: 'R', pos: 'CF', avg: '.269', hr: 25, rbi: 72, con: 66, pow: 76, spd: 60, obp: 0.333, slg: 0.491, est: 1 },
+                    { name: 'K.Carpenter', bats: 'L', throws: 'R', pos: 'RF', avg: '.276', hr: 24, rbi: 70, con: 70, pow: 74, spd: 58, obp: 0.342, slg: 0.489, est: 1 },
+                    { name: 'S.Torkelson', bats: 'R', throws: 'R', pos: '1B', avg: '.258', hr: 27, rbi: 76, con: 60, pow: 78, spd: 48, obp: 0.320, slg: 0.489, est: 1 },
+                    { name: 'J.Torres', bats: 'R', throws: 'R', pos: '3B', avg: '.269', hr: 13, rbi: 48, con: 66, pow: 58, spd: 52, obp: 0.333, slg: 0.410, est: 1 },
+                    { name: 'S.Dingler', bats: 'R', throws: 'R', pos: 'C', avg: '.269', hr: 15, rbi: 52, con: 66, pow: 62, spd: 52, obp: 0.333, slg: 0.428, est: 1 },
+                    { name: 'Z.McKinstry', bats: 'L', throws: 'R', pos: '2B', avg: '.262', hr: 11, rbi: 44, con: 62, pow: 56, spd: 66, obp: 0.324, slg: 0.394, est: 1 },
+                    { name: 'H.Meadows', bats: 'R', throws: 'R', pos: 'DH', avg: '.254', hr: 20, rbi: 62, con: 58, pow: 68, spd: 55, obp: 0.316, slg: 0.440, est: 1 },
+                    { name: 'J.Jung', bats: 'R', throws: 'R', pos: '3B', avg: '.269', hr: 21, rbi: 64, con: 66, pow: 70, spd: 54, obp: 0.333, slg: 0.464, est: 1 },
+                    { name: 'J.Gonzalez', bats: 'R', throws: 'R', pos: 'SS', avg: '.254', hr: 7, rbi: 36, con: 58, pow: 50, spd: 62, obp: 0.316, slg: 0.359, est: 1 },
+                    { name: 'M.Perez', bats: 'L', throws: 'R', pos: 'LF', avg: '.251', hr: 14, rbi: 50, con: 56, pow: 60, spd: 62, obp: 0.311, slg: 0.401, est: 1 },
+                    { name: 'A.Baddoo', bats: 'L', throws: 'R', pos: 'OF', avg: '.251', hr: 13, rbi: 48, con: 56, pow: 58, spd: 66, obp: 0.311, slg: 0.392, est: 1 },
+                    { name: 'T.Greene', bats: 'R', throws: 'R', pos: 'IF', avg: '.247', hr: 11, rbi: 44, con: 54, pow: 56, spd: 60, obp: 0.307, slg: 0.379, est: 1 },
+                    { name: 'B.Baez', bats: 'R', throws: 'R', pos: 'SS', avg: '.244', hr: 13, rbi: 48, con: 52, pow: 58, spd: 58, obp: 0.302, slg: 0.385, est: 1 }
+                ]
+            },
+            'KC': {
+                pitchers: [
+                    { name: 'C.Ragans', throws: 'L', vel: 97, ctrl: 72, stm: 82, era: '4.23', k: 117, pitches: [{ id: 0, lv: 5 }, { id: 4, lv: 5 }, { id: 5, lv: 5 }, { id: 2, lv: 4 }], est: 1 },
+                    { name: 'S.Lugo', throws: 'R', vel: 94, ctrl: 82, stm: 84, era: '4.17', k: 109, pitches: [{ id: 0, lv: 4 }, { id: 5, lv: 5 }, { id: 4, lv: 5 }, { id: 2, lv: 4 }, { id: 7, lv: 4 }], est: 1 },
+                    { name: 'M.Wacha', throws: 'R', vel: 92, ctrl: 84, stm: 78, era: '4.26', k: 98, pitches: [{ id: 0, lv: 3 }, { id: 5, lv: 5 }, { id: 4, lv: 5 }, { id: 2, lv: 4 }, { id: 7, lv: 4 }], est: 1 },
+                    { name: 'K.Bubic', throws: 'L', vel: 92, ctrl: 74, stm: 70, era: '4.49', k: 92, pitches: [{ id: 0, lv: 3 }, { id: 4, lv: 5 }, { id: 5, lv: 5 }, { id: 2, lv: 4 }], est: 1 },
+                    { name: 'R.Lynch', throws: 'L', vel: 94, ctrl: 66, stm: 55, era: '4.61', k: 57, pitches: [{ id: 0, lv: 4 }, { id: 2, lv: 6 }, { id: 4, lv: 4 }], est: 1 },
+                    { name: 'C.Erceg', throws: 'R', vel: 95, ctrl: 65, stm: 50, era: '4.60', k: 60, pitches: [{ id: 0, lv: 5 }, { id: 2, lv: 6 }, { id: 5, lv: 4 }], est: 1 },
+                    { name: 'C.Bowman', throws: 'R', vel: 98, ctrl: 60, stm: 45, era: '4.57', k: 69, pitches: [{ id: 0, lv: 6 }, { id: 2, lv: 6 }], est: 1 },
+                    { name: 'J.Wacha', throws: 'R', vel: 91, ctrl: 82, stm: 70, era: '4.38', k: 89, pitches: [{ id: 0, lv: 3 }, { id: 5, lv: 5 }, { id: 4, lv: 5 }, { id: 2, lv: 4 }], est: 1 },
+                    { name: 'S.Long', throws: 'L', vel: 94, ctrl: 62, stm: 45, era: '4.73', k: 57, pitches: [{ id: 0, lv: 4 }, { id: 2, lv: 6 }, { id: 4, lv: 4 }], est: 1 },
+                    { name: 'D.Hernandez', throws: 'R', vel: 96, ctrl: 62, stm: 50, era: '4.61', k: 63, pitches: [{ id: 0, lv: 5 }, { id: 2, lv: 6 }, { id: 4, lv: 4 }], est: 1 },
+                    { name: 'J.Garcia', throws: 'R', vel: 95, ctrl: 62, stm: 45, era: '4.68', k: 60, pitches: [{ id: 0, lv: 5 }, { id: 2, lv: 6 }, { id: 4, lv: 4 }], est: 1 },
+                    { name: 'A.Marsh', throws: 'R', vel: 95, ctrl: 62, stm: 60, era: '4.62', k: 93, pitches: [{ id: 0, lv: 5 }, { id: 2, lv: 5 }, { id: 4, lv: 5 }], est: 1 }
+                ],
+                batters: [
+                    { name: 'B.Witt Jr.', bats: 'R', throws: 'R', pos: 'SS', avg: '.298', hr: 28, rbi: 78, con: 82, pow: 80, spd: 92, obp: 0.368, slg: 0.538, est: 1 },
+                    { name: 'S.Perez', bats: 'R', throws: 'R', pos: 'C', avg: '.276', hr: 27, rbi: 76, con: 70, pow: 78, spd: 40, obp: 0.342, slg: 0.507, est: 1 },
+                    { name: 'V.Pasquantino', bats: 'L', throws: 'R', pos: '1B', avg: '.269', hr: 20, rbi: 62, con: 66, pow: 68, spd: 45, obp: 0.333, slg: 0.455, est: 1 },
+                    { name: 'M.Garcia', bats: 'S', throws: 'R', pos: '3B', avg: '.265', hr: 18, rbi: 58, con: 64, pow: 66, spd: 72, obp: 0.329, slg: 0.442, est: 1 },
+                    { name: 'M.Massey', bats: 'R', throws: 'R', pos: '2B', avg: '.254', hr: 14, rbi: 50, con: 58, pow: 60, spd: 66, obp: 0.316, slg: 0.404, est: 1 },
+                    { name: 'K.Isbel', bats: 'L', throws: 'R', pos: 'RF', avg: '.254', hr: 15, rbi: 52, con: 58, pow: 62, spd: 66, obp: 0.316, slg: 0.413, est: 1 },
+                    { name: 'J.Caglianone', bats: 'L', throws: 'R', pos: 'DH', avg: '.269', hr: 29, rbi: 80, con: 66, pow: 82, spd: 48, obp: 0.333, slg: 0.518, est: 1 },
+                    { name: 'H.Pham', bats: 'R', throws: 'R', pos: 'CF', avg: '.251', hr: 13, rbi: 48, con: 56, pow: 58, spd: 72, obp: 0.311, slg: 0.392, est: 1 },
+                    { name: 'D.Vaughn', bats: 'R', throws: 'R', pos: 'LF', avg: '.251', hr: 15, rbi: 52, con: 56, pow: 62, spd: 66, obp: 0.311, slg: 0.410, est: 1 },
+                    { name: 'J.Blanco', bats: 'S', throws: 'R', pos: 'OF', avg: '.247', hr: 8, rbi: 38, con: 54, pow: 52, spd: 62, obp: 0.307, slg: 0.361, est: 1 },
+                    { name: 'S.Lugo', bats: 'R', throws: 'R', pos: '3B', avg: '.244', hr: 7, rbi: 36, con: 52, pow: 50, spd: 55, obp: 0.302, slg: 0.349, est: 1 },
+                    { name: 'F.Fermin', bats: 'R', throws: 'R', pos: 'C', avg: '.254', hr: 1, rbi: 24, con: 58, pow: 42, spd: 52, obp: 0.316, slg: 0.323, est: 1 },
+                    { name: 'N.Loftin', bats: 'R', throws: 'R', pos: 'OF', avg: '.251', hr: 8, rbi: 38, con: 56, pow: 52, spd: 66, obp: 0.311, slg: 0.365, est: 1 }
+                ]
+            },
+            'MIN': {
+                pitchers: [
+                    { name: 'P.Lopez', throws: 'R', vel: 96, ctrl: 82, stm: 82, era: '4.08', k: 114, pitches: [{ id: 0, lv: 5 }, { id: 2, lv: 5 }, { id: 4, lv: 5 }, { id: 5, lv: 4 }], est: 1 },
+                    { name: 'J.Ryan', throws: 'R', vel: 94, ctrl: 78, stm: 76, era: '4.29', k: 103, pitches: [{ id: 0, lv: 4 }, { id: 5, lv: 5 }, { id: 2, lv: 5 }, { id: 4, lv: 4 }], est: 1 },
+                    { name: 'J.Ober', throws: 'R', vel: 93, ctrl: 78, stm: 72, era: '4.35', k: 97, pitches: [{ id: 0, lv: 4 }, { id: 5, lv: 5 }, { id: 4, lv: 5 }, { id: 2, lv: 4 }], est: 1 },
+                    { name: 'C.Paddack', throws: 'R', vel: 94, ctrl: 78, stm: 72, era: '4.30', k: 100, pitches: [{ id: 0, lv: 4 }, { id: 5, lv: 5 }, { id: 4, lv: 5 }, { id: 2, lv: 4 }], est: 1 },
+                    { name: 'J.Duran', throws: 'R', vel: 100, ctrl: 65, stm: 45, era: '4.37', k: 75, pitches: [{ id: 0, lv: 6 }, { id: 6, lv: 6 }, { id: 2, lv: 4 }], est: 1 },
+                    { name: 'G.Jax', throws: 'R', vel: 95, ctrl: 64, stm: 50, era: '4.62', k: 60, pitches: [{ id: 0, lv: 5 }, { id: 2, lv: 6 }, { id: 6, lv: 4 }], est: 1 },
+                    { name: 'B.Funderburk', throws: 'R', vel: 96, ctrl: 66, stm: 50, era: '4.53', k: 63, pitches: [{ id: 0, lv: 5 }, { id: 2, lv: 6 }], est: 1 },
+                    { name: 'J.Topa', throws: 'R', vel: 95, ctrl: 62, stm: 45, era: '4.68', k: 60, pitches: [{ id: 0, lv: 5 }, { id: 2, lv: 6 }, { id: 4, lv: 4 }], est: 1 },
+                    { name: 'C.Sands', throws: 'R', vel: 96, ctrl: 62, stm: 45, era: '4.63', k: 63, pitches: [{ id: 0, lv: 5 }, { id: 2, lv: 6 }, { id: 4, lv: 4 }], est: 1 },
+                    { name: 'J.Hartman', throws: 'L', vel: 95, ctrl: 60, stm: 50, era: '4.70', k: 60, pitches: [{ id: 0, lv: 5 }, { id: 2, lv: 6 }, { id: 4, lv: 4 }], est: 1 },
+                    { name: 'T.Zebby', throws: 'R', vel: 94, ctrl: 64, stm: 60, era: '4.63', k: 90, pitches: [{ id: 0, lv: 4 }, { id: 2, lv: 5 }, { id: 4, lv: 5 }], est: 1 },
+                    { name: 'M.Pagán', throws: 'R', vel: 96, ctrl: 62, stm: 45, era: '4.63', k: 63, pitches: [{ id: 0, lv: 5 }, { id: 2, lv: 6 }, { id: 4, lv: 4 }], est: 1 }
+                ],
+                batters: [
+                    { name: 'B.Buxton', bats: 'R', throws: 'R', pos: 'CF', avg: '.262', hr: 29, rbi: 80, con: 62, pow: 82, spd: 85, obp: 0.324, slg: 0.511, est: 1 },
+                    { name: 'C.Correa', bats: 'R', throws: 'R', pos: 'SS', avg: '.280', hr: 22, rbi: 66, con: 72, pow: 72, spd: 50, obp: 0.346, slg: 0.484, est: 1 },
+                    { name: 'R.Lewis', bats: 'R', throws: 'R', pos: '3B', avg: '.254', hr: 17, rbi: 56, con: 58, pow: 64, spd: 58, obp: 0.316, slg: 0.422, est: 1 },
+                    { name: 'M.Wallner', bats: 'L', throws: 'R', pos: 'RF', avg: '.244', hr: 29, rbi: 80, con: 52, pow: 82, spd: 62, obp: 0.302, slg: 0.493, est: 1 },
+                    { name: 'R.Jeffers', bats: 'R', throws: 'R', pos: 'C', avg: '.265', hr: 17, rbi: 56, con: 64, pow: 64, spd: 42, obp: 0.329, slg: 0.433, est: 1 },
+                    { name: 'T.Larnach', bats: 'L', throws: 'R', pos: 'LF', avg: '.262', hr: 18, rbi: 58, con: 62, pow: 66, spd: 52, obp: 0.324, slg: 0.439, est: 1 },
+                    { name: 'A.Julien', bats: 'L', throws: 'R', pos: '2B', avg: '.269', hr: 11, rbi: 44, con: 66, pow: 56, spd: 62, obp: 0.333, slg: 0.401, est: 1 },
+                    { name: 'R.Vazquez', bats: 'L', throws: 'R', pos: 'OF', avg: '.254', hr: 11, rbi: 44, con: 58, pow: 56, spd: 62, obp: 0.316, slg: 0.386, est: 1 },
+                    { name: 'C.Julien', bats: 'L', throws: 'R', pos: 'IF', avg: '.251', hr: 15, rbi: 52, con: 56, pow: 62, spd: 52, obp: 0.311, slg: 0.410, est: 1 },
+                    { name: 'M.Margot', bats: 'R', throws: 'R', pos: '1B', avg: '.251', hr: 8, rbi: 38, con: 56, pow: 52, spd: 64, obp: 0.311, slg: 0.365, est: 1 },
+                    { name: 'B.Lee', bats: 'S', throws: 'R', pos: 'C', avg: '.251', hr: 7, rbi: 36, con: 56, pow: 50, spd: 55, obp: 0.311, slg: 0.356, est: 1 },
+                    { name: 'M.Miranda', bats: 'R', throws: 'R', pos: '1B', avg: '.262', hr: 14, rbi: 50, con: 62, pow: 60, spd: 42, obp: 0.324, slg: 0.412, est: 1 },
+                    { name: 'K.Kepler', bats: 'L', throws: 'R', pos: 'OF', avg: '.251', hr: 13, rbi: 48, con: 56, pow: 58, spd: 56, obp: 0.311, slg: 0.392, est: 1 }
+                ]
+            },
+            'CWS': {
+                pitchers: [
+                    { name: 'G.Kay', throws: 'R', vel: 96, ctrl: 65, stm: 60, era: '4.51', k: 96, pitches: [{ id: 0, lv: 5 }, { id: 2, lv: 5 }, { id: 4, lv: 5 }, { id: 5, lv: 4 }], est: 1 },
+                    { name: 'S.Burke', throws: 'R', vel: 98, ctrl: 65, stm: 50, era: '4.45', k: 69, pitches: [{ id: 0, lv: 6 }, { id: 2, lv: 6 }, { id: 5, lv: 4 }], est: 1 },
+                    { name: 'J.Martin', throws: 'R', vel: 96, ctrl: 70, stm: 58, era: '4.42', k: 94, pitches: [{ id: 0, lv: 5 }, { id: 2, lv: 5 }, { id: 5, lv: 5 }], est: 1 },
+                    { name: 'S.Schultz', throws: 'R', vel: 97, ctrl: 60, stm: 75, era: '4.50', k: 111, pitches: [{ id: 0, lv: 5 }, { id: 2, lv: 5 }, { id: 5, lv: 5 }, { id: 4, lv: 4 }], est: 1 },
+                    { name: 'S.Taylor', throws: 'R', vel: 95, ctrl: 68, stm: 72, era: '4.45', k: 103, pitches: [{ id: 0, lv: 5 }, { id: 2, lv: 5 }, { id: 5, lv: 5 }, { id: 4, lv: 4 }], est: 1 },
+                    { name: 'W.Fedde', throws: 'R', vel: 99, ctrl: 55, stm: 50, era: '4.60', k: 72, pitches: [{ id: 0, lv: 6 }, { id: 2, lv: 6 }, { id: 5, lv: 4 }], est: 1 },
+                    { name: 'J.Taylor', throws: 'R', vel: 97, ctrl: 58, stm: 55, era: '4.62', k: 66, pitches: [{ id: 0, lv: 5 }, { id: 2, lv: 6 }, { id: 4, lv: 4 }], est: 1 },
+                    { name: 'J.Kuhl', throws: 'R', vel: 96, ctrl: 60, stm: 45, era: '4.67', k: 63, pitches: [{ id: 0, lv: 5 }, { id: 2, lv: 6 }, { id: 4, lv: 4 }], est: 1 },
+                    { name: 'D.Vaughn', throws: 'R', vel: 95, ctrl: 62, stm: 50, era: '4.66', k: 60, pitches: [{ id: 0, lv: 5 }, { id: 2, lv: 6 }, { id: 4, lv: 4 }], est: 1 },
+                    { name: 'K.Davis', throws: 'R', vel: 94, ctrl: 64, stm: 60, era: '4.63', k: 90, pitches: [{ id: 0, lv: 4 }, { id: 2, lv: 5 }, { id: 4, lv: 5 }], est: 1 },
+                    { name: 'G.Cannon', throws: 'R', vel: 96, ctrl: 60, stm: 50, era: '4.65', k: 63, pitches: [{ id: 0, lv: 5 }, { id: 2, lv: 6 }, { id: 4, lv: 4 }], est: 1 },
+                    { name: 'B.Peterson', throws: 'R', vel: 94, ctrl: 64, stm: 45, era: '4.69', k: 57, pitches: [{ id: 0, lv: 4 }, { id: 2, lv: 6 }, { id: 4, lv: 4 }], est: 1 }
+                ],
+                batters: [
+                    { name: 'A.Vaughn', bats: 'R', throws: 'R', pos: '1B', avg: '.269', hr: 18, rbi: 58, con: 66, pow: 66, spd: 50, obp: 0.333, slg: 0.446, est: 1 },
+                    { name: 'C.Quero', bats: 'R', throws: 'R', pos: 'C', avg: '.265', hr: 14, rbi: 50, con: 64, pow: 60, spd: 48, obp: 0.329, slg: 0.415, est: 1 },
+                    { name: 'L.Robert Jr.', bats: 'R', throws: 'R', pos: 'CF', avg: '.269', hr: 29, rbi: 80, con: 66, pow: 82, spd: 78, obp: 0.333, slg: 0.518, est: 1 },
+                    { name: 'M.Vargas', bats: 'R', throws: 'R', pos: '3B', avg: '.254', hr: 15, rbi: 52, con: 58, pow: 62, spd: 56, obp: 0.316, slg: 0.413, est: 1 },
+                    { name: 'C.Meidroth', bats: 'L', throws: 'R', pos: 'SS', avg: '.254', hr: 8, rbi: 38, con: 58, pow: 52, spd: 62, obp: 0.316, slg: 0.368, est: 1 },
+                    { name: 'M.Sosa', bats: 'S', throws: 'R', pos: 'DH', avg: '.244', hr: 24, rbi: 70, con: 52, pow: 74, spd: 50, obp: 0.302, slg: 0.457, est: 1 },
+                    { name: 'B.Montgomery', bats: 'S', throws: 'R', pos: '2B', avg: '.254', hr: 14, rbi: 50, con: 58, pow: 60, spd: 60, obp: 0.316, slg: 0.404, est: 1 },
+                    { name: 'D.Fletcher', bats: 'L', throws: 'R', pos: '2B', avg: '.265', hr: 3, rbi: 28, con: 64, pow: 44, spd: 62, obp: 0.329, slg: 0.343, est: 1 },
+                    { name: 'T.Anderson', bats: 'R', throws: 'R', pos: 'SS', avg: '.254', hr: 11, rbi: 44, con: 58, pow: 56, spd: 68, obp: 0.316, slg: 0.386, est: 1 },
+                    { name: 'M.Tauchman', bats: 'L', throws: 'R', pos: 'RF', avg: '.262', hr: 13, rbi: 48, con: 62, pow: 58, spd: 66, obp: 0.324, slg: 0.403, est: 1 },
+                    { name: 'K.Teel', bats: 'L', throws: 'R', pos: 'C', avg: '.244', hr: 18, rbi: 58, con: 52, pow: 66, spd: 44, obp: 0.302, slg: 0.421, est: 1 },
+                    { name: 'A.Hicks', bats: 'R', throws: 'R', pos: 'OF', avg: '.247', hr: 11, rbi: 44, con: 54, pow: 56, spd: 60, obp: 0.307, slg: 0.379, est: 1 },
+                    { name: 'L.Sosa', bats: 'R', throws: 'R', pos: 'IF', avg: '.244', hr: 10, rbi: 42, con: 52, pow: 54, spd: 58, obp: 0.302, slg: 0.367, est: 1 }
+                ]
+            },
+            'HOU': {
+                pitchers: [
+                    { name: 'H.Brown', throws: 'R', vel: 96, ctrl: 74, stm: 78, era: '4.26', k: 110, pitches: [{ id: 0, lv: 5 }, { id: 2, lv: 5 }, { id: 4, lv: 5 }, { id: 5, lv: 4 }], est: 1 },
+                    { name: 'F.Valdez', throws: 'L', vel: 94, ctrl: 78, stm: 82, era: '4.26', k: 108, pitches: [{ id: 0, lv: 4 }, { id: 4, lv: 5 }, { id: 5, lv: 5 }, { id: 2, lv: 4 }], est: 1 },
+                    { name: 'M.Arrighetti', throws: 'R', vel: 94, ctrl: 74, stm: 76, era: '4.37', k: 103, pitches: [{ id: 0, lv: 4 }, { id: 2, lv: 5 }, { id: 4, lv: 5 }, { id: 5, lv: 4 }], est: 1 },
+                    { name: 'C.Javier', throws: 'R', vel: 95, ctrl: 68, stm: 78, era: '4.43', k: 107, pitches: [{ id: 0, lv: 5 }, { id: 2, lv: 5 }, { id: 5, lv: 5 }, { id: 4, lv: 4 }], est: 1 },
+                    { name: 'J.Hader', throws: 'R', vel: 97, ctrl: 62, stm: 55, era: '4.54', k: 66, pitches: [{ id: 0, lv: 5 }, { id: 2, lv: 6 }, { id: 5, lv: 4 }], est: 1 },
+                    { name: 'B.Abreu', throws: 'R', vel: 99, ctrl: 66, stm: 45, era: '4.40', k: 72, pitches: [{ id: 0, lv: 6 }, { id: 2, lv: 6 }, { id: 5, lv: 4 }], est: 1 },
+                    { name: 'B.King', throws: 'R', vel: 96, ctrl: 60, stm: 50, era: '4.65', k: 63, pitches: [{ id: 0, lv: 5 }, { id: 2, lv: 6 }, { id: 4, lv: 4 }], est: 1 },
+                    { name: 'S.Dubin', throws: 'R', vel: 95, ctrl: 62, stm: 60, era: '4.62', k: 93, pitches: [{ id: 0, lv: 5 }, { id: 2, lv: 5 }, { id: 4, lv: 5 }], est: 1 },
+                    { name: 'B.Hader', throws: 'L', vel: 97, ctrl: 62, stm: 45, era: '4.58', k: 66, pitches: [{ id: 0, lv: 5 }, { id: 2, lv: 6 }, { id: 4, lv: 4 }], est: 1 },
+                    { name: 'R.Pressly', throws: 'R', vel: 93, ctrl: 74, stm: 45, era: '4.54', k: 54, pitches: [{ id: 0, lv: 4 }, { id: 2, lv: 6 }, { id: 4, lv: 4 }], est: 1 },
+                    { name: 'S.Okert', throws: 'L', vel: 95, ctrl: 64, stm: 45, era: '4.64', k: 60, pitches: [{ id: 0, lv: 5 }, { id: 2, lv: 6 }, { id: 4, lv: 4 }], est: 1 },
+                    { name: 'W.Abreu', throws: 'R', vel: 97, ctrl: 60, stm: 50, era: '4.60', k: 66, pitches: [{ id: 0, lv: 5 }, { id: 2, lv: 6 }, { id: 4, lv: 4 }], est: 1 }
+                ],
+                batters: [
+                    { name: 'J.Altuve', bats: 'R', throws: 'R', pos: '2B', avg: '.290', hr: 18, rbi: 58, con: 78, pow: 66, spd: 66, obp: 0.360, slg: 0.467, est: 1 },
+                    { name: 'Y.Alvarez', bats: 'L', throws: 'R', pos: 'DH', avg: '.294', hr: 35, rbi: 92, con: 80, pow: 90, spd: 40, obp: 0.364, slg: 0.579, est: 1 },
+                    { name: 'J.Pena', bats: 'R', throws: 'R', pos: 'SS', avg: '.269', hr: 15, rbi: 52, con: 66, pow: 62, spd: 66, obp: 0.333, slg: 0.428, est: 1 },
+                    { name: 'A.Bregman', bats: 'R', throws: 'R', pos: '3B', avg: '.280', hr: 20, rbi: 62, con: 72, pow: 68, spd: 48, obp: 0.346, slg: 0.466, est: 1 },
+                    { name: 'I.Paredes', bats: 'R', throws: 'R', pos: '3B', avg: '.265', hr: 22, rbi: 66, con: 64, pow: 72, spd: 44, obp: 0.329, slg: 0.469, est: 1 },
+                    { name: 'C.Walker', bats: 'R', throws: 'R', pos: '1B', avg: '.251', hr: 27, rbi: 76, con: 56, pow: 78, spd: 44, obp: 0.311, slg: 0.482, est: 1 },
+                    { name: 'J.Meyers', bats: 'R', throws: 'R', pos: 'CF', avg: '.254', hr: 11, rbi: 44, con: 58, pow: 56, spd: 64, obp: 0.316, slg: 0.386, est: 1 },
+                    { name: 'M.Dubon', bats: 'R', throws: 'R', pos: 'LF', avg: '.262', hr: 7, rbi: 36, con: 62, pow: 50, spd: 60, obp: 0.324, slg: 0.367, est: 1 },
+                    { name: 'V.Caratini', bats: 'S', throws: 'R', pos: 'C', avg: '.269', hr: 8, rbi: 38, con: 66, pow: 52, spd: 40, obp: 0.333, slg: 0.383, est: 1 },
+                    { name: 'E.Diaz', bats: 'R', throws: 'R', pos: '1B', avg: '.269', hr: 15, rbi: 52, con: 66, pow: 62, spd: 45, obp: 0.333, slg: 0.428, est: 1 },
+                    { name: 'Z.Dezenzo', bats: 'R', throws: 'R', pos: 'RF', avg: '.244', hr: 14, rbi: 50, con: 52, pow: 60, spd: 62, obp: 0.302, slg: 0.394, est: 1 },
+                    { name: 'Y.Gurriel', bats: 'R', throws: 'R', pos: 'OF', avg: '.258', hr: 6, rbi: 34, con: 60, pow: 48, spd: 48, obp: 0.320, slg: 0.354, est: 1 },
+                    { name: 'J.Abreu', bats: 'R', throws: 'R', pos: 'IF', avg: '.254', hr: 7, rbi: 36, con: 58, pow: 50, spd: 62, obp: 0.316, slg: 0.359, est: 1 }
+                ]
+            },
+            'ATH': {
+                pitchers: [
+                    { name: 'L.Severino', throws: 'R', vel: 96, ctrl: 68, stm: 80, era: '4.37', k: 112, pitches: [{ id: 0, lv: 5 }, { id: 5, lv: 5 }, { id: 2, lv: 5 }, { id: 4, lv: 4 }], est: 1 },
+                    { name: 'J.Sears', throws: 'L', vel: 93, ctrl: 75, stm: 78, era: '4.39', k: 101, pitches: [{ id: 0, lv: 4 }, { id: 4, lv: 5 }, { id: 2, lv: 5 }, { id: 5, lv: 4 }], est: 1 },
+                    { name: 'J.Springs', throws: 'L', vel: 92, ctrl: 74, stm: 74, era: '4.47', k: 95, pitches: [{ id: 0, lv: 3 }, { id: 5, lv: 5 }, { id: 4, lv: 5 }, { id: 2, lv: 4 }], est: 1 },
+                    { name: 'M.Boyle', throws: 'R', vel: 95, ctrl: 65, stm: 72, era: '4.51', k: 103, pitches: [{ id: 0, lv: 5 }, { id: 2, lv: 5 }, { id: 4, lv: 5 }], est: 1 },
+                    { name: 'M.Miller', throws: 'R', vel: 100, ctrl: 58, stm: 45, era: '4.51', k: 75, pitches: [{ id: 0, lv: 6 }, { id: 2, lv: 6 }], est: 1 },
+                    { name: 'J.Alvarado', throws: 'R', vel: 96, ctrl: 66, stm: 50, era: '4.53', k: 63, pitches: [{ id: 0, lv: 5 }, { id: 2, lv: 6 }, { id: 6, lv: 4 }], est: 1 },
+                    { name: 'E.Jax', throws: 'L', vel: 96, ctrl: 66, stm: 48, era: '4.54', k: 63, pitches: [{ id: 0, lv: 5 }, { id: 2, lv: 6 }, { id: 6, lv: 4 }], est: 1 },
+                    { name: 'L.Ginn', throws: 'R', vel: 95, ctrl: 60, stm: 50, era: '4.70', k: 60, pitches: [{ id: 0, lv: 5 }, { id: 2, lv: 6 }, { id: 4, lv: 4 }], est: 1 },
+                    { name: 'J.Barnes', throws: 'R', vel: 94, ctrl: 62, stm: 45, era: '4.73', k: 57, pitches: [{ id: 0, lv: 4 }, { id: 2, lv: 6 }, { id: 4, lv: 4 }], est: 1 },
+                    { name: 'M.Lovelady', throws: 'L', vel: 94, ctrl: 62, stm: 45, era: '4.73', k: 57, pitches: [{ id: 0, lv: 4 }, { id: 2, lv: 6 }, { id: 4, lv: 4 }], est: 1 },
+                    { name: 'M.Wood', throws: 'R', vel: 96, ctrl: 60, stm: 50, era: '4.65', k: 63, pitches: [{ id: 0, lv: 5 }, { id: 2, lv: 6 }, { id: 4, lv: 4 }], est: 1 },
+                    { name: 'J.Jiménez', throws: 'R', vel: 95, ctrl: 60, stm: 45, era: '4.72', k: 60, pitches: [{ id: 0, lv: 5 }, { id: 2, lv: 6 }, { id: 4, lv: 4 }], est: 1 }
+                ],
+                batters: [
+                    { name: 'B.Rooker', bats: 'R', throws: 'R', pos: 'DH', avg: '.265', hr: 27, rbi: 76, con: 64, pow: 78, spd: 50, obp: 0.329, slg: 0.496, est: 1 },
+                    { name: 'J.Langeliers', bats: 'R', throws: 'R', pos: 'C', avg: '.258', hr: 24, rbi: 70, con: 60, pow: 74, spd: 40, obp: 0.320, slg: 0.471, est: 1 },
+                    { name: 'L.Butler', bats: 'L', throws: 'R', pos: '3B', avg: '.269', hr: 20, rbi: 62, con: 66, pow: 68, spd: 56, obp: 0.333, slg: 0.455, est: 1 },
+                    { name: 'S.Lawrence', bats: 'L', throws: 'R', pos: '2B', avg: '.265', hr: 15, rbi: 52, con: 64, pow: 62, spd: 62, obp: 0.329, slg: 0.424, est: 1 },
+                    { name: 'N.Kurtz', bats: 'L', throws: 'R', pos: '1B', avg: '.272', hr: 29, rbi: 80, con: 68, pow: 82, spd: 50, obp: 0.338, slg: 0.521, est: 1 },
+                    { name: 'T.Soderstrom', bats: 'L', throws: 'R', pos: '1B', avg: '.265', hr: 18, rbi: 58, con: 64, pow: 66, spd: 52, obp: 0.329, slg: 0.442, est: 1 },
+                    { name: 'J.Wilson', bats: 'L', throws: 'R', pos: 'SS', avg: '.276', hr: 14, rbi: 50, con: 70, pow: 60, spd: 58, obp: 0.342, slg: 0.426, est: 1 },
+                    { name: 'L.Rushing', bats: 'R', throws: 'R', pos: 'CF', avg: '.251', hr: 17, rbi: 56, con: 56, pow: 64, spd: 62, obp: 0.311, slg: 0.419, est: 1 },
+                    { name: 'S.Bruce', bats: 'R', throws: 'R', pos: 'C', avg: '.251', hr: 13, rbi: 48, con: 56, pow: 58, spd: 44, obp: 0.311, slg: 0.392, est: 1 },
+                    { name: 'C.Bleday', bats: 'L', throws: 'R', pos: 'OF', avg: '.258', hr: 15, rbi: 52, con: 60, pow: 62, spd: 60, obp: 0.320, slg: 0.417, est: 1 },
+                    { name: 'M.Andujar', bats: 'R', throws: 'R', pos: 'LF', avg: '.262', hr: 10, rbi: 42, con: 62, pow: 54, spd: 60, obp: 0.324, slg: 0.385, est: 1 },
+                    { name: 'Z.Gelof', bats: 'R', throws: 'R', pos: '2B', avg: '.251', hr: 14, rbi: 50, con: 56, pow: 60, spd: 74, obp: 0.311, slg: 0.401, est: 1 },
+                    { name: 'K.Sheets', bats: 'L', throws: 'R', pos: 'OF', avg: '.251', hr: 15, rbi: 52, con: 56, pow: 62, spd: 56, obp: 0.311, slg: 0.410, est: 1 }
+                ]
+            },
+            'SEA': {
+                pitchers: [
+                    { name: 'L.Castillo', throws: 'R', vel: 96, ctrl: 70, stm: 82, era: '4.32', k: 114, pitches: [{ id: 0, lv: 5 }, { id: 5, lv: 5 }, { id: 2, lv: 5 }, { id: 4, lv: 4 }], est: 1 },
+                    { name: 'L.Gilbert', throws: 'R', vel: 97, ctrl: 72, stm: 82, era: '4.23', k: 117, pitches: [{ id: 0, lv: 5 }, { id: 6, lv: 5 }, { id: 2, lv: 5 }, { id: 4, lv: 4 }], est: 1 },
+                    { name: 'G.Kirby', throws: 'R', vel: 95, ctrl: 92, stm: 82, era: '3.93', k: 111, pitches: [{ id: 0, lv: 5 }, { id: 2, lv: 5 }, { id: 6, lv: 5 }, { id: 5, lv: 4 }], est: 1 },
+                    { name: 'B.Woo', throws: 'R', vel: 95, ctrl: 78, stm: 78, era: '4.23', k: 107, pitches: [{ id: 0, lv: 5 }, { id: 2, lv: 5 }, { id: 5, lv: 5 }, { id: 4, lv: 4 }], est: 1 },
+                    { name: 'A.Muñoz', throws: 'R', vel: 100, ctrl: 60, stm: 45, era: '4.47', k: 75, pitches: [{ id: 0, lv: 6 }, { id: 2, lv: 6 }], est: 1 },
+                    { name: 'M.Brash', throws: 'R', vel: 98, ctrl: 58, stm: 50, era: '4.59', k: 69, pitches: [{ id: 0, lv: 6 }, { id: 2, lv: 6 }, { id: 6, lv: 4 }], est: 1 },
+                    { name: 'G.Speier', throws: 'R', vel: 96, ctrl: 62, stm: 50, era: '4.61', k: 63, pitches: [{ id: 0, lv: 5 }, { id: 2, lv: 6 }, { id: 6, lv: 4 }], est: 1 },
+                    { name: 'G.Hancock', throws: 'R', vel: 93, ctrl: 70, stm: 74, era: '4.50', k: 98, pitches: [{ id: 0, lv: 4 }, { id: 2, lv: 5 }, { id: 4, lv: 5 }, { id: 5, lv: 4 }], est: 1 },
+                    { name: 'B.Miller', throws: 'R', vel: 96, ctrl: 68, stm: 74, era: '4.39', k: 107, pitches: [{ id: 0, lv: 5 }, { id: 2, lv: 5 }, { id: 4, lv: 5 }, { id: 5, lv: 4 }], est: 1 },
+                    { name: 'C.Ford', throws: 'R', vel: 95, ctrl: 62, stm: 50, era: '4.66', k: 60, pitches: [{ id: 0, lv: 5 }, { id: 2, lv: 6 }, { id: 4, lv: 4 }], est: 1 },
+                    { name: 'D.Garcia', throws: 'R', vel: 96, ctrl: 62, stm: 45, era: '4.63', k: 63, pitches: [{ id: 0, lv: 5 }, { id: 2, lv: 6 }, { id: 4, lv: 4 }], est: 1 },
+                    { name: 'C.Vargas', throws: 'R', vel: 94, ctrl: 62, stm: 60, era: '4.67', k: 90, pitches: [{ id: 0, lv: 4 }, { id: 2, lv: 5 }, { id: 4, lv: 5 }], est: 1 }
+                ],
+                batters: [
+                    { name: 'J.Rodriguez', bats: 'R', throws: 'R', pos: 'CF', avg: '.283', hr: 29, rbi: 80, con: 74, pow: 82, spd: 88, obp: 0.351, slg: 0.532, est: 1 },
+                    { name: 'C.Raleigh', bats: 'S', throws: 'R', pos: 'C', avg: '.251', hr: 38, rbi: 98, con: 56, pow: 94, spd: 40, obp: 0.311, slg: 0.554, est: 1 },
+                    { name: 'J.Crawford', bats: 'L', throws: 'R', pos: 'SS', avg: '.272', hr: 11, rbi: 44, con: 68, pow: 56, spd: 60, obp: 0.338, slg: 0.404, est: 1 },
+                    { name: 'R.Arozarena', bats: 'R', throws: 'R', pos: 'LF', avg: '.269', hr: 24, rbi: 70, con: 66, pow: 74, spd: 74, obp: 0.333, slg: 0.482, est: 1 },
+                    { name: 'J.Naylor', bats: 'L', throws: 'R', pos: '1B', avg: '.269', hr: 18, rbi: 58, con: 66, pow: 66, spd: 58, obp: 0.333, slg: 0.446, est: 1 },
+                    { name: 'D.Hancock', bats: 'L', throws: 'R', pos: '2B', avg: '.262', hr: 11, rbi: 44, con: 62, pow: 56, spd: 56, obp: 0.324, slg: 0.394, est: 1 },
+                    { name: 'B.Donovan', bats: 'L', throws: 'R', pos: '3B', avg: '.276', hr: 8, rbi: 38, con: 70, pow: 52, spd: 58, obp: 0.342, slg: 0.390, est: 1 },
+                    { name: 'L.Raley', bats: 'L', throws: 'R', pos: 'RF', avg: '.254', hr: 20, rbi: 62, con: 58, pow: 68, spd: 60, obp: 0.316, slg: 0.440, est: 1 },
+                    { name: 'M.Garver', bats: 'R', throws: 'R', pos: 'DH', avg: '.258', hr: 18, rbi: 58, con: 60, pow: 66, spd: 44, obp: 0.320, slg: 0.435, est: 1 },
+                    { name: 'J.Polanco', bats: 'S', throws: 'R', pos: '2B', avg: '.258', hr: 22, rbi: 66, con: 60, pow: 72, spd: 50, obp: 0.320, slg: 0.462, est: 1 },
+                    { name: 'M.Haniger', bats: 'R', throws: 'R', pos: 'LF', avg: '.251', hr: 18, rbi: 58, con: 56, pow: 66, spd: 52, obp: 0.311, slg: 0.428, est: 1 },
+                    { name: 'H.Ford', bats: 'R', throws: 'R', pos: '1B', avg: '.247', hr: 14, rbi: 50, con: 54, pow: 60, spd: 44, obp: 0.307, slg: 0.397, est: 1 },
+                    { name: 'D.Moore', bats: 'L', throws: 'R', pos: 'OF', avg: '.251', hr: 10, rbi: 42, con: 56, pow: 54, spd: 70, obp: 0.311, slg: 0.374, est: 1 }
+                ]
+            },
+            'TEX': {
+                pitchers: [
+                    { name: 'J.deGrom', throws: 'R', vel: 98, ctrl: 82, stm: 75, era: '4.01', k: 114, pitches: [{ id: 0, lv: 6 }, { id: 2, lv: 5 }, { id: 5, lv: 5 }, { id: 4, lv: 4 }], est: 1 },
+                    { name: 'N.Eovaldi', throws: 'R', vel: 97, ctrl: 82, stm: 80, era: '4.04', k: 115, pitches: [{ id: 0, lv: 5 }, { id: 6, lv: 5 }, { id: 5, lv: 5 }, { id: 2, lv: 4 }, { id: 4, lv: 4 }], est: 1 },
+                    { name: 'J.Leiter Jr.', throws: 'R', vel: 97, ctrl: 60, stm: 70, era: '4.52', k: 107, pitches: [{ id: 0, lv: 5 }, { id: 2, lv: 5 }, { id: 4, lv: 5 }], est: 1 },
+                    { name: 'J.Gore', throws: 'L', vel: 95, ctrl: 66, stm: 72, era: '4.49', k: 103, pitches: [{ id: 0, lv: 5 }, { id: 2, lv: 5 }, { id: 4, lv: 5 }, { id: 5, lv: 4 }], est: 1 },
+                    { name: 'T.Ferguson', throws: 'R', vel: 96, ctrl: 66, stm: 50, era: '4.53', k: 63, pitches: [{ id: 0, lv: 5 }, { id: 2, lv: 6 }, { id: 4, lv: 4 }], est: 1 },
+                    { name: 'R.Garcia', throws: 'R', vel: 97, ctrl: 58, stm: 45, era: '4.66', k: 66, pitches: [{ id: 0, lv: 5 }, { id: 2, lv: 6 }], est: 1 },
+                    { name: 'C.Latz', throws: 'L', vel: 95, ctrl: 64, stm: 50, era: '4.62', k: 60, pitches: [{ id: 0, lv: 5 }, { id: 2, lv: 6 }, { id: 4, lv: 4 }], est: 1 },
+                    { name: 'C.Bradford', throws: 'L', vel: 93, ctrl: 66, stm: 50, era: '4.68', k: 54, pitches: [{ id: 0, lv: 4 }, { id: 2, lv: 6 }, { id: 4, lv: 4 }], est: 1 },
+                    { name: 'T.Mahle', throws: 'R', vel: 93, ctrl: 66, stm: 70, era: '4.60', k: 95, pitches: [{ id: 0, lv: 4 }, { id: 2, lv: 5 }, { id: 4, lv: 5 }, { id: 5, lv: 4 }], est: 1 },
+                    { name: 'J.Robertson', throws: 'R', vel: 93, ctrl: 68, stm: 45, era: '4.66', k: 54, pitches: [{ id: 0, lv: 4 }, { id: 2, lv: 6 }, { id: 4, lv: 4 }], est: 1 },
+                    { name: 'L.Garcia', throws: 'R', vel: 96, ctrl: 62, stm: 45, era: '4.63', k: 63, pitches: [{ id: 0, lv: 5 }, { id: 2, lv: 6 }, { id: 4, lv: 4 }], est: 1 },
+                    { name: 'H.Kelly', throws: 'R', vel: 95, ctrl: 62, stm: 45, era: '4.68', k: 60, pitches: [{ id: 0, lv: 5 }, { id: 2, lv: 6 }, { id: 4, lv: 4 }], est: 1 }
+                ],
+                batters: [
+                    { name: 'C.Seager', bats: 'L', throws: 'R', pos: 'SS', avg: '.290', hr: 32, rbi: 86, con: 78, pow: 86, spd: 46, obp: 0.360, slg: 0.557, est: 1 },
+                    { name: 'M.Semien', bats: 'R', throws: 'R', pos: '2B', avg: '.269', hr: 18, rbi: 58, con: 66, pow: 66, spd: 60, obp: 0.333, slg: 0.446, est: 1 },
+                    { name: 'W.Langford', bats: 'R', throws: 'R', pos: 'LF', avg: '.262', hr: 20, rbi: 62, con: 62, pow: 68, spd: 68, obp: 0.324, slg: 0.448, est: 1 },
+                    { name: 'J.Heim', bats: 'S', throws: 'R', pos: 'C', avg: '.254', hr: 17, rbi: 56, con: 58, pow: 64, spd: 42, obp: 0.316, slg: 0.422, est: 1 },
+                    { name: 'A.Garcia', bats: 'R', throws: 'R', pos: 'RF', avg: '.262', hr: 22, rbi: 66, con: 62, pow: 72, spd: 68, obp: 0.324, slg: 0.466, est: 1 },
+                    { name: 'J.Jung', bats: 'R', throws: 'R', pos: '3B', avg: '.269', hr: 21, rbi: 64, con: 66, pow: 70, spd: 54, obp: 0.333, slg: 0.464, est: 1 },
+                    { name: 'E.Carter', bats: 'L', throws: 'R', pos: 'CF', avg: '.251', hr: 7, rbi: 36, con: 56, pow: 50, spd: 82, obp: 0.311, slg: 0.356, est: 1 },
+                    { name: 'N.Lowe', bats: 'L', throws: 'R', pos: '1B', avg: '.269', hr: 21, rbi: 64, con: 66, pow: 70, spd: 44, obp: 0.333, slg: 0.464, est: 1 },
+                    { name: 'J.Smith', bats: 'L', throws: 'R', pos: '3B', avg: '.265', hr: 13, rbi: 48, con: 64, pow: 58, spd: 58, obp: 0.329, slg: 0.406, est: 1 },
+                    { name: 'J.Burger', bats: 'R', throws: 'R', pos: '3B', avg: '.251', hr: 27, rbi: 76, con: 56, pow: 78, spd: 50, obp: 0.311, slg: 0.482, est: 1 },
+                    { name: 'K.Higashioka', bats: 'R', throws: 'R', pos: 'C', avg: '.244', hr: 13, rbi: 48, con: 52, pow: 58, spd: 40, obp: 0.302, slg: 0.385, est: 1 },
+                    { name: 'J.McCarthy', bats: 'L', throws: 'R', pos: 'OF', avg: '.251', hr: 7, rbi: 36, con: 56, pow: 50, spd: 70, obp: 0.311, slg: 0.356, est: 1 },
+                    { name: 'D.Hernandez', bats: 'L', throws: 'R', pos: 'OF', avg: '.251', hr: 7, rbi: 36, con: 56, pow: 50, spd: 80, obp: 0.311, slg: 0.356, est: 1 }
+                ]
+            },
+            'LAA': {
+                pitchers: [
+                    { name: 'Y.Kikuchi', throws: 'L', vel: 95, ctrl: 60, stm: 70, era: '4.62', k: 101, pitches: [{ id: 0, lv: 5 }, { id: 2, lv: 5 }, { id: 4, lv: 5 }, { id: 5, lv: 4 }], est: 1 },
+                    { name: 'T.Detmers', throws: 'L', vel: 94, ctrl: 66, stm: 72, era: '4.54', k: 100, pitches: [{ id: 0, lv: 4 }, { id: 4, lv: 5 }, { id: 5, lv: 5 }, { id: 2, lv: 4 }], est: 1 },
+                    { name: 'J.Soriano', throws: 'R', vel: 98, ctrl: 60, stm: 75, era: '4.45', k: 114, pitches: [{ id: 0, lv: 6 }, { id: 2, lv: 5 }, { id: 5, lv: 5 }, { id: 4, lv: 4 }], est: 1 },
+                    { name: 'A.Rodriguez', throws: 'R', vel: 94, ctrl: 66, stm: 68, era: '4.56', k: 96, pitches: [{ id: 0, lv: 4 }, { id: 2, lv: 5 }, { id: 5, lv: 5 }, { id: 4, lv: 4 }], est: 1 },
+                    { name: 'R.Stephenson', throws: 'R', vel: 97, ctrl: 60, stm: 45, era: '4.62', k: 66, pitches: [{ id: 0, lv: 5 }, { id: 2, lv: 6 }, { id: 6, lv: 4 }], est: 1 },
+                    { name: 'H.Strickland', throws: 'R', vel: 96, ctrl: 66, stm: 50, era: '4.53', k: 63, pitches: [{ id: 0, lv: 5 }, { id: 2, lv: 6 }, { id: 4, lv: 4 }], est: 1 },
+                    { name: 'B.Anderson', throws: 'L', vel: 93, ctrl: 70, stm: 55, era: '4.58', k: 54, pitches: [{ id: 0, lv: 4 }, { id: 2, lv: 6 }, { id: 4, lv: 4 }], est: 1 },
+                    { name: 'C.Kochanowicz', throws: 'R', vel: 94, ctrl: 66, stm: 66, era: '4.57', k: 95, pitches: [{ id: 0, lv: 4 }, { id: 2, lv: 5 }, { id: 4, lv: 5 }], est: 1 },
+                    { name: 'J.Fermin', throws: 'R', vel: 93, ctrl: 66, stm: 50, era: '4.68', k: 54, pitches: [{ id: 0, lv: 4 }, { id: 2, lv: 6 }, { id: 4, lv: 4 }], est: 1 },
+                    { name: 'M.Moore', throws: 'R', vel: 95, ctrl: 62, stm: 45, era: '4.68', k: 60, pitches: [{ id: 0, lv: 5 }, { id: 2, lv: 6 }, { id: 4, lv: 4 }], est: 1 },
+                    { name: 'B.Fisher', throws: 'R', vel: 94, ctrl: 62, stm: 50, era: '4.71', k: 57, pitches: [{ id: 0, lv: 4 }, { id: 2, lv: 6 }, { id: 4, lv: 4 }], est: 1 },
+                    { name: 'J.Kelly', throws: 'R', vel: 96, ctrl: 62, stm: 45, era: '4.63', k: 63, pitches: [{ id: 0, lv: 5 }, { id: 2, lv: 6 }, { id: 4, lv: 4 }], est: 1 }
+                ],
+                batters: [
+                    { name: 'M.Trout', bats: 'R', throws: 'R', pos: 'CF', avg: '.280', hr: 34, rbi: 90, con: 72, pow: 88, spd: 68, obp: 0.346, slg: 0.556, est: 1 },
+                    { name: 'T.Ward', bats: 'R', throws: 'R', pos: 'LF', avg: '.265', hr: 27, rbi: 76, con: 64, pow: 78, spd: 56, obp: 0.329, slg: 0.496, est: 1 },
+                    { name: 'Z.Neto', bats: 'R', throws: 'R', pos: 'SS', avg: '.272', hr: 18, rbi: 58, con: 68, pow: 66, spd: 78, obp: 0.338, slg: 0.449, est: 1 },
+                    { name: 'J.Soler', bats: 'R', throws: 'R', pos: 'DH', avg: '.254', hr: 29, rbi: 80, con: 58, pow: 82, spd: 50, obp: 0.316, slg: 0.503, est: 1 },
+                    { name: 'N.Schanuel', bats: 'L', throws: 'R', pos: '1B', avg: '.276', hr: 13, rbi: 48, con: 70, pow: 58, spd: 50, obp: 0.342, slg: 0.417, est: 1 },
+                    { name: 'L.Rengifo', bats: 'S', throws: 'R', pos: '2B', avg: '.269', hr: 10, rbi: 42, con: 66, pow: 54, spd: 60, obp: 0.333, slg: 0.392, est: 1 },
+                    { name: 'J.Adell', bats: 'R', throws: 'R', pos: 'RF', avg: '.251', hr: 27, rbi: 76, con: 56, pow: 78, spd: 62, obp: 0.311, slg: 0.482, est: 1 },
+                    { name: 'Y.Moncada', bats: 'S', throws: 'R', pos: '3B', avg: '.262', hr: 8, rbi: 38, con: 62, pow: 52, spd: 56, obp: 0.324, slg: 0.376, est: 1 },
+                    { name: 'L.Stefanic', bats: 'L', throws: 'R', pos: 'IF', avg: '.247', hr: 3, rbi: 28, con: 54, pow: 44, spd: 58, obp: 0.307, slg: 0.325, est: 1 },
+                    { name: 'B.Drury', bats: 'R', throws: 'R', pos: 'OF', avg: '.244', hr: 14, rbi: 50, con: 52, pow: 60, spd: 62, obp: 0.302, slg: 0.394, est: 1 },
+                    { name: 'L.Rortvedt', bats: 'L', throws: 'R', pos: 'C', avg: '.244', hr: 11, rbi: 44, con: 52, pow: 56, spd: 44, obp: 0.302, slg: 0.376, est: 1 },
+                    { name: 'T.Pina', bats: 'R', throws: 'R', pos: 'C', avg: '.247', hr: 3, rbi: 28, con: 54, pow: 44, spd: 40, obp: 0.307, slg: 0.325, est: 1 },
+                    { name: 'N.Madrigal', bats: 'R', throws: 'R', pos: 'IF', avg: '.247', hr: 7, rbi: 36, con: 54, pow: 50, spd: 60, obp: 0.307, slg: 0.352, est: 1 }
+                ]
+            },
+            'NYM': {
+                pitchers: [
+                    { name: 'K.Senga', throws: 'R', vel: 97, ctrl: 66, stm: 80, era: '4.36', k: 115, pitches: [{ id: 0, lv: 5 }, { id: 6, lv: 5 }, { id: 5, lv: 5 }, { id: 2, lv: 4 }], est: 1 },
+                    { name: 'D.Peterson', throws: 'L', vel: 95, ctrl: 70, stm: 75, era: '4.40', k: 105, pitches: [{ id: 0, lv: 5 }, { id: 2, lv: 5 }, { id: 4, lv: 5 }, { id: 5, lv: 4 }], est: 1 },
+                    { name: 'C.Holmes', throws: 'R', vel: 96, ctrl: 60, stm: 78, era: '4.54', k: 110, pitches: [{ id: 0, lv: 5 }, { id: 2, lv: 5 }, { id: 6, lv: 5 }, { id: 8, lv: 4 }], est: 1 },
+                    { name: 'S.Manaea', throws: 'L', vel: 93, ctrl: 68, stm: 75, era: '4.54', k: 99, pitches: [{ id: 0, lv: 4 }, { id: 2, lv: 5 }, { id: 4, lv: 5 }, { id: 5, lv: 4 }], est: 1 },
+                    { name: 'E.Diaz', throws: 'R', vel: 99, ctrl: 68, stm: 45, era: '4.36', k: 72, pitches: [{ id: 0, lv: 6 }, { id: 2, lv: 6 }], est: 1 },
+                    { name: 'R.Helsley', throws: 'R', vel: 99, ctrl: 66, stm: 45, era: '4.40', k: 72, pitches: [{ id: 0, lv: 6 }, { id: 2, lv: 6 }, { id: 4, lv: 4 }], est: 1 },
+                    { name: 'A.Minter', throws: 'L', vel: 95, ctrl: 68, stm: 50, era: '4.54', k: 60, pitches: [{ id: 0, lv: 5 }, { id: 2, lv: 6 }, { id: 4, lv: 4 }], est: 1 },
+                    { name: 'C.Montgomery', throws: 'L', vel: 94, ctrl: 62, stm: 50, era: '4.71', k: 57, pitches: [{ id: 0, lv: 4 }, { id: 2, lv: 6 }, { id: 4, lv: 4 }], est: 1 },
+                    { name: 'K.Ottavino', throws: 'R', vel: 93, ctrl: 66, stm: 45, era: '4.70', k: 54, pitches: [{ id: 0, lv: 4 }, { id: 2, lv: 6 }, { id: 4, lv: 4 }], est: 1 },
+                    { name: 'D.Raley', throws: 'L', vel: 94, ctrl: 62, stm: 45, era: '4.73', k: 57, pitches: [{ id: 0, lv: 4 }, { id: 2, lv: 6 }, { id: 4, lv: 4 }], est: 1 },
+                    { name: 'H.Pérez', throws: 'R', vel: 96, ctrl: 60, stm: 50, era: '4.65', k: 63, pitches: [{ id: 0, lv: 5 }, { id: 2, lv: 6 }, { id: 4, lv: 4 }], est: 1 },
+                    { name: 'J.Buttó', throws: 'R', vel: 95, ctrl: 62, stm: 50, era: '4.66', k: 60, pitches: [{ id: 0, lv: 5 }, { id: 2, lv: 6 }, { id: 4, lv: 4 }], est: 1 }
+                ],
+                batters: [
+                    { name: 'J.Soto', bats: 'L', throws: 'R', pos: 'RF', avg: '.308', hr: 34, rbi: 90, con: 88, pow: 88, spd: 58, obp: 0.382, slg: 0.584, est: 1 },
+                    { name: 'F.Lindor', bats: 'S', throws: 'R', pos: 'SS', avg: '.287', hr: 27, rbi: 76, con: 76, pow: 78, spd: 68, obp: 0.355, slg: 0.518, est: 1 },
+                    { name: 'P.Alonso', bats: 'R', throws: 'R', pos: '1B', avg: '.272', hr: 35, rbi: 92, con: 68, pow: 90, spd: 42, obp: 0.338, slg: 0.557, est: 1 },
+                    { name: 'B.Nimmo', bats: 'L', throws: 'R', pos: 'LF', avg: '.280', hr: 18, rbi: 58, con: 72, pow: 66, spd: 58, obp: 0.346, slg: 0.457, est: 1 },
+                    { name: 'M.Vientos', bats: 'R', throws: 'R', pos: '3B', avg: '.265', hr: 25, rbi: 72, con: 64, pow: 76, spd: 50, obp: 0.329, slg: 0.487, est: 1 },
+                    { name: 'F.Alvarez', bats: 'R', throws: 'R', pos: 'C', avg: '.254', hr: 29, rbi: 80, con: 58, pow: 82, spd: 42, obp: 0.316, slg: 0.503, est: 1 },
+                    { name: 'J.McNeil', bats: 'L', throws: 'R', pos: '2B', avg: '.298', hr: 8, rbi: 38, con: 82, pow: 52, spd: 60, obp: 0.368, slg: 0.412, est: 1 },
+                    { name: 'T.Taylor', bats: 'R', throws: 'R', pos: 'CF', avg: '.251', hr: 15, rbi: 52, con: 56, pow: 62, spd: 68, obp: 0.311, slg: 0.410, est: 1 },
+                    { name: 'F.Alvarez Jr.', bats: 'R', throws: 'R', pos: 'C', avg: '.247', hr: 20, rbi: 62, con: 54, pow: 68, spd: 40, obp: 0.307, slg: 0.433, est: 1 },
+                    { name: 'J.Winker', bats: 'L', throws: 'R', pos: 'DH', avg: '.269', hr: 13, rbi: 48, con: 66, pow: 58, spd: 44, obp: 0.333, slg: 0.410, est: 1 },
+                    { name: 'R.Mauricio', bats: 'S', throws: 'R', pos: '3B', avg: '.251', hr: 17, rbi: 56, con: 56, pow: 64, spd: 62, obp: 0.311, slg: 0.419, est: 1 },
+                    { name: 'L.Torrens', bats: 'R', throws: 'R', pos: 'C', avg: '.244', hr: 11, rbi: 44, con: 52, pow: 56, spd: 42, obp: 0.302, slg: 0.376, est: 1 },
+                    { name: 'J.Siri', bats: 'R', throws: 'R', pos: 'OF', avg: '.244', hr: 18, rbi: 58, con: 52, pow: 66, spd: 78, obp: 0.302, slg: 0.421, est: 1 }
+                ]
+            },
+            'PHI': {
+                pitchers: [
+                    { name: 'Z.Wheeler', throws: 'R', vel: 96, ctrl: 82, stm: 85, era: '4.07', k: 116, pitches: [{ id: 0, lv: 5 }, { id: 5, lv: 5 }, { id: 4, lv: 5 }, { id: 2, lv: 4 }], est: 1 },
+                    { name: 'A.Nola', throws: 'R', vel: 93, ctrl: 82, stm: 80, era: '4.24', k: 103, pitches: [{ id: 0, lv: 4 }, { id: 4, lv: 5 }, { id: 5, lv: 5 }, { id: 2, lv: 4 }], est: 1 },
+                    { name: 'C.Sanchez', throws: 'L', vel: 95, ctrl: 78, stm: 82, era: '4.21', k: 111, pitches: [{ id: 0, lv: 5 }, { id: 8, lv: 5 }, { id: 5, lv: 5 }, { id: 4, lv: 4 }], est: 1 },
+                    { name: 'J.Luzardo', throws: 'L', vel: 97, ctrl: 68, stm: 78, era: '4.33', k: 113, pitches: [{ id: 0, lv: 5 }, { id: 2, lv: 5 }, { id: 4, lv: 5 }, { id: 5, lv: 4 }], est: 1 },
+                    { name: 'J.Duran', throws: 'R', vel: 100, ctrl: 66, stm: 45, era: '4.35', k: 75, pitches: [{ id: 0, lv: 6 }, { id: 6, lv: 6 }, { id: 2, lv: 4 }], est: 1 },
+                    { name: 'J.Alvarado', throws: 'R', vel: 96, ctrl: 68, stm: 45, era: '4.51', k: 63, pitches: [{ id: 0, lv: 5 }, { id: 2, lv: 6 }, { id: 4, lv: 4 }], est: 1 },
+                    { name: 'M.Strahm', throws: 'L', vel: 93, ctrl: 70, stm: 50, era: '4.60', k: 54, pitches: [{ id: 0, lv: 4 }, { id: 2, lv: 6 }, { id: 4, lv: 4 }], est: 1 },
+                    { name: 'A.Suárez', throws: 'L', vel: 96, ctrl: 60, stm: 45, era: '4.67', k: 63, pitches: [{ id: 0, lv: 5 }, { id: 2, lv: 6 }, { id: 4, lv: 4 }], est: 1 },
+                    { name: 'T.Walker', throws: 'R', vel: 95, ctrl: 66, stm: 72, era: '4.49', k: 103, pitches: [{ id: 0, lv: 5 }, { id: 2, lv: 5 }, { id: 4, lv: 5 }, { id: 5, lv: 4 }], est: 1 },
+                    { name: 'J.Romano', throws: 'R', vel: 96, ctrl: 62, stm: 45, era: '4.63', k: 63, pitches: [{ id: 0, lv: 5 }, { id: 2, lv: 6 }, { id: 4, lv: 4 }], est: 1 },
+                    { name: 'M.Kerkering', throws: 'R', vel: 97, ctrl: 62, stm: 45, era: '4.58', k: 66, pitches: [{ id: 0, lv: 5 }, { id: 2, lv: 6 }], est: 1 },
+                    { name: 'Y.Garcia', throws: 'R', vel: 94, ctrl: 60, stm: 45, era: '4.77', k: 57, pitches: [{ id: 0, lv: 4 }, { id: 2, lv: 6 }, { id: 4, lv: 4 }], est: 1 }
+                ],
+                batters: [
+                    { name: 'K.Schwarber', bats: 'L', throws: 'R', pos: 'DH', avg: '.258', hr: 38, rbi: 98, con: 60, pow: 94, spd: 44, obp: 0.320, slg: 0.561, est: 1 },
+                    { name: 'B.Harper', bats: 'L', throws: 'R', pos: '1B', avg: '.287', hr: 32, rbi: 86, con: 76, pow: 86, spd: 56, obp: 0.355, slg: 0.554, est: 1 },
+                    { name: 'T.Turner', bats: 'R', throws: 'R', pos: 'SS', avg: '.287', hr: 24, rbi: 70, con: 76, pow: 74, spd: 78, obp: 0.355, slg: 0.500, est: 1 },
+                    { name: 'A.Bohm', bats: 'R', throws: 'R', pos: '3B', avg: '.290', hr: 14, rbi: 50, con: 78, pow: 60, spd: 45, obp: 0.360, slg: 0.440, est: 1 },
+                    { name: 'J.Realmuto', bats: 'R', throws: 'R', pos: 'C', avg: '.269', hr: 18, rbi: 58, con: 66, pow: 66, spd: 56, obp: 0.333, slg: 0.446, est: 1 },
+                    { name: 'N.Castellanos', bats: 'R', throws: 'R', pos: 'RF', avg: '.280', hr: 22, rbi: 66, con: 72, pow: 72, spd: 48, obp: 0.346, slg: 0.484, est: 1 },
+                    { name: 'B.Marsh', bats: 'L', throws: 'R', pos: 'CF', avg: '.258', hr: 20, rbi: 62, con: 60, pow: 68, spd: 66, obp: 0.320, slg: 0.444, est: 1 },
+                    { name: 'B.Stott', bats: 'L', throws: 'R', pos: '2B', avg: '.272', hr: 13, rbi: 48, con: 68, pow: 58, spd: 68, obp: 0.338, slg: 0.413, est: 1 },
+                    { name: 'E.Sosa', bats: 'R', throws: 'R', pos: '2B', avg: '.262', hr: 13, rbi: 48, con: 62, pow: 58, spd: 58, obp: 0.324, slg: 0.403, est: 1 },
+                    { name: 'J.Rojas', bats: 'R', throws: 'R', pos: '3B', avg: '.262', hr: 10, rbi: 42, con: 62, pow: 54, spd: 58, obp: 0.324, slg: 0.385, est: 1 },
+                    { name: 'R.Clemens', bats: 'S', throws: 'R', pos: 'OF', avg: '.254', hr: 7, rbi: 36, con: 58, pow: 50, spd: 62, obp: 0.316, slg: 0.359, est: 1 },
+                    { name: 'R.Marchan', bats: 'R', throws: 'R', pos: 'C', avg: '.247', hr: 7, rbi: 36, con: 54, pow: 50, spd: 40, obp: 0.307, slg: 0.352, est: 1 },
+                    { name: 'B.Rose', bats: 'R', throws: 'R', pos: 'OF', avg: '.247', hr: 8, rbi: 38, con: 54, pow: 52, spd: 62, obp: 0.307, slg: 0.361, est: 1 }
+                ]
+            },
+            'ATL': {
+                pitchers: [
+                    { name: 'C.Sale', throws: 'L', vel: 95, ctrl: 82, stm: 76, era: '4.16', k: 106, pitches: [{ id: 0, lv: 5 }, { id: 2, lv: 5 }, { id: 5, lv: 5 }], est: 1 },
+                    { name: 'S.Strider', throws: 'R', vel: 98, ctrl: 72, stm: 75, era: '4.21', k: 114, pitches: [{ id: 0, lv: 6 }, { id: 2, lv: 5 }, { id: 5, lv: 5 }, { id: 4, lv: 4 }], est: 1 },
+                    { name: 'S.Schwellenbach', throws: 'R', vel: 96, ctrl: 74, stm: 78, era: '4.26', k: 110, pitches: [{ id: 0, lv: 5 }, { id: 2, lv: 5 }, { id: 4, lv: 5 }, { id: 5, lv: 4 }], est: 1 },
+                    { name: 'R.Lopez', throws: 'R', vel: 95, ctrl: 74, stm: 76, era: '4.32', k: 106, pitches: [{ id: 0, lv: 5 }, { id: 2, lv: 5 }, { id: 4, lv: 5 }, { id: 5, lv: 4 }], est: 1 },
+                    { name: 'R.Iglesias', throws: 'R', vel: 97, ctrl: 70, stm: 45, era: '4.42', k: 66, pitches: [{ id: 0, lv: 5 }, { id: 2, lv: 6 }, { id: 5, lv: 4 }], est: 1 },
+                    { name: 'A.Bummer', throws: 'L', vel: 94, ctrl: 65, stm: 50, era: '4.65', k: 57, pitches: [{ id: 0, lv: 4 }, { id: 2, lv: 6 }, { id: 4, lv: 4 }], est: 1 },
+                    { name: 'P.Lee', throws: 'R', vel: 97, ctrl: 66, stm: 45, era: '4.50', k: 66, pitches: [{ id: 0, lv: 5 }, { id: 2, lv: 6 }, { id: 4, lv: 4 }], est: 1 },
+                    { name: 'C.Morton', throws: 'R', vel: 92, ctrl: 70, stm: 74, era: '4.55', k: 95, pitches: [{ id: 0, lv: 3 }, { id: 4, lv: 5 }, { id: 5, lv: 5 }, { id: 2, lv: 4 }], est: 1 },
+                    { name: 'G.Elder', throws: 'R', vel: 93, ctrl: 70, stm: 72, era: '4.51', k: 97, pitches: [{ id: 0, lv: 4 }, { id: 4, lv: 5 }, { id: 5, lv: 5 }, { id: 2, lv: 4 }], est: 1 },
+                    { name: 'D.Hernandez', throws: 'R', vel: 95, ctrl: 60, stm: 50, era: '4.70', k: 60, pitches: [{ id: 0, lv: 5 }, { id: 2, lv: 6 }, { id: 4, lv: 4 }], est: 1 },
+                    { name: 'J.Johnson', throws: 'R', vel: 94, ctrl: 62, stm: 45, era: '4.73', k: 57, pitches: [{ id: 0, lv: 4 }, { id: 2, lv: 6 }, { id: 4, lv: 4 }], est: 1 },
+                    { name: 'H.Kim', throws: 'L', vel: 93, ctrl: 66, stm: 50, era: '4.68', k: 54, pitches: [{ id: 0, lv: 4 }, { id: 2, lv: 6 }, { id: 4, lv: 4 }], est: 1 }
+                ],
+                batters: [
+                    { name: 'R.Acuña Jr.', bats: 'R', throws: 'R', pos: 'RF', avg: '.287', hr: 32, rbi: 86, con: 76, pow: 86, spd: 88, obp: 0.355, slg: 0.554, est: 1 },
+                    { name: 'M.Harris II', bats: 'L', throws: 'R', pos: 'CF', avg: '.269', hr: 24, rbi: 70, con: 66, pow: 74, spd: 76, obp: 0.333, slg: 0.482, est: 1 },
+                    { name: 'M.Olson', bats: 'L', throws: 'R', pos: '1B', avg: '.269', hr: 28, rbi: 78, con: 66, pow: 80, spd: 42, obp: 0.333, slg: 0.509, est: 1 },
+                    { name: 'O.Albies', bats: 'S', throws: 'R', pos: '2B', avg: '.280', hr: 21, rbi: 64, con: 72, pow: 70, spd: 66, obp: 0.346, slg: 0.475, est: 1 },
+                    { name: 'A.Riley', bats: 'R', throws: 'R', pos: '3B', avg: '.272', hr: 29, rbi: 80, con: 68, pow: 82, spd: 52, obp: 0.338, slg: 0.521, est: 1 },
+                    { name: 'M.Murphy', bats: 'R', throws: 'R', pos: 'C', avg: '.269', hr: 25, rbi: 72, con: 66, pow: 76, spd: 44, obp: 0.333, slg: 0.491, est: 1 },
+                    { name: 'N.Arcia', bats: 'R', throws: 'R', pos: 'SS', avg: '.262', hr: 18, rbi: 58, con: 62, pow: 66, spd: 60, obp: 0.324, slg: 0.439, est: 1 },
+                    { name: 'M.Ozuna', bats: 'R', throws: 'R', pos: 'DH', avg: '.272', hr: 29, rbi: 80, con: 68, pow: 82, spd: 42, obp: 0.338, slg: 0.521, est: 1 },
+                    { name: 'J.Sanchez', bats: 'R', throws: 'R', pos: 'LF', avg: '.254', hr: 24, rbi: 70, con: 58, pow: 74, spd: 50, obp: 0.316, slg: 0.467, est: 1 },
+                    { name: 'S.Kelenic', bats: 'L', throws: 'R', pos: 'LF', avg: '.251', hr: 18, rbi: 58, con: 56, pow: 66, spd: 60, obp: 0.311, slg: 0.428, est: 1 },
+                    { name: 'E.Rosario', bats: 'R', throws: 'R', pos: 'LF', avg: '.258', hr: 14, rbi: 50, con: 60, pow: 60, spd: 58, obp: 0.320, slg: 0.408, est: 1 },
+                    { name: 'O.Arcia', bats: 'R', throws: 'R', pos: 'SS', avg: '.254', hr: 14, rbi: 50, con: 58, pow: 60, spd: 58, obp: 0.316, slg: 0.404, est: 1 },
+                    { name: 'N.Gonzalez', bats: 'R', throws: 'R', pos: 'SS', avg: '.254', hr: 13, rbi: 48, con: 58, pow: 58, spd: 58, obp: 0.316, slg: 0.395, est: 1 }
+                ]
+            },
+            'MIA': {
+                pitchers: [
+                    { name: 'S.Alcantara', throws: 'R', vel: 98, ctrl: 74, stm: 85, era: '4.13', k: 122, pitches: [{ id: 0, lv: 6 }, { id: 2, lv: 5 }, { id: 4, lv: 5 }, { id: 5, lv: 4 }], est: 1 },
+                    { name: 'E.Perez', throws: 'R', vel: 95, ctrl: 74, stm: 76, era: '4.32', k: 106, pitches: [{ id: 0, lv: 5 }, { id: 2, lv: 5 }, { id: 4, lv: 5 }, { id: 5, lv: 4 }], est: 1 },
+                    { name: 'B.Meyer', throws: 'R', vel: 95, ctrl: 66, stm: 72, era: '4.49', k: 103, pitches: [{ id: 0, lv: 5 }, { id: 2, lv: 5 }, { id: 4, lv: 5 }, { id: 5, lv: 4 }], est: 1 },
+                    { name: 'R.Weathers', throws: 'L', vel: 97, ctrl: 62, stm: 68, era: '4.49', k: 105, pitches: [{ id: 0, lv: 5 }, { id: 2, lv: 5 }, { id: 4, lv: 5 }], est: 1 },
+                    { name: 'Z.Cabrera', throws: 'R', vel: 96, ctrl: 58, stm: 45, era: '4.71', k: 63, pitches: [{ id: 0, lv: 5 }, { id: 2, lv: 6 }, { id: 4, lv: 4 }], est: 1 },
+                    { name: 'A.Puk', throws: 'L', vel: 98, ctrl: 60, stm: 45, era: '4.57', k: 69, pitches: [{ id: 0, lv: 6 }, { id: 2, lv: 6 }], est: 1 },
+                    { name: 'C.Faucher', throws: 'R', vel: 96, ctrl: 58, stm: 50, era: '4.69', k: 63, pitches: [{ id: 0, lv: 5 }, { id: 2, lv: 6 }, { id: 4, lv: 4 }], est: 1 },
+                    { name: 'C.Cronin', throws: 'R', vel: 95, ctrl: 62, stm: 45, era: '4.68', k: 60, pitches: [{ id: 0, lv: 5 }, { id: 2, lv: 6 }, { id: 4, lv: 4 }], est: 1 },
+                    { name: 'J.Junk', throws: 'R', vel: 94, ctrl: 62, stm: 50, era: '4.71', k: 57, pitches: [{ id: 0, lv: 4 }, { id: 2, lv: 6 }, { id: 4, lv: 4 }], est: 1 },
+                    { name: 'L.Soriano', throws: 'R', vel: 94, ctrl: 62, stm: 45, era: '4.73', k: 57, pitches: [{ id: 0, lv: 4 }, { id: 2, lv: 6 }, { id: 4, lv: 4 }], est: 1 },
+                    { name: 'T.Scott', throws: 'R', vel: 96, ctrl: 62, stm: 45, era: '4.63', k: 63, pitches: [{ id: 0, lv: 5 }, { id: 2, lv: 6 }, { id: 4, lv: 4 }], est: 1 },
+                    { name: 'B.Chandler', throws: 'R', vel: 94, ctrl: 66, stm: 66, era: '4.57', k: 95, pitches: [{ id: 0, lv: 4 }, { id: 2, lv: 5 }, { id: 4, lv: 5 }], est: 1 }
+                ],
+                batters: [
+                    { name: 'K.Stowers', bats: 'L', throws: 'R', pos: 'LF', avg: '.265', hr: 24, rbi: 70, con: 64, pow: 74, spd: 54, obp: 0.329, slg: 0.478, est: 1 },
+                    { name: 'J.Chisholm', bats: 'L', throws: 'R', pos: '2B', avg: '.262', hr: 22, rbi: 66, con: 62, pow: 72, spd: 82, obp: 0.324, slg: 0.466, est: 1 },
+                    { name: 'J.Sanchez', bats: 'R', throws: 'R', pos: 'CF', avg: '.258', hr: 18, rbi: 58, con: 60, pow: 66, spd: 60, obp: 0.320, slg: 0.435, est: 1 },
+                    { name: 'O.Lopez', bats: 'R', throws: 'R', pos: 'SS', avg: '.262', hr: 10, rbi: 42, con: 62, pow: 54, spd: 78, obp: 0.324, slg: 0.385, est: 1 },
+                    { name: 'M.Mervis', bats: 'L', throws: 'R', pos: '1B', avg: '.258', hr: 20, rbi: 62, con: 60, pow: 68, spd: 46, obp: 0.320, slg: 0.444, est: 1 },
+                    { name: 'A.Burger', bats: 'R', throws: 'R', pos: '3B', avg: '.251', hr: 27, rbi: 76, con: 56, pow: 78, spd: 48, obp: 0.311, slg: 0.482, est: 1 },
+                    { name: 'E.Bonilla', bats: 'R', throws: 'R', pos: 'C', avg: '.258', hr: 14, rbi: 50, con: 60, pow: 60, spd: 46, obp: 0.320, slg: 0.408, est: 1 },
+                    { name: 'D.Myers', bats: 'L', throws: 'R', pos: 'RF', avg: '.258', hr: 18, rbi: 58, con: 60, pow: 66, spd: 62, obp: 0.320, slg: 0.435, est: 1 },
+                    { name: 'X.Edwards', bats: 'S', throws: 'R', pos: 'SS', avg: '.265', hr: 3, rbi: 28, con: 64, pow: 44, spd: 66, obp: 0.329, slg: 0.343, est: 1 },
+                    { name: 'T.Hill', bats: 'S', throws: 'R', pos: '2B', avg: '.254', hr: 7, rbi: 36, con: 58, pow: 50, spd: 56, obp: 0.316, slg: 0.359, est: 1 },
+                    { name: 'H.Ramos', bats: 'L', throws: 'R', pos: 'OF', avg: '.251', hr: 11, rbi: 44, con: 56, pow: 56, spd: 62, obp: 0.311, slg: 0.383, est: 1 },
+                    { name: 'J.Fortes', bats: 'R', throws: 'R', pos: 'C', avg: '.244', hr: 6, rbi: 34, con: 52, pow: 48, spd: 42, obp: 0.302, slg: 0.340, est: 1 },
+                    { name: 'D.Jansen', bats: 'R', throws: 'R', pos: 'OF', avg: '.251', hr: 11, rbi: 44, con: 56, pow: 56, spd: 62, obp: 0.311, slg: 0.383, est: 1 }
+                ]
+            },
+            'WSH': {
+                pitchers: [
+                    { name: 'M.Gore', throws: 'L', vel: 97, ctrl: 68, stm: 78, era: '4.33', k: 113, pitches: [{ id: 0, lv: 5 }, { id: 4, lv: 5 }, { id: 5, lv: 5 }, { id: 2, lv: 4 }], est: 1 },
+                    { name: 'J.Irvin', throws: 'R', vel: 93, ctrl: 78, stm: 78, era: '4.33', k: 101, pitches: [{ id: 0, lv: 4 }, { id: 4, lv: 5 }, { id: 5, lv: 5 }, { id: 2, lv: 4 }], est: 1 },
+                    { name: 'C.Cavalli', throws: 'R', vel: 95, ctrl: 66, stm: 72, era: '4.49', k: 103, pitches: [{ id: 0, lv: 5 }, { id: 2, lv: 5 }, { id: 4, lv: 5 }, { id: 5, lv: 4 }], est: 1 },
+                    { name: 'J.Gray', throws: 'R', vel: 96, ctrl: 72, stm: 74, era: '4.31', k: 107, pitches: [{ id: 0, lv: 5 }, { id: 2, lv: 5 }, { id: 4, lv: 5 }, { id: 5, lv: 4 }], est: 1 },
+                    { name: 'J.Finnegan', throws: 'L', vel: 97, ctrl: 66, stm: 45, era: '4.50', k: 66, pitches: [{ id: 0, lv: 5 }, { id: 2, lv: 6 }, { id: 6, lv: 4 }], est: 1 },
+                    { name: 'J.Law', throws: 'R', vel: 96, ctrl: 62, stm: 45, era: '4.63', k: 63, pitches: [{ id: 0, lv: 5 }, { id: 2, lv: 6 }, { id: 4, lv: 4 }], est: 1 },
+                    { name: 'D.Law', throws: 'R', vel: 96, ctrl: 62, stm: 50, era: '4.61', k: 63, pitches: [{ id: 0, lv: 5 }, { id: 2, lv: 6 }, { id: 4, lv: 4 }], est: 1 },
+                    { name: 'M.Parker', throws: 'R', vel: 93, ctrl: 68, stm: 74, era: '4.54', k: 98, pitches: [{ id: 0, lv: 4 }, { id: 2, lv: 5 }, { id: 4, lv: 5 }, { id: 5, lv: 4 }], est: 1 },
+                    { name: 'S.Alexander', throws: 'R', vel: 94, ctrl: 62, stm: 45, era: '4.73', k: 57, pitches: [{ id: 0, lv: 4 }, { id: 2, lv: 6 }, { id: 4, lv: 4 }], est: 1 },
+                    { name: 'M.Harvey', throws: 'R', vel: 96, ctrl: 60, stm: 50, era: '4.65', k: 63, pitches: [{ id: 0, lv: 5 }, { id: 2, lv: 6 }, { id: 4, lv: 4 }], est: 1 },
+                    { name: 'R.Garcia', throws: 'R', vel: 94, ctrl: 66, stm: 45, era: '4.65', k: 57, pitches: [{ id: 0, lv: 4 }, { id: 2, lv: 6 }, { id: 4, lv: 4 }], est: 1 },
+                    { name: 'J.Barrios', throws: 'R', vel: 95, ctrl: 62, stm: 50, era: '4.66', k: 60, pitches: [{ id: 0, lv: 5 }, { id: 2, lv: 6 }, { id: 4, lv: 4 }], est: 1 }
+                ],
+                batters: [
+                    { name: 'J.Wood', bats: 'L', throws: 'R', pos: 'LF', avg: '.265', hr: 28, rbi: 78, con: 64, pow: 80, spd: 56, obp: 0.329, slg: 0.505, est: 1 },
+                    { name: 'J.Abrams', bats: 'L', throws: 'R', pos: 'SS', avg: '.269', hr: 18, rbi: 58, con: 66, pow: 66, spd: 84, obp: 0.333, slg: 0.446, est: 1 },
+                    { name: 'C.Garcia', bats: 'R', throws: 'R', pos: '3B', avg: '.254', hr: 10, rbi: 42, con: 58, pow: 54, spd: 66, obp: 0.316, slg: 0.377, est: 1 },
+                    { name: 'D.Call', bats: 'L', throws: 'R', pos: 'RF', avg: '.254', hr: 13, rbi: 48, con: 58, pow: 58, spd: 72, obp: 0.316, slg: 0.395, est: 1 },
+                    { name: 'J.Young', bats: 'L', throws: 'R', pos: '1B', avg: '.254', hr: 18, rbi: 58, con: 58, pow: 66, spd: 46, obp: 0.316, slg: 0.431, est: 1 },
+                    { name: 'K.Ruiz', bats: 'L', throws: 'R', pos: 'C', avg: '.258', hr: 8, rbi: 38, con: 60, pow: 52, spd: 44, obp: 0.320, slg: 0.372, est: 1 },
+                    { name: 'L.Garcia Jr.', bats: 'L', throws: 'R', pos: '2B', avg: '.269', hr: 3, rbi: 28, con: 66, pow: 44, spd: 68, obp: 0.333, slg: 0.347, est: 1 },
+                    { name: 'J.Vargas', bats: 'R', throws: 'R', pos: '2B', avg: '.251', hr: 7, rbi: 36, con: 56, pow: 50, spd: 56, obp: 0.311, slg: 0.356, est: 1 },
+                    { name: 'N.Lile', bats: 'L', throws: 'R', pos: 'OF', avg: '.254', hr: 7, rbi: 36, con: 58, pow: 50, spd: 62, obp: 0.316, slg: 0.359, est: 1 },
+                    { name: 'D.Millas', bats: 'R', throws: 'R', pos: 'C', avg: '.247', hr: 11, rbi: 44, con: 54, pow: 56, spd: 42, obp: 0.307, slg: 0.379, est: 1 },
+                    { name: 'R.Mena', bats: 'S', throws: 'R', pos: '1B', avg: '.247', hr: 8, rbi: 38, con: 54, pow: 52, spd: 52, obp: 0.307, slg: 0.361, est: 1 },
+                    { name: 'M.Candelario', bats: 'S', throws: 'R', pos: '3B', avg: '.258', hr: 18, rbi: 58, con: 60, pow: 66, spd: 48, obp: 0.320, slg: 0.435, est: 1 },
+                    { name: 'J.Bell', bats: 'R', throws: 'R', pos: 'IF', avg: '.254', hr: 8, rbi: 38, con: 58, pow: 52, spd: 50, obp: 0.316, slg: 0.368, est: 1 }
+                ]
+            },
+            'CHC': {
+                pitchers: [
+                    { name: 'S.Imanaga', throws: 'L', vel: 92, ctrl: 80, stm: 80, era: '4.33', k: 100, pitches: [{ id: 0, lv: 3 }, { id: 5, lv: 5 }, { id: 2, lv: 5 }, { id: 6, lv: 4 }], est: 1 },
+                    { name: 'J.Taillon', throws: 'R', vel: 94, ctrl: 78, stm: 78, era: '4.28', k: 104, pitches: [{ id: 0, lv: 4 }, { id: 4, lv: 5 }, { id: 5, lv: 5 }, { id: 2, lv: 4 }], est: 1 },
+                    { name: 'M.Boyd', throws: 'L', vel: 93, ctrl: 75, stm: 76, era: '4.40', k: 100, pitches: [{ id: 0, lv: 4 }, { id: 2, lv: 5 }, { id: 4, lv: 5 }, { id: 5, lv: 4 }], est: 1 },
+                    { name: 'J.Cease', throws: 'R', vel: 97, ctrl: 68, stm: 70, era: '4.36', k: 107, pitches: [{ id: 0, lv: 5 }, { id: 2, lv: 5 }, { id: 5, lv: 5 }, { id: 4, lv: 4 }], est: 1 },
+                    { name: 'D.Palencia', throws: 'R', vel: 100, ctrl: 60, stm: 45, era: '4.47', k: 75, pitches: [{ id: 0, lv: 6 }, { id: 2, lv: 6 }], est: 1 },
+                    { name: 'B.Brown', throws: 'R', vel: 98, ctrl: 60, stm: 50, era: '4.55', k: 69, pitches: [{ id: 0, lv: 6 }, { id: 2, lv: 6 }, { id: 4, lv: 4 }], est: 1 },
+                    { name: 'B.Thielbar', throws: 'R', vel: 95, ctrl: 62, stm: 50, era: '4.66', k: 60, pitches: [{ id: 0, lv: 5 }, { id: 2, lv: 6 }, { id: 4, lv: 4 }], est: 1 },
+                    { name: 'J.Steele', throws: 'L', vel: 95, ctrl: 68, stm: 70, era: '4.46', k: 101, pitches: [{ id: 0, lv: 5 }, { id: 2, lv: 5 }, { id: 4, lv: 5 }, { id: 5, lv: 4 }], est: 1 },
+                    { name: 'D.Pomeranz', throws: 'L', vel: 94, ctrl: 62, stm: 45, era: '4.73', k: 57, pitches: [{ id: 0, lv: 4 }, { id: 2, lv: 6 }, { id: 4, lv: 4 }], est: 1 },
+                    { name: 'D.Hodge', throws: 'R', vel: 94, ctrl: 62, stm: 50, era: '4.71', k: 57, pitches: [{ id: 0, lv: 4 }, { id: 2, lv: 6 }, { id: 4, lv: 4 }], est: 1 },
+                    { name: 'E.Morgan', throws: 'R', vel: 95, ctrl: 62, stm: 45, era: '4.68', k: 60, pitches: [{ id: 0, lv: 5 }, { id: 2, lv: 6 }, { id: 4, lv: 4 }], est: 1 },
+                    { name: 'C.Bellinger', throws: 'R', vel: 93, ctrl: 62, stm: 45, era: '4.78', k: 54, pitches: [{ id: 0, lv: 4 }, { id: 2, lv: 6 }, { id: 4, lv: 4 }], est: 1 }
+                ],
+                batters: [
+                    { name: 'K.Tucker', bats: 'L', throws: 'R', pos: 'RF', avg: '.287', hr: 28, rbi: 78, con: 76, pow: 80, spd: 74, obp: 0.355, slg: 0.527, est: 1 },
+                    { name: 'S.Suzuki', bats: 'R', throws: 'R', pos: 'RF', avg: '.276', hr: 25, rbi: 72, con: 70, pow: 76, spd: 52, obp: 0.342, slg: 0.498, est: 1 },
+                    { name: 'I.Happ', bats: 'S', throws: 'R', pos: 'LF', avg: '.269', hr: 18, rbi: 58, con: 66, pow: 66, spd: 56, obp: 0.333, slg: 0.446, est: 1 },
+                    { name: 'P.Crow-Armstrong', bats: 'L', throws: 'R', pos: 'CF', avg: '.251', hr: 27, rbi: 76, con: 56, pow: 78, spd: 88, obp: 0.311, slg: 0.482, est: 1 },
+                    { name: 'D.Swanson', bats: 'R', throws: 'R', pos: 'SS', avg: '.258', hr: 18, rbi: 58, con: 60, pow: 66, spd: 62, obp: 0.320, slg: 0.435, est: 1 },
+                    { name: 'M.Busch', bats: 'L', throws: 'R', pos: '1B', avg: '.265', hr: 21, rbi: 64, con: 64, pow: 70, spd: 50, obp: 0.329, slg: 0.460, est: 1 },
+                    { name: 'N.Hoerner', bats: 'R', throws: 'R', pos: '2B', avg: '.290', hr: 0, rbi: 22, con: 78, pow: 36, spd: 74, obp: 0.360, slg: 0.332, est: 1 },
+                    { name: 'C.Bellinger', bats: 'L', throws: 'R', pos: '1B', avg: '.272', hr: 20, rbi: 62, con: 68, pow: 68, spd: 64, obp: 0.338, slg: 0.458, est: 1 },
+                    { name: 'M.Amaya', bats: 'R', throws: 'R', pos: 'C', avg: '.258', hr: 13, rbi: 48, con: 60, pow: 58, spd: 46, obp: 0.320, slg: 0.399, est: 1 },
+                    { name: 'S.Kelly', bats: 'R', throws: 'R', pos: 'C', avg: '.254', hr: 14, rbi: 50, con: 58, pow: 60, spd: 42, obp: 0.316, slg: 0.404, est: 1 },
+                    { name: 'M.Shaw', bats: 'R', throws: 'R', pos: '3B', avg: '.269', hr: 11, rbi: 44, con: 66, pow: 56, spd: 58, obp: 0.333, slg: 0.401, est: 1 },
+                    { name: 'J.Ramirez', bats: 'R', throws: 'R', pos: 'OF', avg: '.240', hr: 11, rbi: 44, con: 50, pow: 56, spd: 66, obp: 0.298, slg: 0.372, est: 1 },
+                    { name: 'P.Wisdom', bats: 'R', throws: 'R', pos: 'IF', avg: '.251', hr: 18, rbi: 58, con: 56, pow: 66, spd: 50, obp: 0.311, slg: 0.428, est: 1 }
+                ]
+            },
+            'MIL': {
+                pitchers: [
+                    { name: 'F.Peralta', throws: 'R', vel: 96, ctrl: 72, stm: 76, era: '4.31', k: 109, pitches: [{ id: 0, lv: 5 }, { id: 4, lv: 5 }, { id: 5, lv: 5 }, { id: 2, lv: 4 }], est: 1 },
+                    { name: 'B.Woodruff', throws: 'R', vel: 97, ctrl: 78, stm: 82, era: '4.11', k: 117, pitches: [{ id: 0, lv: 5 }, { id: 5, lv: 5 }, { id: 4, lv: 5 }, { id: 2, lv: 4 }], est: 1 },
+                    { name: 'D.Rea', throws: 'R', vel: 93, ctrl: 74, stm: 74, era: '4.42', k: 98, pitches: [{ id: 0, lv: 4 }, { id: 5, lv: 5 }, { id: 4, lv: 5 }, { id: 2, lv: 4 }], est: 1 },
+                    { name: 'J.Misiorowski', throws: 'R', vel: 100, ctrl: 55, stm: 70, era: '4.47', k: 116, pitches: [{ id: 0, lv: 6 }, { id: 2, lv: 5 }, { id: 4, lv: 5 }], est: 1 },
+                    { name: 'T.Megill', throws: 'R', vel: 96, ctrl: 66, stm: 45, era: '4.55', k: 63, pitches: [{ id: 0, lv: 5 }, { id: 2, lv: 6 }], est: 1 },
+                    { name: 'H.Hudson', throws: 'L', vel: 96, ctrl: 62, stm: 60, era: '4.57', k: 96, pitches: [{ id: 0, lv: 5 }, { id: 2, lv: 5 }, { id: 4, lv: 5 }], est: 1 },
+                    { name: 'J.Koenig', throws: 'R', vel: 96, ctrl: 58, stm: 50, era: '4.69', k: 63, pitches: [{ id: 0, lv: 5 }, { id: 2, lv: 6 }, { id: 4, lv: 4 }], est: 1 },
+                    { name: 'T.Alexander', throws: 'L', vel: 94, ctrl: 66, stm: 74, era: '4.53', k: 101, pitches: [{ id: 0, lv: 4 }, { id: 2, lv: 5 }, { id: 4, lv: 5 }, { id: 5, lv: 4 }], est: 1 },
+                    { name: 'J.Junis', throws: 'R', vel: 92, ctrl: 68, stm: 60, era: '4.65', k: 84, pitches: [{ id: 0, lv: 3 }, { id: 2, lv: 5 }, { id: 4, lv: 5 }], est: 1 },
+                    { name: 'G.Henderson', throws: 'R', vel: 99, ctrl: 62, stm: 45, era: '4.48', k: 72, pitches: [{ id: 0, lv: 6 }, { id: 2, lv: 6 }, { id: 4, lv: 4 }], est: 1 },
+                    { name: 'N.Mears', throws: 'R', vel: 96, ctrl: 60, stm: 50, era: '4.65', k: 63, pitches: [{ id: 0, lv: 5 }, { id: 2, lv: 6 }, { id: 4, lv: 4 }], est: 1 },
+                    { name: 'B.Hall', throws: 'R', vel: 95, ctrl: 62, stm: 45, era: '4.68', k: 60, pitches: [{ id: 0, lv: 5 }, { id: 2, lv: 6 }, { id: 4, lv: 4 }], est: 1 }
+                ],
+                batters: [
+                    { name: 'C.Yelich', bats: 'L', throws: 'R', pos: 'LF', avg: '.283', hr: 20, rbi: 62, con: 74, pow: 68, spd: 58, obp: 0.351, slg: 0.469, est: 1 },
+                    { name: 'W.Contreras', bats: 'R', throws: 'R', pos: 'C', avg: '.269', hr: 21, rbi: 64, con: 66, pow: 70, spd: 50, obp: 0.333, slg: 0.464, est: 1 },
+                    { name: 'J.Chourio', bats: 'R', throws: 'R', pos: 'LF', avg: '.269', hr: 22, rbi: 66, con: 66, pow: 72, spd: 78, obp: 0.333, slg: 0.473, est: 1 },
+                    { name: 'W.Adames', bats: 'R', throws: 'R', pos: 'SS', avg: '.269', hr: 24, rbi: 70, con: 66, pow: 74, spd: 62, obp: 0.333, slg: 0.482, est: 1 },
+                    { name: 'S.Frelick', bats: 'L', throws: 'R', pos: 'RF', avg: '.272', hr: 8, rbi: 38, con: 68, pow: 52, spd: 74, obp: 0.338, slg: 0.386, est: 1 },
+                    { name: 'B.Turang', bats: 'L', throws: 'R', pos: '2B', avg: '.276', hr: 7, rbi: 36, con: 70, pow: 50, spd: 78, obp: 0.342, slg: 0.381, est: 1 },
+                    { name: 'C.Mitchell', bats: 'L', throws: 'R', pos: 'CF', avg: '.258', hr: 11, rbi: 44, con: 60, pow: 56, spd: 78, obp: 0.320, slg: 0.390, est: 1 },
+                    { name: 'J.Bauers', bats: 'L', throws: 'R', pos: '1B', avg: '.244', hr: 18, rbi: 58, con: 52, pow: 66, spd: 60, obp: 0.302, slg: 0.421, est: 1 },
+                    { name: 'B.Perkins', bats: 'R', throws: 'R', pos: 'DH', avg: '.254', hr: 17, rbi: 56, con: 58, pow: 64, spd: 60, obp: 0.316, slg: 0.422, est: 1 },
+                    { name: 'A.Monasterio', bats: 'S', throws: 'R', pos: 'IF', avg: '.258', hr: 3, rbi: 28, con: 60, pow: 44, spd: 60, obp: 0.320, slg: 0.336, est: 1 },
+                    { name: 'G.Sanchez', bats: 'R', throws: 'R', pos: 'C', avg: '.244', hr: 11, rbi: 44, con: 52, pow: 56, spd: 42, obp: 0.302, slg: 0.376, est: 1 },
+                    { name: 'R.Vaughn', bats: 'R', throws: 'R', pos: 'OF', avg: '.240', hr: 8, rbi: 38, con: 50, pow: 52, spd: 58, obp: 0.298, slg: 0.354, est: 1 },
+                    { name: 'J.Turang', bats: 'R', throws: 'R', pos: 'IF', avg: '.251', hr: 4, rbi: 30, con: 56, pow: 46, spd: 62, obp: 0.311, slg: 0.338, est: 1 }
+                ]
+            },
+            'STL': {
+                pitchers: [
+                    { name: 'S.Gray', throws: 'R', vel: 94, ctrl: 76, stm: 80, era: '4.31', k: 106, pitches: [{ id: 0, lv: 4 }, { id: 2, lv: 5 }, { id: 4, lv: 5 }, { id: 5, lv: 4 }], est: 1 },
+                    { name: 'M.Liberatore', throws: 'L', vel: 95, ctrl: 65, stm: 72, era: '4.51', k: 103, pitches: [{ id: 0, lv: 5 }, { id: 2, lv: 5 }, { id: 4, lv: 5 }, { id: 5, lv: 4 }], est: 1 },
+                    { name: 'K.Gibson', throws: 'R', vel: 94, ctrl: 72, stm: 74, era: '4.41', k: 101, pitches: [{ id: 0, lv: 4 }, { id: 2, lv: 5 }, { id: 4, lv: 5 }, { id: 5, lv: 4 }], est: 1 },
+                    { name: 'M.McGreevy', throws: 'R', vel: 94, ctrl: 78, stm: 76, era: '4.29', k: 103, pitches: [{ id: 0, lv: 4 }, { id: 2, lv: 5 }, { id: 4, lv: 5 }, { id: 5, lv: 4 }], est: 1 },
+                    { name: 'R.Helsley', throws: 'R', vel: 99, ctrl: 66, stm: 45, era: '4.40', k: 72, pitches: [{ id: 0, lv: 6 }, { id: 2, lv: 6 }], est: 1 },
+                    { name: 'I.Leahy', throws: 'R', vel: 96, ctrl: 62, stm: 50, era: '4.61', k: 63, pitches: [{ id: 0, lv: 5 }, { id: 2, lv: 6 }, { id: 4, lv: 4 }], est: 1 },
+                    { name: 'J.Romero', throws: 'L', vel: 95, ctrl: 64, stm: 50, era: '4.62', k: 60, pitches: [{ id: 0, lv: 5 }, { id: 2, lv: 6 }, { id: 4, lv: 4 }], est: 1 },
+                    { name: 'D.King', throws: 'R', vel: 95, ctrl: 66, stm: 75, era: '4.48', k: 105, pitches: [{ id: 0, lv: 5 }, { id: 2, lv: 5 }, { id: 4, lv: 5 }, { id: 5, lv: 4 }], est: 1 },
+                    { name: 'M.Matz', throws: 'L', vel: 93, ctrl: 68, stm: 74, era: '4.54', k: 98, pitches: [{ id: 0, lv: 4 }, { id: 2, lv: 5 }, { id: 4, lv: 5 }, { id: 5, lv: 4 }], est: 1 },
+                    { name: 'J.Fernandez', throws: 'R', vel: 96, ctrl: 60, stm: 45, era: '4.67', k: 63, pitches: [{ id: 0, lv: 5 }, { id: 2, lv: 6 }, { id: 4, lv: 4 }], est: 1 },
+                    { name: 'R.Roberts', throws: 'R', vel: 96, ctrl: 60, stm: 45, era: '4.67', k: 63, pitches: [{ id: 0, lv: 5 }, { id: 2, lv: 6 }, { id: 4, lv: 4 }], est: 1 },
+                    { name: 'A.Fernandez', throws: 'R', vel: 95, ctrl: 62, stm: 45, era: '4.68', k: 60, pitches: [{ id: 0, lv: 5 }, { id: 2, lv: 6 }, { id: 4, lv: 4 }], est: 1 }
+                ],
+                batters: [
+                    { name: 'N.Gorman', bats: 'L', throws: 'R', pos: '2B', avg: '.254', hr: 27, rbi: 76, con: 58, pow: 78, spd: 52, obp: 0.316, slg: 0.485, est: 1 },
+                    { name: 'M.Winn', bats: 'S', throws: 'R', pos: 'SS', avg: '.269', hr: 11, rbi: 44, con: 66, pow: 56, spd: 70, obp: 0.333, slg: 0.401, est: 1 },
+                    { name: 'I.Herrera', bats: 'R', throws: 'R', pos: 'C', avg: '.269', hr: 15, rbi: 52, con: 66, pow: 62, spd: 46, obp: 0.333, slg: 0.428, est: 1 },
+                    { name: 'J.Walker', bats: 'R', throws: 'R', pos: 'RF', avg: '.262', hr: 25, rbi: 72, con: 62, pow: 76, spd: 60, obp: 0.324, slg: 0.484, est: 1 },
+                    { name: 'T.Saggese', bats: 'R', throws: 'R', pos: 'DH', avg: '.258', hr: 17, rbi: 56, con: 60, pow: 64, spd: 44, obp: 0.320, slg: 0.426, est: 1 },
+                    { name: 'A.Burleson', bats: 'L', throws: 'R', pos: 'LF', avg: '.280', hr: 21, rbi: 64, con: 72, pow: 70, spd: 54, obp: 0.346, slg: 0.475, est: 1 },
+                    { name: 'L.Nootbaar', bats: 'L', throws: 'R', pos: 'LF', avg: '.258', hr: 20, rbi: 62, con: 60, pow: 68, spd: 64, obp: 0.320, slg: 0.444, est: 1 },
+                    { name: 'B.Donovan', bats: 'L', throws: 'R', pos: '3B', avg: '.276', hr: 8, rbi: 38, con: 70, pow: 52, spd: 58, obp: 0.342, slg: 0.390, est: 1 },
+                    { name: 'P.Pages', bats: 'R', throws: 'R', pos: 'C', avg: '.244', hr: 8, rbi: 38, con: 52, pow: 52, spd: 46, obp: 0.302, slg: 0.358, est: 1 },
+                    { name: 'V.Scott II', bats: 'L', throws: 'R', pos: 'SS', avg: '.258', hr: 11, rbi: 44, con: 60, pow: 56, spd: 66, obp: 0.320, slg: 0.390, est: 1 },
+                    { name: 'N.Church', bats: 'R', throws: 'R', pos: 'OF', avg: '.254', hr: 11, rbi: 44, con: 58, pow: 56, spd: 68, obp: 0.316, slg: 0.386, est: 1 },
+                    { name: 'J.Bader', bats: 'R', throws: 'R', pos: 'CF', avg: '.258', hr: 11, rbi: 44, con: 60, pow: 56, spd: 78, obp: 0.320, slg: 0.390, est: 1 },
+                    { name: 'T.Walker', bats: 'R', throws: 'R', pos: 'OF', avg: '.251', hr: 14, rbi: 50, con: 56, pow: 60, spd: 60, obp: 0.311, slg: 0.401, est: 1 }
+                ]
+            },
+            'CIN': {
+                pitchers: [
+                    { name: 'H.Greene', throws: 'R', vel: 100, ctrl: 68, stm: 74, era: '4.19', k: 119, pitches: [{ id: 0, lv: 6 }, { id: 2, lv: 5 }, { id: 4, lv: 5 }], est: 1 },
+                    { name: 'A.Abbott', throws: 'L', vel: 93, ctrl: 74, stm: 76, era: '4.42', k: 100, pitches: [{ id: 0, lv: 4 }, { id: 4, lv: 5 }, { id: 5, lv: 5 }, { id: 2, lv: 4 }], est: 1 },
+                    { name: 'N.Martinez', throws: 'R', vel: 93, ctrl: 78, stm: 78, era: '4.33', k: 101, pitches: [{ id: 0, lv: 4 }, { id: 4, lv: 5 }, { id: 5, lv: 5 }, { id: 2, lv: 4 }], est: 1 },
+                    { name: 'N.Lodolo', throws: 'L', vel: 95, ctrl: 66, stm: 74, era: '4.48', k: 104, pitches: [{ id: 0, lv: 5 }, { id: 2, lv: 5 }, { id: 4, lv: 5 }, { id: 5, lv: 4 }], est: 1 },
+                    { name: 'E.Pagan', throws: 'R', vel: 98, ctrl: 62, stm: 45, era: '4.53', k: 69, pitches: [{ id: 0, lv: 6 }, { id: 2, lv: 6 }, { id: 6, lv: 4 }], est: 1 },
+                    { name: 'T.Ashcraft', throws: 'R', vel: 97, ctrl: 66, stm: 50, era: '4.48', k: 66, pitches: [{ id: 0, lv: 5 }, { id: 2, lv: 6 }, { id: 4, lv: 4 }], est: 1 },
+                    { name: 'B.Singer', throws: 'R', vel: 94, ctrl: 60, stm: 45, era: '4.77', k: 57, pitches: [{ id: 0, lv: 4 }, { id: 2, lv: 6 }, { id: 4, lv: 4 }], est: 1 },
+                    { name: 'G.Williamson', throws: 'L', vel: 94, ctrl: 66, stm: 74, era: '4.53', k: 101, pitches: [{ id: 0, lv: 4 }, { id: 2, lv: 5 }, { id: 4, lv: 5 }, { id: 5, lv: 4 }], est: 1 },
+                    { name: 'B.Ashcraft', throws: 'R', vel: 98, ctrl: 62, stm: 70, era: '4.43', k: 110, pitches: [{ id: 0, lv: 6 }, { id: 2, lv: 5 }, { id: 4, lv: 5 }], est: 1 },
+                    { name: 'L.Sims', throws: 'R', vel: 96, ctrl: 60, stm: 50, era: '4.65', k: 63, pitches: [{ id: 0, lv: 5 }, { id: 2, lv: 6 }, { id: 4, lv: 4 }], est: 1 },
+                    { name: 'K.Hall', throws: 'L', vel: 95, ctrl: 60, stm: 45, era: '4.72', k: 60, pitches: [{ id: 0, lv: 5 }, { id: 2, lv: 6 }, { id: 4, lv: 4 }], est: 1 },
+                    { name: 'A.Antone', throws: 'R', vel: 96, ctrl: 60, stm: 50, era: '4.65', k: 63, pitches: [{ id: 0, lv: 5 }, { id: 2, lv: 6 }, { id: 4, lv: 4 }], est: 1 }
+                ],
+                batters: [
+                    { name: 'E.De La Cruz', bats: 'S', throws: 'R', pos: 'SS', avg: '.262', hr: 29, rbi: 80, con: 62, pow: 82, spd: 96, obp: 0.324, slg: 0.511, est: 1 },
+                    { name: 'T.Stephenson', bats: 'R', throws: 'R', pos: 'C', avg: '.269', hr: 18, rbi: 58, con: 66, pow: 66, spd: 42, obp: 0.333, slg: 0.446, est: 1 },
+                    { name: 'M.McLain', bats: 'R', throws: 'R', pos: '2B', avg: '.254', hr: 24, rbi: 70, con: 58, pow: 74, spd: 80, obp: 0.316, slg: 0.467, est: 1 },
+                    { name: 'S.Steer', bats: 'R', throws: 'R', pos: '1B', avg: '.272', hr: 21, rbi: 64, con: 68, pow: 70, spd: 52, obp: 0.338, slg: 0.467, est: 1 },
+                    { name: 'J.India', bats: 'R', throws: 'R', pos: '2B', avg: '.283', hr: 11, rbi: 44, con: 74, pow: 56, spd: 60, obp: 0.351, slg: 0.415, est: 1 },
+                    { name: 'S.Hunter', bats: 'R', throws: 'R', pos: 'LF', avg: '.262', hr: 25, rbi: 72, con: 62, pow: 76, spd: 54, obp: 0.324, slg: 0.484, est: 1 },
+                    { name: 'T.Marte', bats: 'R', throws: 'R', pos: 'RF', avg: '.262', hr: 18, rbi: 58, con: 62, pow: 66, spd: 58, obp: 0.324, slg: 0.439, est: 1 },
+                    { name: 'J.Friedl', bats: 'L', throws: 'R', pos: 'CF', avg: '.262', hr: 11, rbi: 44, con: 62, pow: 56, spd: 78, obp: 0.324, slg: 0.394, est: 1 },
+                    { name: 'N.Martini', bats: 'R', throws: 'R', pos: '3B', avg: '.258', hr: 14, rbi: 50, con: 60, pow: 60, spd: 56, obp: 0.320, slg: 0.408, est: 1 },
+                    { name: 'A.Fraley', bats: 'L', throws: 'R', pos: 'RF', avg: '.254', hr: 18, rbi: 58, con: 58, pow: 66, spd: 60, obp: 0.316, slg: 0.431, est: 1 },
+                    { name: 'M.Maile', bats: 'R', throws: 'R', pos: 'OF', avg: '.247', hr: 8, rbi: 38, con: 54, pow: 52, spd: 62, obp: 0.307, slg: 0.361, est: 1 },
+                    { name: 'E.Santana', bats: 'R', throws: 'R', pos: 'C', avg: '.247', hr: 7, rbi: 36, con: 54, pow: 50, spd: 42, obp: 0.307, slg: 0.352, est: 1 },
+                    { name: 'W.Benson', bats: 'L', throws: 'R', pos: 'OF', avg: '.254', hr: 18, rbi: 58, con: 58, pow: 66, spd: 74, obp: 0.316, slg: 0.431, est: 1 }
+                ]
+            },
+            'PIT': {
+                pitchers: [
+                    { name: 'P.Skenes', throws: 'R', vel: 100, ctrl: 80, stm: 86, era: '3.91', k: 129, pitches: [{ id: 0, lv: 6 }, { id: 2, lv: 5 }, { id: 5, lv: 5 }, { id: 4, lv: 4 }], est: 1 },
+                    { name: 'M.Keller', throws: 'R', vel: 96, ctrl: 72, stm: 80, era: '4.29', k: 112, pitches: [{ id: 0, lv: 5 }, { id: 2, lv: 5 }, { id: 4, lv: 5 }, { id: 5, lv: 4 }], est: 1 },
+                    { name: 'B.Falter', throws: 'L', vel: 93, ctrl: 74, stm: 76, era: '4.42', k: 100, pitches: [{ id: 0, lv: 4 }, { id: 4, lv: 5 }, { id: 5, lv: 5 }, { id: 2, lv: 4 }], est: 1 },
+                    { name: 'B.Ashcraft', throws: 'R', vel: 95, ctrl: 66, stm: 76, era: '4.48', k: 106, pitches: [{ id: 0, lv: 5 }, { id: 2, lv: 5 }, { id: 4, lv: 5 }, { id: 5, lv: 4 }], est: 1 },
+                    { name: 'D.Bednar', throws: 'R', vel: 97, ctrl: 68, stm: 45, era: '4.46', k: 66, pitches: [{ id: 0, lv: 5 }, { id: 2, lv: 6 }, { id: 6, lv: 4 }], est: 1 },
+                    { name: 'C.Holderman', throws: 'R', vel: 96, ctrl: 62, stm: 50, era: '4.61', k: 63, pitches: [{ id: 0, lv: 5 }, { id: 2, lv: 6 }, { id: 4, lv: 4 }], est: 1 },
+                    { name: 'I.Mlodzinski', throws: 'R', vel: 95, ctrl: 62, stm: 50, era: '4.66', k: 60, pitches: [{ id: 0, lv: 5 }, { id: 2, lv: 6 }, { id: 4, lv: 4 }], est: 1 },
+                    { name: 'J.Ortiz', throws: 'R', vel: 95, ctrl: 60, stm: 50, era: '4.70', k: 60, pitches: [{ id: 0, lv: 5 }, { id: 2, lv: 6 }, { id: 4, lv: 4 }], est: 1 },
+                    { name: 'D.Santana', throws: 'R', vel: 96, ctrl: 60, stm: 50, era: '4.65', k: 63, pitches: [{ id: 0, lv: 5 }, { id: 2, lv: 6 }, { id: 4, lv: 4 }], est: 1 },
+                    { name: 'H.Bednar', throws: 'R', vel: 94, ctrl: 62, stm: 45, era: '4.73', k: 57, pitches: [{ id: 0, lv: 4 }, { id: 2, lv: 6 }, { id: 4, lv: 4 }], est: 1 },
+                    { name: 'C.Mlodzinski', throws: 'R', vel: 95, ctrl: 60, stm: 50, era: '4.70', k: 60, pitches: [{ id: 0, lv: 5 }, { id: 2, lv: 6 }, { id: 4, lv: 4 }], est: 1 },
+                    { name: 'M.Mlodzinski', throws: 'R', vel: 94, ctrl: 62, stm: 50, era: '4.71', k: 57, pitches: [{ id: 0, lv: 4 }, { id: 2, lv: 6 }, { id: 4, lv: 4 }], est: 1 }
+                ],
+                batters: [
+                    { name: 'O.Cruz', bats: 'L', throws: 'R', pos: 'CF', avg: '.254', hr: 25, rbi: 72, con: 58, pow: 76, spd: 78, obp: 0.316, slg: 0.476, est: 1 },
+                    { name: 'B.Reynolds', bats: 'S', throws: 'R', pos: 'LF', avg: '.276', hr: 24, rbi: 70, con: 70, pow: 74, spd: 62, obp: 0.342, slg: 0.489, est: 1 },
+                    { name: 'A.McCutchen', bats: 'R', throws: 'R', pos: 'DH', avg: '.269', hr: 18, rbi: 58, con: 66, pow: 66, spd: 54, obp: 0.333, slg: 0.446, est: 1 },
+                    { name: 'K.Hayes', bats: 'L', throws: 'R', pos: '3B', avg: '.283', hr: 15, rbi: 52, con: 74, pow: 62, spd: 72, obp: 0.351, slg: 0.442, est: 1 },
+                    { name: 'S.Bart', bats: 'R', throws: 'R', pos: 'C', avg: '.254', hr: 17, rbi: 56, con: 58, pow: 64, spd: 48, obp: 0.316, slg: 0.422, est: 1 },
+                    { name: 'N.Gonzales', bats: 'R', throws: 'R', pos: '2B', avg: '.265', hr: 10, rbi: 42, con: 64, pow: 54, spd: 58, obp: 0.329, slg: 0.388, est: 1 },
+                    { name: 'S.Horwitz', bats: 'L', throws: 'R', pos: '1B', avg: '.272', hr: 8, rbi: 38, con: 68, pow: 52, spd: 48, obp: 0.338, slg: 0.386, est: 1 },
+                    { name: 'T.Heyward', bats: 'L', throws: 'R', pos: 'RF', avg: '.258', hr: 14, rbi: 50, con: 60, pow: 60, spd: 68, obp: 0.320, slg: 0.408, est: 1 },
+                    { name: 'I.Mena', bats: 'R', throws: 'R', pos: 'SS', avg: '.262', hr: 10, rbi: 42, con: 62, pow: 54, spd: 60, obp: 0.324, slg: 0.385, est: 1 },
+                    { name: 'C.Henderson', bats: 'R', throws: 'R', pos: 'SS', avg: '.247', hr: 7, rbi: 36, con: 54, pow: 50, spd: 58, obp: 0.307, slg: 0.352, est: 1 },
+                    { name: 'J.Sosa', bats: 'R', throws: 'R', pos: 'IF', avg: '.251', hr: 8, rbi: 38, con: 56, pow: 52, spd: 52, obp: 0.311, slg: 0.365, est: 1 },
+                    { name: 'H.Davis', bats: 'R', throws: 'R', pos: 'C', avg: '.244', hr: 7, rbi: 36, con: 52, pow: 50, spd: 44, obp: 0.302, slg: 0.349, est: 1 },
+                    { name: 'L.Osuna', bats: 'R', throws: 'R', pos: 'C', avg: '.244', hr: 7, rbi: 36, con: 52, pow: 50, spd: 42, obp: 0.302, slg: 0.349, est: 1 }
+                ]
+            },
+            'SD': {
+                pitchers: [
+                    { name: 'D.Cease', throws: 'R', vel: 98, ctrl: 68, stm: 82, era: '4.26', k: 120, pitches: [{ id: 0, lv: 6 }, { id: 2, lv: 5 }, { id: 6, lv: 5 }, { id: 5, lv: 4 }], est: 1 },
+                    { name: 'Y.Darvish', throws: 'R', vel: 94, ctrl: 80, stm: 75, era: '4.25', k: 102, pitches: [{ id: 0, lv: 4 }, { id: 2, lv: 5 }, { id: 4, lv: 5 }, { id: 7, lv: 4 }, { id: 6, lv: 4 }], est: 1 },
+                    { name: 'M.King', throws: 'R', vel: 96, ctrl: 72, stm: 80, era: '4.29', k: 112, pitches: [{ id: 0, lv: 5 }, { id: 5, lv: 5 }, { id: 2, lv: 5 }, { id: 4, lv: 4 }], est: 1 },
+                    { name: 'N.Pivetta', throws: 'R', vel: 96, ctrl: 70, stm: 78, era: '4.34', k: 110, pitches: [{ id: 0, lv: 5 }, { id: 2, lv: 5 }, { id: 4, lv: 5 }, { id: 5, lv: 4 }], est: 1 },
+                    { name: 'R.Suarez', throws: 'R', vel: 96, ctrl: 66, stm: 45, era: '4.55', k: 63, pitches: [{ id: 0, lv: 5 }, { id: 2, lv: 6 }, { id: 6, lv: 4 }, { id: 5, lv: 3 }], est: 1 },
+                    { name: 'J.Adam', throws: 'R', vel: 96, ctrl: 66, stm: 45, era: '4.55', k: 63, pitches: [{ id: 0, lv: 5 }, { id: 2, lv: 6 }, { id: 4, lv: 4 }], est: 1 },
+                    { name: 'A.Morejon', throws: 'L', vel: 95, ctrl: 66, stm: 50, era: '4.58', k: 60, pitches: [{ id: 0, lv: 5 }, { id: 2, lv: 6 }, { id: 4, lv: 4 }], est: 1 },
+                    { name: 'M.Waldron', throws: 'R', vel: 88, ctrl: 66, stm: 74, era: '4.83', k: 83, pitches: [{ id: 0, lv: 3 }, { id: 2, lv: 5 }, { id: 4, lv: 5 }, { id: 5, lv: 4 }], est: 1 },
+                    { name: 'S.Matsui', throws: 'L', vel: 93, ctrl: 66, stm: 45, era: '4.70', k: 54, pitches: [{ id: 0, lv: 4 }, { id: 2, lv: 6 }, { id: 4, lv: 4 }], est: 1 },
+                    { name: 'J.Hart', throws: 'R', vel: 93, ctrl: 70, stm: 45, era: '4.62', k: 54, pitches: [{ id: 0, lv: 4 }, { id: 2, lv: 6 }, { id: 4, lv: 4 }], est: 1 },
+                    { name: 'T.Rogers', throws: 'R', vel: 95, ctrl: 62, stm: 50, era: '4.66', k: 60, pitches: [{ id: 0, lv: 5 }, { id: 2, lv: 6 }, { id: 4, lv: 4 }], est: 1 },
+                    { name: 'W.Peralta', throws: 'R', vel: 96, ctrl: 62, stm: 50, era: '4.61', k: 63, pitches: [{ id: 0, lv: 5 }, { id: 2, lv: 6 }, { id: 4, lv: 4 }], est: 1 }
+                ],
+                batters: [
+                    { name: 'F.Tatis Jr.', bats: 'R', throws: 'R', pos: 'RF', avg: '.276', hr: 31, rbi: 84, con: 70, pow: 84, spd: 82, obp: 0.342, slg: 0.534, est: 1 },
+                    { name: 'M.Machado', bats: 'R', throws: 'R', pos: '3B', avg: '.283', hr: 28, rbi: 78, con: 74, pow: 80, spd: 52, obp: 0.351, slg: 0.523, est: 1 },
+                    { name: 'J.Merrill', bats: 'L', throws: 'R', pos: 'CF', avg: '.269', hr: 22, rbi: 66, con: 66, pow: 72, spd: 66, obp: 0.333, slg: 0.473, est: 1 },
+                    { name: 'X.Bogaerts', bats: 'R', throws: 'R', pos: 'SS', avg: '.283', hr: 18, rbi: 58, con: 74, pow: 66, spd: 52, obp: 0.351, slg: 0.460, est: 1 },
+                    { name: 'J.Cronenworth', bats: 'L', throws: 'R', pos: '2B', avg: '.265', hr: 13, rbi: 48, con: 64, pow: 58, spd: 56, obp: 0.329, slg: 0.406, est: 1 },
+                    { name: 'L.Arraez', bats: 'L', throws: 'R', pos: '1B', avg: '.319', hr: 0, rbi: 22, con: 94, pow: 30, spd: 50, obp: 0.395, slg: 0.334, est: 1 },
+                    { name: 'F.Mena', bats: 'R', throws: 'R', pos: 'C', avg: '.258', hr: 11, rbi: 44, con: 60, pow: 56, spd: 44, obp: 0.320, slg: 0.390, est: 1 },
+                    { name: 'G.Heredia', bats: 'R', throws: 'R', pos: 'RF', avg: '.258', hr: 10, rbi: 42, con: 60, pow: 54, spd: 62, obp: 0.320, slg: 0.381, est: 1 },
+                    { name: 'R.Laureano', bats: 'R', throws: 'R', pos: 'LF', avg: '.251', hr: 17, rbi: 56, con: 56, pow: 64, spd: 66, obp: 0.311, slg: 0.419, est: 1 },
+                    { name: 'J.Clement', bats: 'R', throws: 'R', pos: 'IF', avg: '.244', hr: 7, rbi: 36, con: 52, pow: 50, spd: 55, obp: 0.302, slg: 0.349, est: 1 },
+                    { name: 'B.Hom', bats: 'R', throws: 'R', pos: 'C', avg: '.247', hr: 7, rbi: 36, con: 54, pow: 50, spd: 42, obp: 0.307, slg: 0.352, est: 1 },
+                    { name: 'J.Azocar', bats: 'R', throws: 'R', pos: 'OF', avg: '.258', hr: 3, rbi: 28, con: 60, pow: 44, spd: 68, obp: 0.320, slg: 0.336, est: 1 },
+                    { name: 'T.Grisham', bats: 'L', throws: 'R', pos: 'OF', avg: '.254', hr: 18, rbi: 58, con: 58, pow: 66, spd: 62, obp: 0.316, slg: 0.431, est: 1 }
+                ]
+            },
+            'SF': {
+                pitchers: [
+                    { name: 'L.Webb', throws: 'R', vel: 93, ctrl: 82, stm: 84, era: '4.22', k: 106, pitches: [{ id: 0, lv: 4 }, { id: 8, lv: 5 }, { id: 4, lv: 5 }, { id: 5, lv: 4 }], est: 1 },
+                    { name: 'R.Ray', throws: 'L', vel: 94, ctrl: 70, stm: 76, era: '4.45', k: 103, pitches: [{ id: 0, lv: 4 }, { id: 2, lv: 5 }, { id: 4, lv: 5 }, { id: 5, lv: 4 }], est: 1 },
+                    { name: 'J.Verlander', throws: 'R', vel: 94, ctrl: 76, stm: 78, era: '4.32', k: 104, pitches: [{ id: 0, lv: 4 }, { id: 4, lv: 5 }, { id: 2, lv: 5 }, { id: 5, lv: 4 }], est: 1 },
+                    { name: 'L.Roupp', throws: 'L', vel: 93, ctrl: 72, stm: 74, era: '4.46', k: 98, pitches: [{ id: 0, lv: 4 }, { id: 2, lv: 5 }, { id: 4, lv: 5 }, { id: 5, lv: 4 }], est: 1 },
+                    { name: 'R.Rodriguez', throws: 'R', vel: 98, ctrl: 62, stm: 45, era: '4.53', k: 69, pitches: [{ id: 0, lv: 6 }, { id: 2, lv: 6 }, { id: 6, lv: 4 }], est: 1 },
+                    { name: 'C.Doval', throws: 'R', vel: 99, ctrl: 62, stm: 45, era: '4.48', k: 72, pitches: [{ id: 0, lv: 6 }, { id: 2, lv: 6 }, { id: 6, lv: 4 }], est: 1 },
+                    { name: 'E.Miller', throws: 'R', vel: 99, ctrl: 62, stm: 45, era: '4.48', k: 72, pitches: [{ id: 0, lv: 6 }, { id: 2, lv: 6 }, { id: 4, lv: 4 }], est: 1 },
+                    { name: 'K.Harrison', throws: 'R', vel: 96, ctrl: 66, stm: 68, era: '4.46', k: 102, pitches: [{ id: 0, lv: 5 }, { id: 2, lv: 5 }, { id: 4, lv: 5 }, { id: 5, lv: 4 }], est: 1 },
+                    { name: 'H.Birdsong', throws: 'L', vel: 97, ctrl: 60, stm: 45, era: '4.62', k: 66, pitches: [{ id: 0, lv: 5 }, { id: 2, lv: 6 }, { id: 4, lv: 4 }], est: 1 },
+                    { name: 'C.Walker', throws: 'R', vel: 96, ctrl: 62, stm: 50, era: '4.61', k: 63, pitches: [{ id: 0, lv: 5 }, { id: 2, lv: 6 }, { id: 4, lv: 4 }], est: 1 },
+                    { name: 'T.Rogers', throws: 'R', vel: 93, ctrl: 62, stm: 45, era: '4.78', k: 54, pitches: [{ id: 0, lv: 4 }, { id: 2, lv: 6 }, { id: 4, lv: 4 }], est: 1 },
+                    { name: 'S.Ray', throws: 'L', vel: 93, ctrl: 62, stm: 60, era: '4.72', k: 87, pitches: [{ id: 0, lv: 4 }, { id: 2, lv: 5 }, { id: 4, lv: 5 }], est: 1 }
+                ],
+                batters: [
+                    { name: 'R.Devers', bats: 'L', throws: 'R', pos: '3B', avg: '.287', hr: 32, rbi: 86, con: 76, pow: 86, spd: 40, obp: 0.355, slg: 0.554, est: 1 },
+                    { name: 'M.Chapman', bats: 'R', throws: 'R', pos: '3B', avg: '.262', hr: 25, rbi: 72, con: 62, pow: 76, spd: 66, obp: 0.324, slg: 0.484, est: 1 },
+                    { name: 'W.Flores', bats: 'R', throws: 'R', pos: '1B', avg: '.269', hr: 24, rbi: 70, con: 66, pow: 74, spd: 62, obp: 0.333, slg: 0.482, est: 1 },
+                    { name: 'H.Ramos', bats: 'R', throws: 'R', pos: 'RF', avg: '.269', hr: 22, rbi: 66, con: 66, pow: 72, spd: 68, obp: 0.333, slg: 0.473, est: 1 },
+                    { name: 'J.Lee', bats: 'L', throws: 'R', pos: 'CF', avg: '.262', hr: 11, rbi: 44, con: 62, pow: 56, spd: 66, obp: 0.324, slg: 0.394, est: 1 },
+                    { name: 'B.Bailey', bats: 'R', throws: 'R', pos: 'C', avg: '.251', hr: 10, rbi: 42, con: 56, pow: 54, spd: 48, obp: 0.311, slg: 0.374, est: 1 },
+                    { name: 'L.Matos', bats: 'R', throws: 'R', pos: 'LF', avg: '.262', hr: 17, rbi: 56, con: 62, pow: 64, spd: 66, obp: 0.324, slg: 0.430, est: 1 },
+                    { name: 'M.Yastrzemski', bats: 'L', throws: 'R', pos: 'RF', avg: '.258', hr: 20, rbi: 62, con: 60, pow: 68, spd: 56, obp: 0.320, slg: 0.444, est: 1 },
+                    { name: 'T.Fitzgerald', bats: 'R', throws: 'R', pos: '2B', avg: '.254', hr: 11, rbi: 44, con: 58, pow: 56, spd: 66, obp: 0.316, slg: 0.386, est: 1 },
+                    { name: 'C.Schmitt', bats: 'R', throws: 'R', pos: '2B', avg: '.247', hr: 6, rbi: 34, con: 54, pow: 48, spd: 60, obp: 0.307, slg: 0.343, est: 1 },
+                    { name: 'P.Bailey', bats: 'S', throws: 'R', pos: 'C', avg: '.258', hr: 7, rbi: 36, con: 60, pow: 50, spd: 44, obp: 0.320, slg: 0.363, est: 1 },
+                    { name: 'L.Ramos', bats: 'R', throws: 'R', pos: 'OF', avg: '.251', hr: 8, rbi: 38, con: 56, pow: 52, spd: 58, obp: 0.311, slg: 0.365, est: 1 },
+                    { name: 'T.Wade', bats: 'L', throws: 'R', pos: '1B', avg: '.269', hr: 8, rbi: 38, con: 66, pow: 52, spd: 62, obp: 0.333, slg: 0.383, est: 1 }
+                ]
+            },
+            'ARI': {
+                pitchers: [
+                    { name: 'Z.Gallen', throws: 'R', vel: 95, ctrl: 82, stm: 84, era: '4.12', k: 112, pitches: [{ id: 0, lv: 5 }, { id: 4, lv: 5 }, { id: 5, lv: 5 }, { id: 2, lv: 4 }, { id: 6, lv: 4 }], est: 1 },
+                    { name: 'M.Kelly', throws: 'R', vel: 94, ctrl: 78, stm: 80, era: '4.27', k: 106, pitches: [{ id: 0, lv: 4 }, { id: 5, lv: 5 }, { id: 2, lv: 5 }, { id: 4, lv: 4 }, { id: 8, lv: 4 }], est: 1 },
+                    { name: 'E.Rodriguez', throws: 'L', vel: 94, ctrl: 68, stm: 76, era: '4.49', k: 103, pitches: [{ id: 0, lv: 4 }, { id: 2, lv: 5 }, { id: 4, lv: 5 }, { id: 5, lv: 4 }], est: 1 },
+                    { name: 'B.Pfaadt', throws: 'R', vel: 93, ctrl: 72, stm: 78, era: '4.45', k: 101, pitches: [{ id: 0, lv: 4 }, { id: 2, lv: 5 }, { id: 4, lv: 5 }, { id: 5, lv: 4 }], est: 1 },
+                    { name: 'A.Puk', throws: 'L', vel: 98, ctrl: 60, stm: 45, era: '4.57', k: 69, pitches: [{ id: 0, lv: 6 }, { id: 2, lv: 6 }], est: 1 },
+                    { name: 'S.Miller', throws: 'R', vel: 98, ctrl: 62, stm: 50, era: '4.51', k: 69, pitches: [{ id: 0, lv: 6 }, { id: 2, lv: 6 }, { id: 4, lv: 4 }], est: 1 },
+                    { name: 'K.Nelson', throws: 'R', vel: 95, ctrl: 66, stm: 50, era: '4.58', k: 60, pitches: [{ id: 0, lv: 5 }, { id: 2, lv: 6 }, { id: 4, lv: 4 }], est: 1 },
+                    { name: 'R.Nelson', throws: 'R', vel: 96, ctrl: 60, stm: 45, era: '4.67', k: 63, pitches: [{ id: 0, lv: 5 }, { id: 2, lv: 6 }, { id: 4, lv: 4 }], est: 1 },
+                    { name: 'J.Martinez', throws: 'R', vel: 95, ctrl: 62, stm: 50, era: '4.66', k: 60, pitches: [{ id: 0, lv: 5 }, { id: 2, lv: 6 }, { id: 4, lv: 4 }], est: 1 },
+                    { name: 'K.Kelly', throws: 'R', vel: 95, ctrl: 60, stm: 50, era: '4.70', k: 60, pitches: [{ id: 0, lv: 5 }, { id: 2, lv: 6 }, { id: 4, lv: 4 }], est: 1 },
+                    { name: 'Y.Nelson', throws: 'R', vel: 96, ctrl: 60, stm: 45, era: '4.67', k: 63, pitches: [{ id: 0, lv: 5 }, { id: 2, lv: 6 }, { id: 4, lv: 4 }], est: 1 },
+                    { name: 'B.Walston', throws: 'R', vel: 95, ctrl: 62, stm: 45, era: '4.68', k: 60, pitches: [{ id: 0, lv: 5 }, { id: 2, lv: 6 }, { id: 4, lv: 4 }], est: 1 }
+                ],
+                batters: [
+                    { name: 'C.Carroll', bats: 'L', throws: 'R', pos: 'RF', avg: '.272', hr: 25, rbi: 72, con: 68, pow: 76, spd: 92, obp: 0.338, slg: 0.494, est: 1 },
+                    { name: 'C.Kelly', bats: 'R', throws: 'R', pos: 'C', avg: '.265', hr: 17, rbi: 56, con: 64, pow: 64, spd: 42, obp: 0.329, slg: 0.433, est: 1 },
+                    { name: 'K.Marte', bats: 'S', throws: 'R', pos: '2B', avg: '.290', hr: 27, rbi: 76, con: 78, pow: 78, spd: 66, obp: 0.360, slg: 0.521, est: 1 },
+                    { name: 'E.Suarez', bats: 'R', throws: 'R', pos: '3B', avg: '.258', hr: 27, rbi: 76, con: 60, pow: 78, spd: 44, obp: 0.320, slg: 0.489, est: 1 },
+                    { name: 'G.Perdomo', bats: 'S', throws: 'R', pos: 'SS', avg: '.272', hr: 7, rbi: 36, con: 68, pow: 50, spd: 60, obp: 0.338, slg: 0.377, est: 1 },
+                    { name: 'P.Alonso', bats: 'R', throws: 'R', pos: '1B', avg: '.269', hr: 18, rbi: 58, con: 66, pow: 66, spd: 58, obp: 0.333, slg: 0.446, est: 1 },
+                    { name: 'C.Moreno', bats: 'R', throws: 'R', pos: 'C', avg: '.262', hr: 13, rbi: 48, con: 62, pow: 58, spd: 44, obp: 0.324, slg: 0.403, est: 1 },
+                    { name: 'A.Thomas', bats: 'R', throws: 'R', pos: 'LF', avg: '.262', hr: 14, rbi: 50, con: 62, pow: 60, spd: 70, obp: 0.324, slg: 0.412, est: 1 },
+                    { name: 'J.Gurriel Jr.', bats: 'R', throws: 'R', pos: 'LF', avg: '.272', hr: 14, rbi: 50, con: 68, pow: 60, spd: 52, obp: 0.338, slg: 0.422, est: 1 },
+                    { name: 'L.Gurriel', bats: 'R', throws: 'R', pos: 'DH', avg: '.258', hr: 11, rbi: 44, con: 60, pow: 56, spd: 48, obp: 0.320, slg: 0.390, est: 1 },
+                    { name: 'T.Locklear', bats: 'L', throws: 'R', pos: '1B', avg: '.251', hr: 17, rbi: 56, con: 56, pow: 64, spd: 56, obp: 0.311, slg: 0.419, est: 1 },
+                    { name: 'P.Orze', bats: 'R', throws: 'R', pos: 'OF', avg: '.240', hr: 8, rbi: 38, con: 50, pow: 52, spd: 60, obp: 0.298, slg: 0.354, est: 1 },
+                    { name: 'A.Perdomo', bats: 'R', throws: 'R', pos: 'IF', avg: '.254', hr: 7, rbi: 36, con: 58, pow: 50, spd: 60, obp: 0.316, slg: 0.359, est: 1 }
+                ]
+            },
+            'COL': {
+                pitchers: [
+                    { name: 'K.Freeland', throws: 'L', vel: 92, ctrl: 70, stm: 76, era: '4.55', k: 97, pitches: [{ id: 0, lv: 3 }, { id: 2, lv: 5 }, { id: 4, lv: 5 }, { id: 5, lv: 4 }], est: 1 },
+                    { name: 'A.Gomber', throws: 'L', vel: 92, ctrl: 68, stm: 76, era: '4.59', k: 97, pitches: [{ id: 0, lv: 3 }, { id: 2, lv: 5 }, { id: 4, lv: 5 }, { id: 5, lv: 4 }], est: 1 },
+                    { name: 'G.Marquez', throws: 'R', vel: 95, ctrl: 66, stm: 78, era: '4.47', k: 107, pitches: [{ id: 0, lv: 5 }, { id: 2, lv: 5 }, { id: 4, lv: 5 }, { id: 5, lv: 4 }], est: 1 },
+                    { name: 'C.Feltner', throws: 'R', vel: 95, ctrl: 66, stm: 74, era: '4.48', k: 104, pitches: [{ id: 0, lv: 5 }, { id: 2, lv: 5 }, { id: 4, lv: 5 }, { id: 5, lv: 4 }], est: 1 },
+                    { name: 'S.Halvorsen', throws: 'R', vel: 98, ctrl: 56, stm: 45, era: '4.65', k: 69, pitches: [{ id: 0, lv: 6 }, { id: 2, lv: 6 }], est: 1 },
+                    { name: 'V.Vodnik', throws: 'R', vel: 95, ctrl: 60, stm: 45, era: '4.72', k: 60, pitches: [{ id: 0, lv: 5 }, { id: 2, lv: 6 }, { id: 4, lv: 4 }], est: 1 },
+                    { name: 'J.Peralta', throws: 'L', vel: 95, ctrl: 60, stm: 45, era: '4.72', k: 60, pitches: [{ id: 0, lv: 5 }, { id: 2, lv: 6 }, { id: 4, lv: 4 }], est: 1 },
+                    { name: 'M.Agnos', throws: 'R', vel: 94, ctrl: 62, stm: 45, era: '4.73', k: 57, pitches: [{ id: 0, lv: 4 }, { id: 2, lv: 6 }, { id: 4, lv: 4 }], est: 1 },
+                    { name: 'J.Hollowell', throws: 'R', vel: 95, ctrl: 62, stm: 45, era: '4.68', k: 60, pitches: [{ id: 0, lv: 5 }, { id: 2, lv: 6 }, { id: 4, lv: 4 }], est: 1 },
+                    { name: 'Z.Agnos', throws: 'R', vel: 93, ctrl: 62, stm: 50, era: '4.76', k: 54, pitches: [{ id: 0, lv: 4 }, { id: 2, lv: 6 }, { id: 4, lv: 4 }], est: 1 },
+                    { name: 'R.Feltner', throws: 'R', vel: 94, ctrl: 66, stm: 60, era: '4.59', k: 90, pitches: [{ id: 0, lv: 4 }, { id: 2, lv: 5 }, { id: 4, lv: 5 }], est: 1 },
+                    { name: 'D.Bard', throws: 'R', vel: 97, ctrl: 60, stm: 50, era: '4.60', k: 66, pitches: [{ id: 0, lv: 5 }, { id: 2, lv: 6 }, { id: 4, lv: 4 }], est: 1 }
+                ],
+                batters: [
+                    { name: 'B.Doyle', bats: 'R', throws: 'R', pos: 'CF', avg: '.258', hr: 11, rbi: 44, con: 60, pow: 56, spd: 86, obp: 0.320, slg: 0.390, est: 1 },
+                    { name: 'H.Goodman', bats: 'R', throws: 'R', pos: 'LF', avg: '.269', hr: 22, rbi: 66, con: 66, pow: 72, spd: 56, obp: 0.333, slg: 0.473, est: 1 },
+                    { name: 'R.McMahon', bats: 'L', throws: 'R', pos: '2B', avg: '.244', hr: 27, rbi: 76, con: 52, pow: 78, spd: 52, obp: 0.302, slg: 0.475, est: 1 },
+                    { name: 'E.Tovar', bats: 'R', throws: 'R', pos: 'SS', avg: '.269', hr: 17, rbi: 56, con: 66, pow: 64, spd: 60, obp: 0.333, slg: 0.437, est: 1 },
+                    { name: 'M.Moniak', bats: 'L', throws: 'R', pos: 'RF', avg: '.262', hr: 14, rbi: 50, con: 62, pow: 60, spd: 64, obp: 0.324, slg: 0.412, est: 1 },
+                    { name: 'T.Freeman', bats: 'R', throws: 'R', pos: '3B', avg: '.247', hr: 14, rbi: 50, con: 54, pow: 60, spd: 52, obp: 0.307, slg: 0.397, est: 1 },
+                    { name: 'K.Bryant', bats: 'R', throws: 'R', pos: '3B', avg: '.262', hr: 20, rbi: 62, con: 62, pow: 68, spd: 52, obp: 0.324, slg: 0.448, est: 1 },
+                    { name: 'H.Bernard', bats: 'R', throws: 'R', pos: 'C', avg: '.251', hr: 14, rbi: 50, con: 56, pow: 60, spd: 44, obp: 0.311, slg: 0.401, est: 1 },
+                    { name: 'J.Beck', bats: 'R', throws: 'R', pos: 'RF', avg: '.254', hr: 17, rbi: 56, con: 58, pow: 64, spd: 62, obp: 0.316, slg: 0.422, est: 1 },
+                    { name: 'A.Toglia', bats: 'S', throws: 'R', pos: '1B', avg: '.244', hr: 27, rbi: 76, con: 52, pow: 78, spd: 48, obp: 0.302, slg: 0.475, est: 1 },
+                    { name: 'D.Rodriguez', bats: 'R', throws: 'R', pos: 'C', avg: '.244', hr: 7, rbi: 36, con: 52, pow: 50, spd: 42, obp: 0.302, slg: 0.349, est: 1 },
+                    { name: 'O.Cuevas', bats: 'R', throws: 'R', pos: 'OF', avg: '.247', hr: 8, rbi: 38, con: 54, pow: 52, spd: 62, obp: 0.307, slg: 0.361, est: 1 },
+                    { name: 'B.Bernard', bats: 'R', throws: 'R', pos: 'C', avg: '.244', hr: 8, rbi: 38, con: 52, pow: 52, spd: 44, obp: 0.302, slg: 0.358, est: 1 }
+                ]
+            },
+            'YOG': {
+                pitchers: [
+                    { name: '戸郷翔征', throws: 'R', vel: 92, ctrl: 72, stm: 80, era: '4.49', k: 100, pitches: [{ id: 0, lv: 3 }, { id: 6, lv: 5 }, { id: 2, lv: 5 }, { id: 4, lv: 4 }], est: 1 },
+                    { name: '山崎伊織', throws: 'R', vel: 93, ctrl: 78, stm: 78, era: '4.33', k: 101, pitches: [{ id: 0, lv: 4 }, { id: 2, lv: 5 }, { id: 6, lv: 5 }, { id: 4, lv: 4 }], est: 1 },
+                    { name: '井上温大', throws: 'L', vel: 91, ctrl: 68, stm: 74, era: '4.64', k: 92, pitches: [{ id: 0, lv: 3 }, { id: 2, lv: 5 }, { id: 4, lv: 5 }, { id: 5, lv: 4 }], est: 1 },
+                    { name: '赤星優志', throws: 'R', vel: 92, ctrl: 72, stm: 74, era: '4.51', k: 95, pitches: [{ id: 0, lv: 3 }, { id: 2, lv: 5 }, { id: 6, lv: 5 }, { id: 5, lv: 4 }], est: 1 },
+                    { name: '大勢', throws: 'R', vel: 96, ctrl: 72, stm: 45, era: '4.43', k: 63, pitches: [{ id: 0, lv: 5 }, { id: 6, lv: 6 }], est: 1 },
+                    { name: 'マルティネス', throws: 'R', vel: 97, ctrl: 74, stm: 45, era: '4.34', k: 66, pitches: [{ id: 0, lv: 5 }, { id: 2, lv: 6 }, { id: 6, lv: 4 }], est: 1 },
+                    { name: '船迫大雅', throws: 'R', vel: 94, ctrl: 68, stm: 45, era: '4.61', k: 57, pitches: [{ id: 0, lv: 4 }, { id: 2, lv: 6 }], est: 1 },
+                    { name: 'グリフィン', throws: 'R', vel: 95, ctrl: 62, stm: 74, era: '4.56', k: 104, pitches: [{ id: 0, lv: 5 }, { id: 6, lv: 5 }, { id: 2, lv: 5 }, { id: 4, lv: 4 }], est: 1 },
+                    { name: '菅野智之', throws: 'R', vel: 91, ctrl: 82, stm: 78, era: '4.35', k: 95, pitches: [{ id: 0, lv: 3 }, { id: 6, lv: 5 }, { id: 2, lv: 5 }, { id: 4, lv: 4 }], est: 1 },
+                    { name: '横川凱', throws: 'L', vel: 92, ctrl: 66, stm: 60, era: '4.69', k: 84, pitches: [{ id: 0, lv: 3 }, { id: 2, lv: 5 }, { id: 4, lv: 5 }], est: 1 },
+                    { name: '田中将大', throws: 'R', vel: 90, ctrl: 78, stm: 74, era: '4.49', k: 89, pitches: [{ id: 0, lv: 3 }, { id: 6, lv: 5 }, { id: 2, lv: 5 }, { id: 4, lv: 4 }], est: 1 },
+                    { name: '中川皓太', throws: 'L', vel: 93, ctrl: 68, stm: 45, era: '4.66', k: 54, pitches: [{ id: 0, lv: 4 }, { id: 2, lv: 6 }, { id: 4, lv: 4 }], est: 1 }
+                ],
+                batters: [
+                    { name: '岡本和真', bats: 'R', throws: 'R', pos: '3B', avg: '.280', hr: 31, rbi: 84, con: 72, pow: 84, spd: 50, obp: 0.346, slg: 0.538, est: 1 },
+                    { name: '吉川尚輝', bats: 'L', throws: 'R', pos: '2B', avg: '.280', hr: 10, rbi: 42, con: 72, pow: 54, spd: 74, obp: 0.346, slg: 0.403, est: 1 },
+                    { name: '丸佳浩', bats: 'L', throws: 'R', pos: 'CF', avg: '.269', hr: 21, rbi: 64, con: 66, pow: 70, spd: 60, obp: 0.333, slg: 0.464, est: 1 },
+                    { name: '坂本勇人', bats: 'R', throws: 'R', pos: 'SS', avg: '.272', hr: 13, rbi: 48, con: 68, pow: 58, spd: 52, obp: 0.338, slg: 0.413, est: 1 },
+                    { name: '岸田行倫', bats: 'R', throws: 'R', pos: 'C', avg: '.265', hr: 7, rbi: 36, con: 64, pow: 50, spd: 48, obp: 0.329, slg: 0.370, est: 1 },
+                    { name: '浅野翔吾', bats: 'R', throws: 'R', pos: 'LF', avg: '.262', hr: 18, rbi: 58, con: 62, pow: 66, spd: 74, obp: 0.324, slg: 0.439, est: 1 },
+                    { name: 'キャベッジ', bats: 'R', throws: 'R', pos: 'RF', avg: '.254', hr: 24, rbi: 70, con: 58, pow: 74, spd: 60, obp: 0.316, slg: 0.467, est: 1 },
+                    { name: '泉口友汰', bats: 'L', throws: 'R', pos: 'SS', avg: '.269', hr: 3, rbi: 28, con: 66, pow: 44, spd: 66, obp: 0.333, slg: 0.347, est: 1 },
+                    { name: '大城卓三', bats: 'L', throws: 'R', pos: 'C', avg: '.269', hr: 13, rbi: 48, con: 66, pow: 58, spd: 42, obp: 0.333, slg: 0.410, est: 1 },
+                    { name: '中山礼都', bats: 'R', throws: 'R', pos: 'IF', avg: '.262', hr: 7, rbi: 36, con: 62, pow: 50, spd: 62, obp: 0.324, slg: 0.367, est: 1 },
+                    { name: '増田陸', bats: 'R', throws: 'R', pos: '2B', avg: '.254', hr: 13, rbi: 48, con: 58, pow: 58, spd: 58, obp: 0.316, slg: 0.395, est: 1 },
+                    { name: '門脇誠', bats: 'R', throws: 'R', pos: 'SS', avg: '.258', hr: 0, rbi: 22, con: 60, pow: 40, spd: 70, obp: 0.320, slg: 0.318, est: 1 },
+                    { name: '甲斐拓也', bats: 'R', throws: 'R', pos: 'C', avg: '.258', hr: 10, rbi: 42, con: 60, pow: 54, spd: 46, obp: 0.320, slg: 0.381, est: 1 }
+                ]
+            },
+            'HAN': {
+                pitchers: [
+                    { name: '村上頌樹', throws: 'R', vel: 92, ctrl: 90, stm: 78, era: '4.14', k: 98, pitches: [{ id: 0, lv: 3 }, { id: 6, lv: 5 }, { id: 4, lv: 5 }, { id: 2, lv: 4 }], est: 1 },
+                    { name: '才木浩人', throws: 'R', vel: 94, ctrl: 74, stm: 80, era: '4.35', k: 106, pitches: [{ id: 0, lv: 4 }, { id: 6, lv: 5 }, { id: 5, lv: 5 }, { id: 2, lv: 4 }], est: 1 },
+                    { name: '大竹耕太郎', throws: 'L', vel: 88, ctrl: 82, stm: 76, era: '4.51', k: 85, pitches: [{ id: 0, lv: 3 }, { id: 4, lv: 5 }, { id: 5, lv: 5 }, { id: 2, lv: 4 }], est: 1 },
+                    { name: '伊藤将司', throws: 'L', vel: 90, ctrl: 74, stm: 74, era: '4.57', k: 89, pitches: [{ id: 0, lv: 3 }, { id: 2, lv: 5 }, { id: 4, lv: 5 }, { id: 5, lv: 4 }], est: 1 },
+                    { name: '岩崎優', throws: 'L', vel: 91, ctrl: 80, stm: 45, era: '4.52', k: 48, pitches: [{ id: 0, lv: 3 }, { id: 2, lv: 6 }], est: 1 },
+                    { name: '石井大智', throws: 'R', vel: 94, ctrl: 70, stm: 45, era: '4.57', k: 57, pitches: [{ id: 0, lv: 4 }, { id: 2, lv: 6 }], est: 1 },
+                    { name: '桐敷拓馬', throws: 'L', vel: 93, ctrl: 66, stm: 50, era: '4.68', k: 54, pitches: [{ id: 0, lv: 4 }, { id: 2, lv: 6 }, { id: 4, lv: 4 }], est: 1 },
+                    { name: '西勇輝', throws: 'L', vel: 87, ctrl: 84, stm: 76, era: '4.52', k: 82, pitches: [{ id: 0, lv: 3 }, { id: 2, lv: 5 }, { id: 4, lv: 5 }, { id: 5, lv: 4 }], est: 1 },
+                    { name: '青柳晃洋', throws: 'R', vel: 88, ctrl: 78, stm: 76, era: '4.59', k: 85, pitches: [{ id: 0, lv: 3 }, { id: 6, lv: 5 }, { id: 2, lv: 5 }, { id: 4, lv: 4 }], est: 1 },
+                    { name: '湯浅京己', throws: 'R', vel: 96, ctrl: 64, stm: 45, era: '4.59', k: 63, pitches: [{ id: 0, lv: 5 }, { id: 2, lv: 6 }], est: 1 },
+                    { name: 'ゲラ', throws: 'R', vel: 96, ctrl: 66, stm: 45, era: '4.55', k: 63, pitches: [{ id: 0, lv: 5 }, { id: 2, lv: 6 }], est: 1 },
+                    { name: 'ビーズリー', throws: 'L', vel: 93, ctrl: 72, stm: 70, era: '4.48', k: 95, pitches: [{ id: 0, lv: 4 }, { id: 2, lv: 5 }, { id: 4, lv: 5 }, { id: 5, lv: 4 }], est: 1 }
+                ],
+                batters: [
+                    { name: '近本光司', bats: 'L', throws: 'R', pos: 'CF', avg: '.290', hr: 14, rbi: 50, con: 78, pow: 60, spd: 80, obp: 0.360, slg: 0.440, est: 1 },
+                    { name: '中野拓夢', bats: 'R', throws: 'R', pos: '2B', avg: '.287', hr: 0, rbi: 22, con: 76, pow: 40, spd: 82, obp: 0.355, slg: 0.347, est: 1 },
+                    { name: '森下翔太', bats: 'R', throws: 'R', pos: 'RF', avg: '.269', hr: 28, rbi: 78, con: 66, pow: 80, spd: 62, obp: 0.333, slg: 0.509, est: 1 },
+                    { name: '佐藤輝明', bats: 'L', throws: 'R', pos: '3B', avg: '.262', hr: 34, rbi: 90, con: 62, pow: 88, spd: 68, obp: 0.324, slg: 0.538, est: 1 },
+                    { name: '大山悠輔', bats: 'R', throws: 'R', pos: '1B', avg: '.276', hr: 27, rbi: 76, con: 70, pow: 78, spd: 46, obp: 0.342, slg: 0.507, est: 1 },
+                    { name: '木浪聖也', bats: 'L', throws: 'R', pos: 'SS', avg: '.262', hr: 1, rbi: 24, con: 62, pow: 42, spd: 60, obp: 0.324, slg: 0.331, est: 1 },
+                    { name: '坂本誠志郎', bats: 'R', throws: 'R', pos: 'C', avg: '.258', hr: 0, rbi: 22, con: 60, pow: 38, spd: 44, obp: 0.320, slg: 0.309, est: 1 },
+                    { name: '梅野隆太郎', bats: 'R', throws: 'R', pos: 'C', avg: '.244', hr: 4, rbi: 30, con: 52, pow: 46, spd: 40, obp: 0.302, slg: 0.331, est: 1 },
+                    { name: '島田海吏', bats: 'R', throws: 'R', pos: 'LF', avg: '.254', hr: 0, rbi: 22, con: 58, pow: 40, spd: 86, obp: 0.316, slg: 0.314, est: 1 },
+                    { name: '熊谷敬宥', bats: 'L', throws: 'R', pos: 'SS', avg: '.251', hr: 0, rbi: 22, con: 56, pow: 34, spd: 70, obp: 0.311, slg: 0.284, est: 1 },
+                    { name: 'ノイジー', bats: 'R', throws: 'R', pos: 'LF', avg: '.262', hr: 25, rbi: 72, con: 62, pow: 76, spd: 52, obp: 0.324, slg: 0.484, est: 1 },
+                    { name: '前川右京', bats: 'L', throws: 'R', pos: 'LF', avg: '.265', hr: 11, rbi: 44, con: 64, pow: 56, spd: 60, obp: 0.329, slg: 0.397, est: 1 },
+                    { name: '糸原健斗', bats: 'L', throws: 'R', pos: 'IF', avg: '.265', hr: 0, rbi: 22, con: 64, pow: 40, spd: 56, obp: 0.329, slg: 0.325, est: 1 }
+                ]
+            },
+            'CHU': {
+                pitchers: [
+                    { name: '高橋宏斗', throws: 'R', vel: 95, ctrl: 74, stm: 82, era: '4.29', k: 111, pitches: [{ id: 0, lv: 5 }, { id: 6, lv: 5 }, { id: 2, lv: 5 }, { id: 4, lv: 4 }], est: 1 },
+                    { name: '柳裕也', throws: 'R', vel: 91, ctrl: 78, stm: 78, era: '4.43', k: 95, pitches: [{ id: 0, lv: 3 }, { id: 2, lv: 5 }, { id: 4, lv: 5 }, { id: 5, lv: 4 }], est: 1 },
+                    { name: '小笠原慎之介', throws: 'L', vel: 92, ctrl: 70, stm: 76, era: '4.55', k: 97, pitches: [{ id: 0, lv: 3 }, { id: 2, lv: 5 }, { id: 4, lv: 5 }, { id: 5, lv: 4 }], est: 1 },
+                    { name: '涌井秀章', throws: 'R', vel: 88, ctrl: 76, stm: 70, era: '4.65', k: 80, pitches: [{ id: 0, lv: 3 }, { id: 2, lv: 5 }, { id: 4, lv: 5 }, { id: 5, lv: 4 }], est: 1 },
+                    { name: '松山晋也', throws: 'R', vel: 96, ctrl: 64, stm: 45, era: '4.59', k: 63, pitches: [{ id: 0, lv: 5 }, { id: 2, lv: 6 }], est: 1 },
+                    { name: 'マルク', throws: 'R', vel: 96, ctrl: 66, stm: 45, era: '4.55', k: 63, pitches: [{ id: 0, lv: 5 }, { id: 2, lv: 6 }], est: 1 },
+                    { name: '清水達也', throws: 'R', vel: 95, ctrl: 68, stm: 45, era: '4.56', k: 60, pitches: [{ id: 0, lv: 5 }, { id: 2, lv: 6 }, { id: 4, lv: 4 }], est: 1 },
+                    { name: 'メヒア', throws: 'R', vel: 97, ctrl: 62, stm: 60, era: '4.52', k: 99, pitches: [{ id: 0, lv: 5 }, { id: 2, lv: 5 }, { id: 4, lv: 5 }], est: 1 },
+                    { name: '勝野昌慶', throws: 'R', vel: 93, ctrl: 66, stm: 60, era: '4.64', k: 87, pitches: [{ id: 0, lv: 4 }, { id: 2, lv: 5 }, { id: 4, lv: 5 }], est: 1 },
+                    { name: '藤嶋健人', throws: 'R', vel: 94, ctrl: 66, stm: 45, era: '4.65', k: 57, pitches: [{ id: 0, lv: 4 }, { id: 2, lv: 6 }, { id: 4, lv: 4 }], est: 1 },
+                    { name: '橋本侑樹', throws: 'L', vel: 93, ctrl: 66, stm: 45, era: '4.70', k: 54, pitches: [{ id: 0, lv: 4 }, { id: 2, lv: 6 }, { id: 4, lv: 4 }], est: 1 },
+                    { name: '祖父江大輔', throws: 'R', vel: 92, ctrl: 68, stm: 45, era: '4.71', k: 51, pitches: [{ id: 0, lv: 3 }, { id: 2, lv: 6 }, { id: 4, lv: 4 }], est: 1 }
+                ],
+                batters: [
+                    { name: '岡林勇希', bats: 'L', throws: 'R', pos: 'CF', avg: '.290', hr: 3, rbi: 28, con: 78, pow: 44, spd: 78, obp: 0.360, slg: 0.368, est: 1 },
+                    { name: '村松開人', bats: 'R', throws: 'R', pos: 'SS', avg: '.272', hr: 4, rbi: 30, con: 68, pow: 46, spd: 74, obp: 0.338, slg: 0.359, est: 1 },
+                    { name: '細川成也', bats: 'R', throws: 'R', pos: 'LF', avg: '.262', hr: 28, rbi: 78, con: 62, pow: 80, spd: 52, obp: 0.324, slg: 0.502, est: 1 },
+                    { name: '石川昂弥', bats: 'R', throws: 'R', pos: '3B', avg: '.258', hr: 27, rbi: 76, con: 60, pow: 78, spd: 54, obp: 0.320, slg: 0.489, est: 1 },
+                    { name: 'ボスラー', bats: 'L', throws: 'R', pos: '1B', avg: '.262', hr: 21, rbi: 64, con: 62, pow: 70, spd: 50, obp: 0.324, slg: 0.457, est: 1 },
+                    { name: '木下拓哉', bats: 'R', throws: 'R', pos: 'C', avg: '.262', hr: 13, rbi: 48, con: 62, pow: 58, spd: 42, obp: 0.324, slg: 0.403, est: 1 },
+                    { name: '上林誠知', bats: 'L', throws: 'R', pos: 'RF', avg: '.258', hr: 14, rbi: 50, con: 60, pow: 60, spd: 66, obp: 0.320, slg: 0.408, est: 1 },
+                    { name: '田中幹也', bats: 'L', throws: 'R', pos: '2B', avg: '.265', hr: 0, rbi: 22, con: 64, pow: 36, spd: 88, obp: 0.329, slg: 0.307, est: 1 },
+                    { name: 'カリステ', bats: 'S', throws: 'R', pos: 'SS', avg: '.258', hr: 7, rbi: 36, con: 60, pow: 50, spd: 66, obp: 0.320, slg: 0.363, est: 1 },
+                    { name: '福永裕基', bats: 'R', throws: 'R', pos: '2B', avg: '.269', hr: 7, rbi: 36, con: 66, pow: 50, spd: 58, obp: 0.333, slg: 0.374, est: 1 },
+                    { name: '山本泰寛', bats: 'R', throws: 'R', pos: '3B', avg: '.258', hr: 6, rbi: 34, con: 60, pow: 48, spd: 52, obp: 0.320, slg: 0.354, est: 1 },
+                    { name: '宇佐見真吾', bats: 'R', throws: 'R', pos: 'C', avg: '.251', hr: 14, rbi: 50, con: 56, pow: 60, spd: 42, obp: 0.311, slg: 0.401, est: 1 },
+                    { name: '板山祐太郎', bats: 'R', throws: 'R', pos: 'OF', avg: '.258', hr: 8, rbi: 38, con: 60, pow: 52, spd: 66, obp: 0.320, slg: 0.372, est: 1 }
+                ]
+            },
+            'HIR': {
+                pitchers: [
+                    { name: '森下暢仁', throws: 'R', vel: 93, ctrl: 82, stm: 82, era: '4.23', k: 105, pitches: [{ id: 0, lv: 4 }, { id: 2, lv: 5 }, { id: 6, lv: 5 }, { id: 4, lv: 4 }], est: 1 },
+                    { name: '床田寛樹', throws: 'L', vel: 90, ctrl: 82, stm: 78, era: '4.40', k: 92, pitches: [{ id: 0, lv: 3 }, { id: 2, lv: 5 }, { id: 4, lv: 5 }, { id: 5, lv: 4 }], est: 1 },
+                    { name: '大瀬良大地', throws: 'R', vel: 92, ctrl: 78, stm: 78, era: '4.38', k: 98, pitches: [{ id: 0, lv: 3 }, { id: 2, lv: 5 }, { id: 4, lv: 5 }, { id: 7, lv: 4 }], est: 1 },
+                    { name: '森浦大輔', throws: 'L', vel: 91, ctrl: 74, stm: 45, era: '4.64', k: 48, pitches: [{ id: 0, lv: 3 }, { id: 2, lv: 6 }], est: 1 },
+                    { name: '栗林良吏', throws: 'R', vel: 93, ctrl: 78, stm: 45, era: '4.46', k: 54, pitches: [{ id: 0, lv: 4 }, { id: 6, lv: 6 }, { id: 2, lv: 4 }], est: 1 },
+                    { name: 'ハーン', throws: 'R', vel: 97, ctrl: 60, stm: 45, era: '4.62', k: 66, pitches: [{ id: 0, lv: 5 }, { id: 2, lv: 6 }], est: 1 },
+                    { name: '島内颯太郎', throws: 'R', vel: 96, ctrl: 66, stm: 45, era: '4.55', k: 63, pitches: [{ id: 0, lv: 5 }, { id: 2, lv: 6 }], est: 1 },
+                    { name: 'アドゥワ誠', throws: 'R', vel: 92, ctrl: 74, stm: 60, era: '4.53', k: 84, pitches: [{ id: 0, lv: 3 }, { id: 2, lv: 5 }, { id: 4, lv: 5 }], est: 1 },
+                    { name: '九里亜蓮', throws: 'R', vel: 91, ctrl: 78, stm: 76, era: '4.44', k: 94, pitches: [{ id: 0, lv: 3 }, { id: 2, lv: 5 }, { id: 4, lv: 5 }, { id: 5, lv: 4 }], est: 1 },
+                    { name: '遠藤淳志', throws: 'R', vel: 93, ctrl: 68, stm: 68, era: '4.57', k: 93, pitches: [{ id: 0, lv: 4 }, { id: 2, lv: 5 }, { id: 4, lv: 5 }], est: 1 },
+                    { name: 'ケムナ誠', throws: 'R', vel: 96, ctrl: 62, stm: 45, era: '4.63', k: 63, pitches: [{ id: 0, lv: 5 }, { id: 2, lv: 6 }], est: 1 },
+                    { name: '矢崎拓也', throws: 'R', vel: 94, ctrl: 66, stm: 45, era: '4.65', k: 57, pitches: [{ id: 0, lv: 4 }, { id: 2, lv: 6 }, { id: 4, lv: 4 }], est: 1 }
+                ],
+                batters: [
+                    { name: '小園海斗', bats: 'L', throws: 'R', pos: 'SS', avg: '.290', hr: 14, rbi: 50, con: 78, pow: 60, spd: 68, obp: 0.360, slg: 0.440, est: 1 },
+                    { name: '秋山翔吾', bats: 'L', throws: 'R', pos: 'CF', avg: '.283', hr: 6, rbi: 34, con: 74, pow: 48, spd: 54, obp: 0.351, slg: 0.379, est: 1 },
+                    { name: '末包昇大', bats: 'R', throws: 'R', pos: 'LF', avg: '.258', hr: 29, rbi: 80, con: 60, pow: 82, spd: 44, obp: 0.320, slg: 0.507, est: 1 },
+                    { name: '坂倉将吾', bats: 'L', throws: 'R', pos: 'C', avg: '.280', hr: 14, rbi: 50, con: 72, pow: 60, spd: 44, obp: 0.346, slg: 0.430, est: 1 },
+                    { name: 'モンテロ', bats: 'R', throws: 'R', pos: '1B', avg: '.254', hr: 24, rbi: 70, con: 58, pow: 74, spd: 44, obp: 0.316, slg: 0.467, est: 1 },
+                    { name: '矢野雅哉', bats: 'R', throws: 'R', pos: 'SS', avg: '.262', hr: 0, rbi: 22, con: 62, pow: 38, spd: 78, obp: 0.324, slg: 0.313, est: 1 },
+                    { name: '田中広輔', bats: 'L', throws: 'R', pos: '2B', avg: '.258', hr: 3, rbi: 28, con: 60, pow: 44, spd: 62, obp: 0.320, slg: 0.336, est: 1 },
+                    { name: '佐々木泰', bats: 'R', throws: 'R', pos: '3B', avg: '.254', hr: 17, rbi: 56, con: 58, pow: 64, spd: 64, obp: 0.316, slg: 0.422, est: 1 },
+                    { name: '二俣翔一', bats: 'R', throws: 'R', pos: '2B', avg: '.247', hr: 11, rbi: 44, con: 54, pow: 56, spd: 60, obp: 0.307, slg: 0.379, est: 1 },
+                    { name: '中村奨成', bats: 'R', throws: 'R', pos: 'CF', avg: '.254', hr: 14, rbi: 50, con: 58, pow: 60, spd: 72, obp: 0.316, slg: 0.404, est: 1 },
+                    { name: '菊池涼介', bats: 'R', throws: 'R', pos: '2B', avg: '.262', hr: 8, rbi: 38, con: 62, pow: 52, spd: 66, obp: 0.324, slg: 0.376, est: 1 },
+                    { name: '会沢翼', bats: 'R', throws: 'R', pos: 'C', avg: '.251', hr: 7, rbi: 36, con: 56, pow: 50, spd: 40, obp: 0.311, slg: 0.356, est: 1 },
+                    { name: '磯村嘉孝', bats: 'R', throws: 'R', pos: 'C', avg: '.251', hr: 4, rbi: 30, con: 56, pow: 46, spd: 44, obp: 0.311, slg: 0.338, est: 1 }
+                ]
+            },
+            'YAK': {
+                pitchers: [
+                    { name: '奥川恭伸', throws: 'R', vel: 92, ctrl: 80, stm: 70, era: '4.37', k: 92, pitches: [{ id: 0, lv: 3 }, { id: 2, lv: 5 }, { id: 6, lv: 5 }, { id: 4, lv: 4 }], est: 1 },
+                    { name: '小川泰弘', throws: 'R', vel: 88, ctrl: 74, stm: 72, era: '4.68', k: 82, pitches: [{ id: 0, lv: 3 }, { id: 2, lv: 5 }, { id: 6, lv: 5 }, { id: 5, lv: 4 }], est: 1 },
+                    { name: '吉村貢司郎', throws: 'R', vel: 92, ctrl: 76, stm: 76, era: '4.43', k: 97, pitches: [{ id: 0, lv: 3 }, { id: 6, lv: 5 }, { id: 2, lv: 5 }, { id: 4, lv: 4 }], est: 1 },
+                    { name: '高橋奎二', throws: 'L', vel: 93, ctrl: 66, stm: 74, era: '4.58', k: 98, pitches: [{ id: 0, lv: 4 }, { id: 2, lv: 5 }, { id: 4, lv: 5 }, { id: 5, lv: 4 }], est: 1 },
+                    { name: '石山泰稚', throws: 'R', vel: 92, ctrl: 72, stm: 45, era: '4.63', k: 51, pitches: [{ id: 0, lv: 3 }, { id: 2, lv: 6 }], est: 1 },
+                    { name: '清水昇', throws: 'R', vel: 93, ctrl: 70, stm: 45, era: '4.62', k: 54, pitches: [{ id: 0, lv: 4 }, { id: 2, lv: 6 }], est: 1 },
+                    { name: 'ケラ', throws: 'R', vel: 96, ctrl: 66, stm: 45, era: '4.55', k: 63, pitches: [{ id: 0, lv: 5 }, { id: 2, lv: 6 }], est: 1 },
+                    { name: '小澤怜史', throws: 'R', vel: 92, ctrl: 68, stm: 70, era: '4.61', k: 92, pitches: [{ id: 0, lv: 3 }, { id: 2, lv: 5 }, { id: 4, lv: 5 }], est: 1 },
+                    { name: 'ヤフーレ', throws: 'R', vel: 94, ctrl: 66, stm: 74, era: '4.53', k: 101, pitches: [{ id: 0, lv: 4 }, { id: 2, lv: 5 }, { id: 4, lv: 5 }, { id: 5, lv: 4 }], est: 1 },
+                    { name: '大西広樹', throws: 'R', vel: 94, ctrl: 64, stm: 45, era: '4.69', k: 57, pitches: [{ id: 0, lv: 4 }, { id: 2, lv: 6 }, { id: 4, lv: 4 }], est: 1 },
+                    { name: '田口麗斗', throws: 'L', vel: 90, ctrl: 72, stm: 45, era: '4.73', k: 45, pitches: [{ id: 0, lv: 3 }, { id: 2, lv: 6 }, { id: 4, lv: 4 }], est: 1 },
+                    { name: '木澤尚文', throws: 'R', vel: 93, ctrl: 66, stm: 45, era: '4.70', k: 54, pitches: [{ id: 0, lv: 4 }, { id: 2, lv: 6 }, { id: 4, lv: 4 }], est: 1 }
+                ],
+                batters: [
+                    { name: '村上宗隆', bats: 'L', throws: 'R', pos: '3B', avg: '.280', hr: 36, rbi: 94, con: 72, pow: 92, spd: 56, obp: 0.346, slg: 0.574, est: 1 },
+                    { name: '塩見泰隆', bats: 'L', throws: 'R', pos: 'CF', avg: '.272', hr: 11, rbi: 44, con: 68, pow: 56, spd: 82, obp: 0.338, slg: 0.404, est: 1 },
+                    { name: '長岡秀樹', bats: 'L', throws: 'R', pos: 'SS', avg: '.276', hr: 3, rbi: 28, con: 70, pow: 44, spd: 68, obp: 0.342, slg: 0.354, est: 1 },
+                    { name: 'オスナ', bats: 'R', throws: 'R', pos: '1B', avg: '.272', hr: 24, rbi: 70, con: 68, pow: 74, spd: 46, obp: 0.338, slg: 0.485, est: 1 },
+                    { name: '山田哲人', bats: 'R', throws: 'R', pos: '2B', avg: '.269', hr: 27, rbi: 76, con: 66, pow: 78, spd: 62, obp: 0.333, slg: 0.500, est: 1 },
+                    { name: '丸山和郁', bats: 'L', throws: 'R', pos: 'LF', avg: '.262', hr: 3, rbi: 28, con: 62, pow: 44, spd: 78, obp: 0.324, slg: 0.340, est: 1 },
+                    { name: 'サンタナ', bats: 'S', throws: 'R', pos: 'RF', avg: '.280', hr: 22, rbi: 66, con: 72, pow: 72, spd: 48, obp: 0.346, slg: 0.484, est: 1 },
+                    { name: '中村悠平', bats: 'R', throws: 'R', pos: 'C', avg: '.265', hr: 3, rbi: 28, con: 64, pow: 44, spd: 40, obp: 0.329, slg: 0.343, est: 1 },
+                    { name: '内山壮真', bats: 'R', throws: 'R', pos: 'C', avg: '.258', hr: 8, rbi: 38, con: 60, pow: 52, spd: 50, obp: 0.320, slg: 0.372, est: 1 },
+                    { name: '武岡龍世', bats: 'L', throws: 'R', pos: 'SS', avg: '.251', hr: 6, rbi: 34, con: 56, pow: 48, spd: 66, obp: 0.311, slg: 0.347, est: 1 },
+                    { name: '赤羽由紘', bats: 'R', throws: 'R', pos: '2B', avg: '.254', hr: 0, rbi: 22, con: 58, pow: 40, spd: 70, obp: 0.316, slg: 0.314, est: 1 },
+                    { name: '青木宣親', bats: 'L', throws: 'R', pos: 'OF', avg: '.269', hr: 3, rbi: 28, con: 66, pow: 44, spd: 58, obp: 0.333, slg: 0.347, est: 1 },
+                    { name: '北村拓己', bats: 'R', throws: 'R', pos: 'IF', avg: '.258', hr: 13, rbi: 48, con: 60, pow: 58, spd: 50, obp: 0.320, slg: 0.399, est: 1 }
+                ]
+            },
+            'YDB': {
+                pitchers: [
+                    { name: '東克樹', throws: 'L', vel: 90, ctrl: 88, stm: 82, era: '4.26', k: 96, pitches: [{ id: 0, lv: 3 }, { id: 4, lv: 5 }, { id: 5, lv: 5 }, { id: 2, lv: 4 }], est: 1 },
+                    { name: '大貫晋一', throws: 'R', vel: 91, ctrl: 76, stm: 78, era: '4.47', k: 95, pitches: [{ id: 0, lv: 3 }, { id: 2, lv: 5 }, { id: 6, lv: 5 }, { id: 4, lv: 4 }], est: 1 },
+                    { name: 'バウアー', throws: 'R', vel: 95, ctrl: 74, stm: 85, era: '4.28', k: 113, pitches: [{ id: 0, lv: 5 }, { id: 2, lv: 5 }, { id: 4, lv: 5 }, { id: 5, lv: 4 }, { id: 7, lv: 4 }], est: 1 },
+                    { name: '石田健大', throws: 'L', vel: 90, ctrl: 76, stm: 74, era: '4.53', k: 89, pitches: [{ id: 0, lv: 3 }, { id: 4, lv: 5 }, { id: 5, lv: 5 }, { id: 2, lv: 4 }], est: 1 },
+                    { name: '森原康平', throws: 'R', vel: 93, ctrl: 76, stm: 45, era: '4.50', k: 54, pitches: [{ id: 0, lv: 4 }, { id: 6, lv: 6 }], est: 1 },
+                    { name: 'ウェンデルケン', throws: 'R', vel: 96, ctrl: 66, stm: 45, era: '4.55', k: 63, pitches: [{ id: 0, lv: 5 }, { id: 2, lv: 6 }], est: 1 },
+                    { name: '伊勢大夢', throws: 'R', vel: 94, ctrl: 68, stm: 45, era: '4.61', k: 57, pitches: [{ id: 0, lv: 4 }, { id: 2, lv: 6 }, { id: 4, lv: 4 }], est: 1 },
+                    { name: 'ケイ', throws: 'L', vel: 93, ctrl: 66, stm: 74, era: '4.58', k: 98, pitches: [{ id: 0, lv: 4 }, { id: 2, lv: 5 }, { id: 4, lv: 5 }, { id: 5, lv: 4 }], est: 1 },
+                    { name: '吉野光樹', throws: 'R', vel: 93, ctrl: 66, stm: 70, era: '4.60', k: 95, pitches: [{ id: 0, lv: 4 }, { id: 2, lv: 5 }, { id: 4, lv: 5 }], est: 1 },
+                    { name: '中川颯', throws: 'R', vel: 91, ctrl: 70, stm: 60, era: '4.66', k: 81, pitches: [{ id: 0, lv: 3 }, { id: 2, lv: 5 }, { id: 4, lv: 5 }], est: 1 },
+                    { name: '堀岡隼人', throws: 'R', vel: 95, ctrl: 62, stm: 45, era: '4.68', k: 60, pitches: [{ id: 0, lv: 5 }, { id: 2, lv: 6 }, { id: 4, lv: 4 }], est: 1 },
+                    { name: '入江大生', throws: 'R', vel: 96, ctrl: 62, stm: 45, era: '4.63', k: 63, pitches: [{ id: 0, lv: 5 }, { id: 2, lv: 6 }, { id: 4, lv: 4 }], est: 1 }
+                ],
+                batters: [
+                    { name: '牧秀悟', bats: 'R', throws: 'R', pos: '2B', avg: '.290', hr: 27, rbi: 76, con: 78, pow: 78, spd: 52, obp: 0.360, slg: 0.521, est: 1 },
+                    { name: '宮﨑敏郎', bats: 'R', throws: 'R', pos: '3B', avg: '.287', hr: 18, rbi: 58, con: 76, pow: 66, spd: 44, obp: 0.355, slg: 0.464, est: 1 },
+                    { name: '桑原将志', bats: 'R', throws: 'R', pos: 'CF', avg: '.276', hr: 13, rbi: 48, con: 70, pow: 58, spd: 72, obp: 0.342, slg: 0.417, est: 1 },
+                    { name: '佐野恵太', bats: 'L', throws: 'R', pos: 'LF', avg: '.283', hr: 14, rbi: 50, con: 74, pow: 60, spd: 48, obp: 0.351, slg: 0.433, est: 1 },
+                    { name: '筒香嘉智', bats: 'L', throws: 'R', pos: '1B', avg: '.262', hr: 29, rbi: 80, con: 62, pow: 82, spd: 40, obp: 0.324, slg: 0.511, est: 1 },
+                    { name: '林琢真', bats: 'L', throws: 'R', pos: 'SS', avg: '.262', hr: 0, rbi: 22, con: 62, pow: 38, spd: 72, obp: 0.324, slg: 0.313, est: 1 },
+                    { name: '戸柱恭孝', bats: 'R', throws: 'R', pos: 'C', avg: '.258', hr: 7, rbi: 36, con: 60, pow: 50, spd: 40, obp: 0.320, slg: 0.363, est: 1 },
+                    { name: '山本祐大', bats: 'R', throws: 'R', pos: 'C', avg: '.269', hr: 8, rbi: 38, con: 66, pow: 52, spd: 46, obp: 0.333, slg: 0.383, est: 1 },
+                    { name: '蝦名達夫', bats: 'L', throws: 'R', pos: 'RF', avg: '.254', hr: 7, rbi: 36, con: 58, pow: 50, spd: 74, obp: 0.316, slg: 0.359, est: 1 },
+                    { name: '度会隆輝', bats: 'L', throws: 'R', pos: 'RF', avg: '.269', hr: 7, rbi: 36, con: 66, pow: 50, spd: 62, obp: 0.333, slg: 0.374, est: 1 },
+                    { name: '石上泰輝', bats: 'R', throws: 'R', pos: 'SS', avg: '.258', hr: 4, rbi: 30, con: 60, pow: 46, spd: 66, obp: 0.320, slg: 0.345, est: 1 },
+                    { name: '関根大気', bats: 'L', throws: 'R', pos: 'OF', avg: '.254', hr: 0, rbi: 22, con: 58, pow: 40, spd: 72, obp: 0.316, slg: 0.314, est: 1 },
+                    { name: '京田陽太', bats: 'L', throws: 'R', pos: 'SS', avg: '.258', hr: 0, rbi: 22, con: 60, pow: 40, spd: 68, obp: 0.320, slg: 0.318, est: 1 }
+                ]
+            },
+            'SOF': {
+                pitchers: [
+                    { name: '有原航平', throws: 'R', vel: 93, ctrl: 78, stm: 82, era: '4.31', k: 105, pitches: [{ id: 0, lv: 4 }, { id: 2, lv: 5 }, { id: 5, lv: 5 }, { id: 4, lv: 4 }, { id: 6, lv: 4 }], est: 1 },
+                    { name: 'モイネロ', throws: 'L', vel: 98, ctrl: 68, stm: 75, era: '4.29', k: 114, pitches: [{ id: 0, lv: 6 }, { id: 2, lv: 5 }, { id: 4, lv: 5 }, { id: 5, lv: 4 }], est: 1 },
+                    { name: '大関友久', throws: 'L', vel: 92, ctrl: 74, stm: 76, era: '4.47', k: 97, pitches: [{ id: 0, lv: 3 }, { id: 2, lv: 5 }, { id: 4, lv: 5 }, { id: 5, lv: 4 }], est: 1 },
+                    { name: '上沢直之', throws: 'R', vel: 92, ctrl: 90, stm: 78, era: '4.14', k: 98, pitches: [{ id: 0, lv: 3 }, { id: 2, lv: 5 }, { id: 6, lv: 5 }, { id: 4, lv: 4 }], est: 1 },
+                    { name: '杉山一樹', throws: 'R', vel: 98, ctrl: 66, stm: 45, era: '4.45', k: 69, pitches: [{ id: 0, lv: 6 }, { id: 6, lv: 6 }], est: 1 },
+                    { name: 'ヘルナンデス', throws: 'R', vel: 97, ctrl: 66, stm: 45, era: '4.50', k: 66, pitches: [{ id: 0, lv: 5 }, { id: 2, lv: 6 }], est: 1 },
+                    { name: '松本裕樹', throws: 'R', vel: 95, ctrl: 70, stm: 45, era: '4.52', k: 60, pitches: [{ id: 0, lv: 5 }, { id: 2, lv: 6 }, { id: 4, lv: 4 }], est: 1 },
+                    { name: '大津亮介', throws: 'R', vel: 93, ctrl: 66, stm: 74, era: '4.58', k: 98, pitches: [{ id: 0, lv: 4 }, { id: 2, lv: 5 }, { id: 4, lv: 5 }], est: 1 },
+                    { name: '石川柊太', throws: 'R', vel: 94, ctrl: 66, stm: 74, era: '4.53', k: 101, pitches: [{ id: 0, lv: 4 }, { id: 2, lv: 5 }, { id: 4, lv: 5 }, { id: 5, lv: 4 }], est: 1 },
+                    { name: '津森宥紀', throws: 'R', vel: 93, ctrl: 66, stm: 45, era: '4.70', k: 54, pitches: [{ id: 0, lv: 4 }, { id: 2, lv: 6 }, { id: 4, lv: 4 }], est: 1 },
+                    { name: '尾形崇斗', throws: 'R', vel: 95, ctrl: 62, stm: 45, era: '4.68', k: 60, pitches: [{ id: 0, lv: 5 }, { id: 2, lv: 6 }, { id: 4, lv: 4 }], est: 1 },
+                    { name: '和田毅', throws: 'L', vel: 85, ctrl: 82, stm: 70, era: '4.68', k: 71, pitches: [{ id: 0, lv: 3 }, { id: 2, lv: 5 }, { id: 4, lv: 5 }, { id: 5, lv: 4 }], est: 1 }
+                ],
+                batters: [
+                    { name: '柳田悠岐', bats: 'L', throws: 'R', pos: 'LF', avg: '.290', hr: 29, rbi: 80, con: 78, pow: 82, spd: 66, obp: 0.360, slg: 0.539, est: 1 },
+                    { name: '近藤健介', bats: 'L', throws: 'R', pos: 'DH', avg: '.308', hr: 22, rbi: 66, con: 88, pow: 72, spd: 56, obp: 0.382, slg: 0.512, est: 1 },
+                    { name: '周東佑京', bats: 'R', throws: 'R', pos: 'CF', avg: '.269', hr: 3, rbi: 28, con: 66, pow: 44, spd: 98, obp: 0.333, slg: 0.347, est: 1 },
+                    { name: '栗原陵矢', bats: 'R', throws: 'R', pos: '3B', avg: '.280', hr: 22, rbi: 66, con: 72, pow: 72, spd: 56, obp: 0.346, slg: 0.484, est: 1 },
+                    { name: '山川穂高', bats: 'R', throws: 'R', pos: '1B', avg: '.262', hr: 35, rbi: 92, con: 62, pow: 90, spd: 40, obp: 0.324, slg: 0.547, est: 1 },
+                    { name: '今宮健太', bats: 'R', throws: 'R', pos: 'SS', avg: '.265', hr: 8, rbi: 38, con: 64, pow: 52, spd: 62, obp: 0.329, slg: 0.379, est: 1 },
+                    { name: '牧原大成', bats: 'L', throws: 'R', pos: '2B', avg: '.283', hr: 3, rbi: 28, con: 74, pow: 44, spd: 70, obp: 0.351, slg: 0.361, est: 1 },
+                    { name: '海野隆司', bats: 'L', throws: 'R', pos: 'C', avg: '.262', hr: 7, rbi: 36, con: 62, pow: 50, spd: 48, obp: 0.324, slg: 0.367, est: 1 },
+                    { name: '正木智也', bats: 'R', throws: 'R', pos: 'RF', avg: '.265', hr: 20, rbi: 62, con: 64, pow: 68, spd: 62, obp: 0.329, slg: 0.451, est: 1 },
+                    { name: '野村勇', bats: 'R', throws: 'R', pos: '3B', avg: '.258', hr: 15, rbi: 52, con: 60, pow: 62, spd: 68, obp: 0.320, slg: 0.417, est: 1 },
+                    { name: '中村晃', bats: 'L', throws: 'R', pos: '1B', avg: '.272', hr: 0, rbi: 22, con: 68, pow: 40, spd: 50, obp: 0.338, slg: 0.332, est: 1 },
+                    { name: '甲斐拓也', bats: 'R', throws: 'R', pos: 'C', avg: '.258', hr: 10, rbi: 42, con: 60, pow: 54, spd: 46, obp: 0.320, slg: 0.381, est: 1 },
+                    { name: '嶺井博希', bats: 'R', throws: 'R', pos: 'C', avg: '.251', hr: 7, rbi: 36, con: 56, pow: 50, spd: 42, obp: 0.311, slg: 0.356, est: 1 }
+                ]
+            },
+            'NIP': {
+                pitchers: [
+                    { name: '伊藤大海', throws: 'R', vel: 95, ctrl: 84, stm: 84, era: '4.08', k: 112, pitches: [{ id: 0, lv: 5 }, { id: 2, lv: 5 }, { id: 6, lv: 5 }, { id: 5, lv: 4 }], est: 1 },
+                    { name: '加藤貴之', throws: 'L', vel: 90, ctrl: 88, stm: 82, era: '4.26', k: 96, pitches: [{ id: 0, lv: 3 }, { id: 2, lv: 5 }, { id: 4, lv: 5 }, { id: 5, lv: 4 }], est: 1 },
+                    { name: '金村尚真', throws: 'R', vel: 94, ctrl: 76, stm: 78, era: '4.32', k: 104, pitches: [{ id: 0, lv: 4 }, { id: 2, lv: 5 }, { id: 6, lv: 5 }, { id: 4, lv: 4 }], est: 1 },
+                    { name: '山﨑福也', throws: 'L', vel: 88, ctrl: 80, stm: 74, era: '4.55', k: 83, pitches: [{ id: 0, lv: 3 }, { id: 2, lv: 5 }, { id: 4, lv: 5 }, { id: 5, lv: 4 }], est: 1 },
+                    { name: '田中正義', throws: 'R', vel: 98, ctrl: 66, stm: 45, era: '4.45', k: 69, pitches: [{ id: 0, lv: 6 }, { id: 6, lv: 6 }], est: 1 },
+                    { name: '河野竜生', throws: 'L', vel: 91, ctrl: 76, stm: 45, era: '4.60', k: 48, pitches: [{ id: 0, lv: 3 }, { id: 2, lv: 6 }, { id: 4, lv: 4 }], est: 1 },
+                    { name: '池田隆英', throws: 'R', vel: 96, ctrl: 66, stm: 45, era: '4.55', k: 63, pitches: [{ id: 0, lv: 5 }, { id: 2, lv: 6 }], est: 1 },
+                    { name: '北山亘基', throws: 'R', vel: 95, ctrl: 66, stm: 74, era: '4.48', k: 104, pitches: [{ id: 0, lv: 5 }, { id: 2, lv: 5 }, { id: 6, lv: 5 }], est: 1 },
+                    { name: '達孝太', throws: 'R', vel: 94, ctrl: 68, stm: 72, era: '4.50', k: 100, pitches: [{ id: 0, lv: 4 }, { id: 2, lv: 5 }, { id: 4, lv: 5 }], est: 1 },
+                    { name: '上原健太', throws: 'L', vel: 92, ctrl: 66, stm: 60, era: '4.69', k: 84, pitches: [{ id: 0, lv: 3 }, { id: 2, lv: 5 }, { id: 4, lv: 5 }], est: 1 },
+                    { name: '玉井大翔', throws: 'R', vel: 93, ctrl: 66, stm: 45, era: '4.70', k: 54, pitches: [{ id: 0, lv: 4 }, { id: 2, lv: 6 }, { id: 4, lv: 4 }], est: 1 },
+                    { name: '齋藤友貴哉', throws: 'R', vel: 95, ctrl: 64, stm: 45, era: '4.64', k: 60, pitches: [{ id: 0, lv: 5 }, { id: 2, lv: 6 }, { id: 4, lv: 4 }], est: 1 }
+                ],
+                batters: [
+                    { name: '万波中正', bats: 'R', throws: 'R', pos: 'RF', avg: '.258', hr: 31, rbi: 84, con: 60, pow: 84, spd: 64, obp: 0.320, slg: 0.516, est: 1 },
+                    { name: '松本剛', bats: 'R', throws: 'R', pos: 'CF', avg: '.290', hr: 7, rbi: 36, con: 78, pow: 50, spd: 64, obp: 0.360, slg: 0.395, est: 1 },
+                    { name: '清宮幸太郎', bats: 'L', throws: 'R', pos: '1B', avg: '.269', hr: 28, rbi: 78, con: 66, pow: 80, spd: 42, obp: 0.333, slg: 0.509, est: 1 },
+                    { name: '郡司裕也', bats: 'L', throws: 'R', pos: '2B', avg: '.269', hr: 11, rbi: 44, con: 66, pow: 56, spd: 50, obp: 0.333, slg: 0.401, est: 1 },
+                    { name: '田宮裕涼', bats: 'L', throws: 'R', pos: 'C', avg: '.262', hr: 7, rbi: 36, con: 62, pow: 50, spd: 60, obp: 0.324, slg: 0.367, est: 1 },
+                    { name: '水野達稀', bats: 'R', throws: 'R', pos: 'SS', avg: '.262', hr: 3, rbi: 28, con: 62, pow: 44, spd: 68, obp: 0.324, slg: 0.340, est: 1 },
+                    { name: 'レイエス', bats: 'R', throws: 'R', pos: 'DH', avg: '.262', hr: 32, rbi: 86, con: 62, pow: 86, spd: 42, obp: 0.324, slg: 0.529, est: 1 },
+                    { name: '五十幡亮汰', bats: 'R', throws: 'R', pos: 'LF', avg: '.254', hr: 0, rbi: 22, con: 58, pow: 40, spd: 92, obp: 0.316, slg: 0.314, est: 1 },
+                    { name: '野村佑希', bats: 'R', throws: 'R', pos: '3B', avg: '.265', hr: 18, rbi: 58, con: 64, pow: 66, spd: 52, obp: 0.329, slg: 0.442, est: 1 },
+                    { name: '石井一成', bats: 'L', throws: 'R', pos: '2B', avg: '.262', hr: 4, rbi: 30, con: 62, pow: 46, spd: 66, obp: 0.324, slg: 0.349, est: 1 },
+                    { name: '上川畑大悟', bats: 'L', throws: 'R', pos: 'SS', avg: '.258', hr: 0, rbi: 22, con: 60, pow: 36, spd: 64, obp: 0.320, slg: 0.300, est: 1 },
+                    { name: '今川優馬', bats: 'R', throws: 'R', pos: 'OF', avg: '.258', hr: 18, rbi: 58, con: 60, pow: 66, spd: 58, obp: 0.320, slg: 0.435, est: 1 },
+                    { name: '江越大賀', bats: 'R', throws: 'R', pos: 'OF', avg: '.247', hr: 11, rbi: 44, con: 54, pow: 56, spd: 74, obp: 0.307, slg: 0.379, est: 1 }
+                ]
+            },
+            'ORI': {
+                pitchers: [
+                    { name: '山下舜平大', throws: 'R', vel: 96, ctrl: 68, stm: 80, era: '4.37', k: 112, pitches: [{ id: 0, lv: 5 }, { id: 6, lv: 5 }, { id: 4, lv: 5 }, { id: 2, lv: 4 }], est: 1 },
+                    { name: '宮城大弥', throws: 'L', vel: 91, ctrl: 84, stm: 82, era: '4.29', k: 99, pitches: [{ id: 0, lv: 3 }, { id: 2, lv: 5 }, { id: 4, lv: 5 }, { id: 5, lv: 4 }], est: 1 },
+                    { name: '曽谷龍平', throws: 'L', vel: 92, ctrl: 70, stm: 74, era: '4.55', k: 95, pitches: [{ id: 0, lv: 3 }, { id: 2, lv: 5 }, { id: 4, lv: 5 }, { id: 5, lv: 4 }], est: 1 },
+                    { name: '東晃平', throws: 'R', vel: 92, ctrl: 72, stm: 74, era: '4.51', k: 95, pitches: [{ id: 0, lv: 3 }, { id: 2, lv: 5 }, { id: 6, lv: 5 }, { id: 4, lv: 4 }], est: 1 },
+                    { name: '平野佳寿', throws: 'R', vel: 93, ctrl: 78, stm: 45, era: '4.46', k: 54, pitches: [{ id: 0, lv: 4 }, { id: 6, lv: 6 }], est: 1 },
+                    { name: '宇田川優希', throws: 'R', vel: 98, ctrl: 62, stm: 45, era: '4.53', k: 69, pitches: [{ id: 0, lv: 6 }, { id: 6, lv: 6 }], est: 1 },
+                    { name: '山岡泰輔', throws: 'R', vel: 91, ctrl: 76, stm: 60, era: '4.54', k: 81, pitches: [{ id: 0, lv: 3 }, { id: 2, lv: 5 }, { id: 4, lv: 5 }, { id: 5, lv: 4 }], est: 1 },
+                    { name: '田嶋大樹', throws: 'L', vel: 91, ctrl: 72, stm: 72, era: '4.57', k: 91, pitches: [{ id: 0, lv: 3 }, { id: 2, lv: 5 }, { id: 4, lv: 5 }, { id: 5, lv: 4 }], est: 1 },
+                    { name: 'エスピノーザ', throws: 'R', vel: 94, ctrl: 68, stm: 74, era: '4.49', k: 101, pitches: [{ id: 0, lv: 4 }, { id: 2, lv: 5 }, { id: 6, lv: 5 }, { id: 4, lv: 4 }], est: 1 },
+                    { name: 'ペルドモ', throws: 'R', vel: 96, ctrl: 62, stm: 45, era: '4.63', k: 63, pitches: [{ id: 0, lv: 5 }, { id: 2, lv: 6 }], est: 1 },
+                    { name: '阿部翔太', throws: 'R', vel: 93, ctrl: 66, stm: 45, era: '4.70', k: 54, pitches: [{ id: 0, lv: 4 }, { id: 2, lv: 6 }, { id: 4, lv: 4 }], est: 1 },
+                    { name: '山田修義', throws: 'L', vel: 90, ctrl: 68, stm: 45, era: '4.81', k: 45, pitches: [{ id: 0, lv: 3 }, { id: 2, lv: 6 }, { id: 4, lv: 4 }], est: 1 }
+                ],
+                batters: [
+                    { name: '森友哉', bats: 'L', throws: 'R', pos: 'C', avg: '.287', hr: 25, rbi: 72, con: 76, pow: 76, spd: 46, obp: 0.355, slg: 0.509, est: 1 },
+                    { name: '西野真弘', bats: 'L', throws: 'R', pos: '2B', avg: '.276', hr: 0, rbi: 22, con: 70, pow: 36, spd: 56, obp: 0.342, slg: 0.318, est: 1 },
+                    { name: '頓宮裕真', bats: 'R', throws: 'R', pos: '1B', avg: '.272', hr: 24, rbi: 70, con: 68, pow: 74, spd: 44, obp: 0.338, slg: 0.485, est: 1 },
+                    { name: '宗佑磨', bats: 'R', throws: 'R', pos: '3B', avg: '.276', hr: 8, rbi: 38, con: 70, pow: 52, spd: 72, obp: 0.342, slg: 0.390, est: 1 },
+                    { name: '太田椋', bats: 'L', throws: 'R', pos: 'SS', avg: '.262', hr: 7, rbi: 36, con: 62, pow: 50, spd: 68, obp: 0.324, slg: 0.367, est: 1 },
+                    { name: '中川圭太', bats: 'R', throws: 'R', pos: '2B', avg: '.272', hr: 10, rbi: 42, con: 68, pow: 54, spd: 60, obp: 0.338, slg: 0.395, est: 1 },
+                    { name: '杉本裕太郎', bats: 'R', throws: 'R', pos: 'RF', avg: '.251', hr: 25, rbi: 72, con: 56, pow: 76, spd: 50, obp: 0.311, slg: 0.473, est: 1 },
+                    { name: '紅林弘太郎', bats: 'R', throws: 'R', pos: 'SS', avg: '.265', hr: 13, rbi: 48, con: 64, pow: 58, spd: 62, obp: 0.329, slg: 0.406, est: 1 },
+                    { name: '福田周平', bats: 'L', throws: 'R', pos: 'CF', avg: '.269', hr: 0, rbi: 22, con: 66, pow: 38, spd: 74, obp: 0.333, slg: 0.320, est: 1 },
+                    { name: '若月健矢', bats: 'R', throws: 'R', pos: 'C', avg: '.251', hr: 1, rbi: 24, con: 56, pow: 42, spd: 40, obp: 0.311, slg: 0.320, est: 1 },
+                    { name: '廣岡大志', bats: 'R', throws: 'R', pos: '3B', avg: '.254', hr: 15, rbi: 52, con: 58, pow: 62, spd: 58, obp: 0.316, slg: 0.413, est: 1 },
+                    { name: '茶野篤政', bats: 'L', throws: 'R', pos: 'CF', avg: '.262', hr: 1, rbi: 24, con: 62, pow: 42, spd: 80, obp: 0.324, slg: 0.331, est: 1 },
+                    { name: '大里昴生', bats: 'R', throws: 'R', pos: 'IF', avg: '.254', hr: 4, rbi: 30, con: 58, pow: 46, spd: 60, obp: 0.316, slg: 0.341, est: 1 }
+                ]
+            },
+            'LOT': {
+                pitchers: [
+                    { name: '佐々木朗希', throws: 'R', vel: 100, ctrl: 66, stm: 78, era: '4.22', k: 122, pitches: [{ id: 0, lv: 6 }, { id: 6, lv: 5 }, { id: 2, lv: 5 }], est: 1 },
+                    { name: '小島和哉', throws: 'L', vel: 91, ctrl: 80, stm: 78, era: '4.39', k: 95, pitches: [{ id: 0, lv: 3 }, { id: 2, lv: 5 }, { id: 4, lv: 5 }, { id: 5, lv: 4 }], est: 1 },
+                    { name: '種市篤暉', throws: 'R', vel: 95, ctrl: 72, stm: 80, era: '4.34', k: 109, pitches: [{ id: 0, lv: 5 }, { id: 6, lv: 5 }, { id: 2, lv: 5 }, { id: 4, lv: 4 }], est: 1 },
+                    { name: '美馬学', throws: 'R', vel: 90, ctrl: 76, stm: 72, era: '4.54', k: 88, pitches: [{ id: 0, lv: 3 }, { id: 2, lv: 5 }, { id: 4, lv: 5 }, { id: 5, lv: 4 }], est: 1 },
+                    { name: '益田直也', throws: 'R', vel: 92, ctrl: 78, stm: 45, era: '4.51', k: 51, pitches: [{ id: 0, lv: 3 }, { id: 6, lv: 6 }], est: 1 },
+                    { name: '横山陸人', throws: 'R', vel: 97, ctrl: 66, stm: 45, era: '4.50', k: 66, pitches: [{ id: 0, lv: 5 }, { id: 6, lv: 6 }], est: 1 },
+                    { name: '澤村拓一', throws: 'R', vel: 95, ctrl: 66, stm: 45, era: '4.60', k: 60, pitches: [{ id: 0, lv: 5 }, { id: 6, lv: 6 }], est: 1 },
+                    { name: 'ソト', throws: 'R', vel: 94, ctrl: 64, stm: 60, era: '4.63', k: 90, pitches: [{ id: 0, lv: 4 }, { id: 2, lv: 5 }, { id: 4, lv: 5 }], est: 1 },
+                    { name: '鈴木昭汰', throws: 'L', vel: 93, ctrl: 66, stm: 60, era: '4.64', k: 87, pitches: [{ id: 0, lv: 4 }, { id: 2, lv: 5 }, { id: 4, lv: 5 }], est: 1 },
+                    { name: '西野勇士', throws: 'R', vel: 95, ctrl: 66, stm: 45, era: '4.60', k: 60, pitches: [{ id: 0, lv: 5 }, { id: 6, lv: 6 }], est: 1 },
+                    { name: '坂本光士郎', throws: 'L', vel: 93, ctrl: 64, stm: 45, era: '4.74', k: 54, pitches: [{ id: 0, lv: 4 }, { id: 2, lv: 6 }, { id: 4, lv: 4 }], est: 1 },
+                    { name: '河村説人', throws: 'R', vel: 96, ctrl: 62, stm: 60, era: '4.57', k: 96, pitches: [{ id: 0, lv: 5 }, { id: 2, lv: 5 }, { id: 4, lv: 5 }], est: 1 }
+                ],
+                batters: [
+                    { name: '藤原恭大', bats: 'L', throws: 'R', pos: 'CF', avg: '.272', hr: 15, rbi: 52, con: 68, pow: 62, spd: 86, obp: 0.338, slg: 0.431, est: 1 },
+                    { name: '角中勝也', bats: 'L', throws: 'R', pos: 'LF', avg: '.283', hr: 3, rbi: 28, con: 74, pow: 44, spd: 56, obp: 0.351, slg: 0.361, est: 1 },
+                    { name: 'ポランコ', bats: 'S', throws: 'R', pos: 'DH', avg: '.258', hr: 31, rbi: 84, con: 60, pow: 84, spd: 44, obp: 0.320, slg: 0.516, est: 1 },
+                    { name: '安田尚憲', bats: 'L', throws: 'R', pos: '3B', avg: '.262', hr: 24, rbi: 70, con: 62, pow: 74, spd: 46, obp: 0.324, slg: 0.475, est: 1 },
+                    { name: '山口航輝', bats: 'L', throws: 'R', pos: 'LF', avg: '.258', hr: 22, rbi: 66, con: 60, pow: 72, spd: 60, obp: 0.320, slg: 0.462, est: 1 },
+                    { name: '友杉篤輝', bats: 'R', throws: 'R', pos: 'SS', avg: '.258', hr: 0, rbi: 22, con: 60, pow: 36, spd: 80, obp: 0.320, slg: 0.300, est: 1 },
+                    { name: '佐藤都志也', bats: 'R', throws: 'R', pos: 'C', avg: '.265', hr: 8, rbi: 38, con: 64, pow: 52, spd: 48, obp: 0.329, slg: 0.379, est: 1 },
+                    { name: '中村奨吾', bats: 'R', throws: 'R', pos: '2B', avg: '.272', hr: 11, rbi: 44, con: 68, pow: 56, spd: 66, obp: 0.338, slg: 0.404, est: 1 },
+                    { name: '藤岡裕大', bats: 'L', throws: 'R', pos: 'SS', avg: '.262', hr: 1, rbi: 24, con: 62, pow: 42, spd: 62, obp: 0.324, slg: 0.331, est: 1 },
+                    { name: '岡大海', bats: 'R', throws: 'R', pos: 'RF', avg: '.262', hr: 8, rbi: 38, con: 62, pow: 52, spd: 68, obp: 0.324, slg: 0.376, est: 1 },
+                    { name: '髙部瑛斗', bats: 'L', throws: 'R', pos: 'CF', avg: '.269', hr: 0, rbi: 22, con: 66, pow: 34, spd: 92, obp: 0.333, slg: 0.302, est: 1 },
+                    { name: '愛斗', bats: 'R', throws: 'R', pos: 'RF', avg: '.254', hr: 13, rbi: 48, con: 58, pow: 58, spd: 68, obp: 0.316, slg: 0.395, est: 1 },
+                    { name: '松川虎生', bats: 'R', throws: 'R', pos: 'C', avg: '.247', hr: 4, rbi: 30, con: 54, pow: 46, spd: 42, obp: 0.307, slg: 0.334, est: 1 }
+                ]
+            },
+            'SEI': {
+                pitchers: [
+                    { name: '今井達也', throws: 'R', vel: 97, ctrl: 70, stm: 85, era: '4.26', k: 119, pitches: [{ id: 0, lv: 5 }, { id: 2, lv: 5 }, { id: 6, lv: 5 }, { id: 4, lv: 4 }], est: 1 },
+                    { name: '高橋光成', throws: 'R', vel: 94, ctrl: 74, stm: 80, era: '4.35', k: 106, pitches: [{ id: 0, lv: 4 }, { id: 2, lv: 5 }, { id: 6, lv: 5 }, { id: 4, lv: 4 }], est: 1 },
+                    { name: '平良海馬', throws: 'R', vel: 98, ctrl: 66, stm: 60, era: '4.39', k: 102, pitches: [{ id: 0, lv: 6 }, { id: 2, lv: 5 }, { id: 6, lv: 5 }], est: 1 },
+                    { name: '隅田知一郎', throws: 'L', vel: 92, ctrl: 74, stm: 76, era: '4.47', k: 97, pitches: [{ id: 0, lv: 3 }, { id: 2, lv: 5 }, { id: 4, lv: 5 }, { id: 5, lv: 4 }], est: 1 },
+                    { name: '青山美夏人', throws: 'R', vel: 94, ctrl: 68, stm: 45, era: '4.61', k: 57, pitches: [{ id: 0, lv: 4 }, { id: 2, lv: 6 }], est: 1 },
+                    { name: 'ヤン', throws: 'R', vel: 95, ctrl: 66, stm: 45, era: '4.60', k: 60, pitches: [{ id: 0, lv: 5 }, { id: 2, lv: 6 }], est: 1 },
+                    { name: '上田大河', throws: 'R', vel: 94, ctrl: 66, stm: 60, era: '4.59', k: 90, pitches: [{ id: 0, lv: 4 }, { id: 2, lv: 5 }, { id: 6, lv: 5 }, { id: 4, lv: 4 }], est: 1 },
+                    { name: '菅井信也', throws: 'R', vel: 93, ctrl: 66, stm: 60, era: '4.64', k: 87, pitches: [{ id: 0, lv: 4 }, { id: 2, lv: 5 }, { id: 4, lv: 5 }], est: 1 },
+                    { name: '武内夏暉', throws: 'L', vel: 93, ctrl: 70, stm: 74, era: '4.50', k: 98, pitches: [{ id: 0, lv: 4 }, { id: 2, lv: 5 }, { id: 4, lv: 5 }, { id: 5, lv: 4 }], est: 1 },
+                    { name: '松本航', throws: 'R', vel: 92, ctrl: 70, stm: 74, era: '4.55', k: 95, pitches: [{ id: 0, lv: 3 }, { id: 2, lv: 5 }, { id: 4, lv: 5 }], est: 1 },
+                    { name: 'アブレイユ', throws: 'R', vel: 96, ctrl: 62, stm: 45, era: '4.63', k: 63, pitches: [{ id: 0, lv: 5 }, { id: 2, lv: 6 }], est: 1 },
+                    { name: '甲斐野央', throws: 'R', vel: 96, ctrl: 62, stm: 45, era: '4.63', k: 63, pitches: [{ id: 0, lv: 5 }, { id: 2, lv: 6 }], est: 1 }
+                ],
+                batters: [
+                    { name: '源田壮亮', bats: 'L', throws: 'R', pos: 'SS', avg: '.269', hr: 0, rbi: 22, con: 66, pow: 38, spd: 78, obp: 0.333, slg: 0.320, est: 1 },
+                    { name: '外崎修汰', bats: 'R', throws: 'R', pos: '2B', avg: '.269', hr: 18, rbi: 58, con: 66, pow: 66, spd: 66, obp: 0.333, slg: 0.446, est: 1 },
+                    { name: '西川愛也', bats: 'L', throws: 'R', pos: 'CF', avg: '.272', hr: 14, rbi: 50, con: 68, pow: 60, spd: 66, obp: 0.338, slg: 0.422, est: 1 },
+                    { name: '渡部健人', bats: 'R', throws: 'R', pos: '1B', avg: '.254', hr: 29, rbi: 80, con: 58, pow: 82, spd: 40, obp: 0.316, slg: 0.503, est: 1 },
+                    { name: 'コルデロ', bats: 'R', throws: 'R', pos: 'LF', avg: '.258', hr: 25, rbi: 72, con: 60, pow: 76, spd: 52, obp: 0.320, slg: 0.480, est: 1 },
+                    { name: '長谷川信哉', bats: 'L', throws: 'R', pos: 'RF', avg: '.262', hr: 10, rbi: 42, con: 62, pow: 54, spd: 66, obp: 0.324, slg: 0.385, est: 1 },
+                    { name: '古賀悠斗', bats: 'R', throws: 'R', pos: 'C', avg: '.254', hr: 0, rbi: 22, con: 58, pow: 40, spd: 44, obp: 0.316, slg: 0.314, est: 1 },
+                    { name: '滝澤夏央', bats: 'L', throws: 'R', pos: 'SS', avg: '.258', hr: 0, rbi: 22, con: 60, pow: 34, spd: 74, obp: 0.320, slg: 0.291, est: 1 },
+                    { name: '佐藤龍世', bats: 'R', throws: 'R', pos: '3B', avg: '.269', hr: 10, rbi: 42, con: 66, pow: 54, spd: 50, obp: 0.333, slg: 0.392, est: 1 },
+                    { name: '平沼翔太', bats: 'L', throws: 'R', pos: 'OF', avg: '.254', hr: 11, rbi: 44, con: 58, pow: 56, spd: 64, obp: 0.316, slg: 0.386, est: 1 },
+                    { name: '山村崇嘉', bats: 'R', throws: 'R', pos: '3B', avg: '.254', hr: 15, rbi: 52, con: 58, pow: 62, spd: 56, obp: 0.316, slg: 0.413, est: 1 },
+                    { name: '炭谷銀仁朗', bats: 'R', throws: 'R', pos: 'C', avg: '.240', hr: 0, rbi: 22, con: 50, pow: 40, spd: 36, obp: 0.298, slg: 0.300, est: 1 },
+                    { name: '柘植世那', bats: 'R', throws: 'R', pos: 'C', avg: '.251', hr: 3, rbi: 28, con: 56, pow: 44, spd: 44, obp: 0.311, slg: 0.329, est: 1 }
+                ]
+            },
+            'RKT': {
+                pitchers: [
+                    { name: '早川隆久', throws: 'L', vel: 92, ctrl: 82, stm: 80, era: '4.29', k: 100, pitches: [{ id: 0, lv: 3 }, { id: 2, lv: 5 }, { id: 4, lv: 5 }, { id: 5, lv: 4 }], est: 1 },
+                    { name: '荘司康誠', throws: 'R', vel: 94, ctrl: 76, stm: 78, era: '4.32', k: 104, pitches: [{ id: 0, lv: 4 }, { id: 6, lv: 5 }, { id: 2, lv: 5 }, { id: 4, lv: 4 }], est: 1 },
+                    { name: '則本昂大', throws: 'R', vel: 94, ctrl: 76, stm: 80, era: '4.31', k: 106, pitches: [{ id: 0, lv: 4 }, { id: 2, lv: 5 }, { id: 6, lv: 5 }, { id: 4, lv: 4 }], est: 1 },
+                    { name: '岸孝之', throws: 'R', vel: 90, ctrl: 80, stm: 74, era: '4.45', k: 89, pitches: [{ id: 0, lv: 3 }, { id: 4, lv: 5 }, { id: 5, lv: 5 }, { id: 2, lv: 4 }], est: 1 },
+                    { name: '松井裕樹', throws: 'L', vel: 94, ctrl: 70, stm: 45, era: '4.57', k: 57, pitches: [{ id: 0, lv: 4 }, { id: 2, lv: 6 }], est: 1 },
+                    { name: '藤平尚真', throws: 'R', vel: 95, ctrl: 66, stm: 60, era: '4.54', k: 93, pitches: [{ id: 0, lv: 5 }, { id: 2, lv: 5 }, { id: 6, lv: 5 }], est: 1 },
+                    { name: '内星龍', throws: 'R', vel: 97, ctrl: 62, stm: 45, era: '4.58', k: 66, pitches: [{ id: 0, lv: 5 }, { id: 2, lv: 6 }], est: 1 },
+                    { name: '岩下大輝', throws: 'R', vel: 94, ctrl: 62, stm: 60, era: '4.67', k: 90, pitches: [{ id: 0, lv: 4 }, { id: 2, lv: 5 }, { id: 4, lv: 5 }], est: 1 },
+                    { name: '内間拓馬', throws: 'R', vel: 95, ctrl: 62, stm: 45, era: '4.68', k: 60, pitches: [{ id: 0, lv: 5 }, { id: 2, lv: 6 }, { id: 4, lv: 4 }], est: 1 },
+                    { name: '酒居知史', throws: 'R', vel: 93, ctrl: 66, stm: 45, era: '4.70', k: 54, pitches: [{ id: 0, lv: 4 }, { id: 2, lv: 6 }, { id: 4, lv: 4 }], est: 1 },
+                    { name: '宋家豪', throws: 'R', vel: 95, ctrl: 66, stm: 45, era: '4.60', k: 60, pitches: [{ id: 0, lv: 5 }, { id: 2, lv: 6 }, { id: 4, lv: 4 }], est: 1 },
+                    { name: '瀧中瞭太', throws: 'R', vel: 91, ctrl: 70, stm: 70, era: '4.62', k: 89, pitches: [{ id: 0, lv: 3 }, { id: 2, lv: 5 }, { id: 4, lv: 5 }], est: 1 }
+                ],
+                batters: [
+                    { name: '浅村栄斗', bats: 'R', throws: 'R', pos: '2B', avg: '.272', hr: 27, rbi: 76, con: 68, pow: 78, spd: 50, obp: 0.338, slg: 0.503, est: 1 },
+                    { name: '辰己涼介', bats: 'R', throws: 'R', pos: 'CF', avg: '.272', hr: 13, rbi: 48, con: 68, pow: 58, spd: 84, obp: 0.338, slg: 0.413, est: 1 },
+                    { name: '小郷裕哉', bats: 'R', throws: 'R', pos: 'RF', avg: '.269', hr: 11, rbi: 44, con: 66, pow: 56, spd: 66, obp: 0.333, slg: 0.401, est: 1 },
+                    { name: '岡島豪郎', bats: 'L', throws: 'R', pos: 'LF', avg: '.262', hr: 4, rbi: 30, con: 62, pow: 46, spd: 60, obp: 0.324, slg: 0.349, est: 1 },
+                    { name: '太田光', bats: 'R', throws: 'R', pos: 'C', avg: '.262', hr: 3, rbi: 28, con: 62, pow: 44, spd: 42, obp: 0.324, slg: 0.340, est: 1 },
+                    { name: '村林一輝', bats: 'R', throws: 'R', pos: '3B', avg: '.269', hr: 3, rbi: 28, con: 66, pow: 44, spd: 60, obp: 0.333, slg: 0.347, est: 1 },
+                    { name: '茂木栄五郎', bats: 'L', throws: 'R', pos: 'SS', avg: '.269', hr: 15, rbi: 52, con: 66, pow: 62, spd: 52, obp: 0.333, slg: 0.428, est: 1 },
+                    { name: 'フランコ', bats: 'R', throws: 'R', pos: '1B', avg: '.262', hr: 24, rbi: 70, con: 62, pow: 74, spd: 44, obp: 0.324, slg: 0.475, est: 1 },
+                    { name: '黒川史陽', bats: 'L', throws: 'R', pos: '2B', avg: '.265', hr: 4, rbi: 30, con: 64, pow: 46, spd: 62, obp: 0.329, slg: 0.352, est: 1 },
+                    { name: '鈴木大地', bats: 'R', throws: 'R', pos: '1B', avg: '.272', hr: 4, rbi: 30, con: 68, pow: 46, spd: 44, obp: 0.338, slg: 0.359, est: 1 },
+                    { name: '伊藤裕季也', bats: 'R', throws: 'R', pos: 'DH', avg: '.258', hr: 20, rbi: 62, con: 60, pow: 68, spd: 48, obp: 0.320, slg: 0.444, est: 1 },
+                    { name: '小深田大翔', bats: 'L', throws: 'R', pos: 'SS', avg: '.269', hr: 0, rbi: 22, con: 66, pow: 40, spd: 74, obp: 0.333, slg: 0.329, est: 1 },
+                    { name: '渡邊佳明', bats: 'R', throws: 'R', pos: 'IF', avg: '.258', hr: 7, rbi: 36, con: 60, pow: 50, spd: 62, obp: 0.320, slg: 0.363, est: 1 }
+                ]
+            },
+        });
         const TEAMS = [
-            { abbr: '道奇', name: 'Dodgers', c1: '#005A9C', c2: '#EF3E42', c3: '#FFF', jersey: '#FFFFFF', hatLogo: 'LA', roster: ROSTERS['LAD'] },
-            { abbr: '洋基', name: 'Yankees', c1: '#003087', c2: '#C4CED4', c3: '#FFF', jersey: '#FFFFFF', hatLogo: 'NY', roster: ROSTERS['NYY'] },
-            { abbr: '兄弟', name: 'Brothers', c1: '#FFD700', c2: '#000080', c3: '#FFF', jersey: '#FFD700', hatLogo: 'B', roster: ROSTERS['BRO'] },
-            { abbr: '統一', name: 'Lions', c1: '#FF6600', c2: '#006600', c3: '#FFF', jersey: '#FFFFFF', hatLogo: 'U', roster: ROSTERS['UNI'] },
-            { abbr: '樂天', name: 'Monkeys', c1: '#990000', c2: '#FFFFFF', c3: '#000', jersey: '#AA0000', hatLogo: 'R', roster: ROSTERS['RAK'] },
-            { abbr: '富邦', name: 'Guardians', c1: '#003366', c2: '#FFFFFF', c3: '#000', jersey: '#002255', hatLogo: 'G', roster: ROSTERS['FUB'] },
-            { abbr: '味全', name: 'Dragons', c1: '#DD0000', c2: '#FFFFFF', c3: '#000', jersey: '#CC0000', hatLogo: 'W', roster: ROSTERS['WEI'] },
-            { abbr: '台鋼', name: 'Hawks', c1: '#006633', c2: '#FFCC00', c3: '#FFF', jersey: '#004d26', hatLogo: 'T', roster: ROSTERS['TSG'] },
+            { abbr: '道奇', name: 'Dodgers', lg: 'MLB', c1: '#005A9C', c2: '#EF3E42', c3: '#FFF', jersey: '#FFFFFF', hatLogo: 'LA', roster: ROSTERS['LAD'] },
+            { abbr: '洋基', name: 'Yankees', lg: 'MLB', c1: '#003087', c2: '#C4CED4', c3: '#FFF', jersey: '#FFFFFF', hatLogo: 'NY', roster: ROSTERS['NYY'] },
+            { abbr: '兄弟', name: 'Brothers', lg: 'CPBL', c1: '#FFD700', c2: '#000080', c3: '#FFF', jersey: '#FFD700', hatLogo: 'B', roster: ROSTERS['BRO'] },
+            { abbr: '統一', name: 'Lions', lg: 'CPBL', c1: '#FF6600', c2: '#006600', c3: '#FFF', jersey: '#FFFFFF', hatLogo: 'U', roster: ROSTERS['UNI'] },
+            { abbr: '樂天', name: 'Monkeys', lg: 'CPBL', c1: '#990000', c2: '#FFFFFF', c3: '#000', jersey: '#AA0000', hatLogo: 'R', roster: ROSTERS['RAK'] },
+            { abbr: '富邦', name: 'Guardians', lg: 'CPBL', c1: '#003366', c2: '#FFFFFF', c3: '#000', jersey: '#002255', hatLogo: 'G', roster: ROSTERS['FUB'] },
+            { abbr: '味全', name: 'Dragons', lg: 'CPBL', c1: '#DD0000', c2: '#FFFFFF', c3: '#000', jersey: '#CC0000', hatLogo: 'W', roster: ROSTERS['WEI'] },
+            { abbr: '台鋼', name: 'Hawks', lg: 'CPBL', c1: '#006633', c2: '#FFCC00', c3: '#FFF', jersey: '#004d26', hatLogo: 'T', roster: ROSTERS['TSG'] },
             // ── WBC Teams ──
-            { abbr: '中華', name: 'Chinese Taipei', c1: '#CE1126', c2: '#003087', c3: '#FFF', jersey: '#FFFFFF', hatLogo: 'T', roster: ROSTERS['CTW'] },
-            { abbr: '日本', name: 'Japan', c1: '#BC002D', c2: '#FFFFFF', c3: '#FFF', jersey: '#FFFFFF', hatLogo: 'J', roster: ROSTERS['JPN'] },
-            { abbr: '韓國', name: 'South Korea', c1: '#003478', c2: '#CE1126', c3: '#FFF', jersey: '#002255', hatLogo: 'K', roster: ROSTERS['KOR'] },
-            { abbr: '澳洲', name: 'Australia', c1: '#006400', c2: '#FFD700', c3: '#FFF', jersey: '#004d00', hatLogo: 'A', roster: ROSTERS['AUS'] },
-            { abbr: '美國', name: 'USA', c1: '#002868', c2: '#BF0A30', c3: '#FFF', jersey: '#FFFFFF', hatLogo: 'US', roster: ROSTERS['USA'] },
-            { abbr: '多明尼加', name: 'Dominican Rep.', c1: '#002D62', c2: '#CF142B', c3: '#FFF', jersey: '#001a55', hatLogo: 'DR', roster: ROSTERS['DOM'] },
-            { abbr: '波多黎各', name: 'Puerto Rico', c1: '#EF3340', c2: '#003082', c3: '#FFF', jersey: '#FFFFFF', hatLogo: 'PR', roster: ROSTERS['PUR'] },
-            { abbr: '墨西哥', name: 'Mexico', c1: '#006847', c2: '#CE1126', c3: '#FFF', jersey: '#004d26', hatLogo: 'M', roster: ROSTERS['MEX'] },
-            { abbr: '義大利', name: 'Italy', c1: '#009246', c2: '#CE2B37', c3: '#FFF', jersey: '#FFFFFF', hatLogo: 'I', roster: ROSTERS['ITA'] }
+            { abbr: '中華', name: 'Chinese Taipei', lg: 'WBC', c1: '#CE1126', c2: '#003087', c3: '#FFF', jersey: '#FFFFFF', hatLogo: 'T', roster: ROSTERS['CTW'] },
+            { abbr: '日本', name: 'Japan', lg: 'WBC', c1: '#BC002D', c2: '#FFFFFF', c3: '#FFF', jersey: '#FFFFFF', hatLogo: 'J', roster: ROSTERS['JPN'] },
+            { abbr: '韓國', name: 'South Korea', lg: 'WBC', c1: '#003478', c2: '#CE1126', c3: '#FFF', jersey: '#002255', hatLogo: 'K', roster: ROSTERS['KOR'] },
+            { abbr: '澳洲', name: 'Australia', lg: 'WBC', c1: '#006400', c2: '#FFD700', c3: '#FFF', jersey: '#004d00', hatLogo: 'A', roster: ROSTERS['AUS'] },
+            { abbr: '美國', name: 'USA', lg: 'WBC', c1: '#002868', c2: '#BF0A30', c3: '#FFF', jersey: '#FFFFFF', hatLogo: 'US', roster: ROSTERS['USA'] },
+            { abbr: '多明尼加', name: 'Dominican Rep.', lg: 'WBC', c1: '#002D62', c2: '#CF142B', c3: '#FFF', jersey: '#001a55', hatLogo: 'DR', roster: ROSTERS['DOM'] },
+            { abbr: '波多黎各', name: 'Puerto Rico', lg: 'WBC', c1: '#EF3340', c2: '#003082', c3: '#FFF', jersey: '#FFFFFF', hatLogo: 'PR', roster: ROSTERS['PUR'] },
+            { abbr: '墨西哥', name: 'Mexico', lg: 'WBC', c1: '#006847', c2: '#CE1126', c3: '#FFF', jersey: '#004d26', hatLogo: 'M', roster: ROSTERS['MEX'] },
+            { abbr: '義大利', name: 'Italy', lg: 'WBC', c1: '#009246', c2: '#CE2B37', c3: '#FFF', jersey: '#FFFFFF', hatLogo: 'I', roster: ROSTERS['ITA'] },
+            // ── MLB / NPB 全部球隊 ──
+            { abbr: '紅襪', name: 'Red Sox', lg: 'MLB', c1: '#BD3039', c2: '#0C2340', c3: '#FFF', jersey: '#FFFFFF', hatLogo: 'B', roster: ROSTERS['BOS'] },
+            { abbr: '藍鳥', name: 'Blue Jays', lg: 'MLB', c1: '#134A8E', c2: '#E8291C', c3: '#FFF', jersey: '#FFFFFF', hatLogo: 'TO', roster: ROSTERS['TOR'] },
+            { abbr: '金鶯', name: 'Orioles', lg: 'MLB', c1: '#DF4601', c2: '#000000', c3: '#FFF', jersey: '#FFFFFF', hatLogo: 'B', roster: ROSTERS['BAL'] },
+            { abbr: '光芒', name: 'Rays', lg: 'MLB', c1: '#092C5C', c2: '#8FBCE6', c3: '#FFF', jersey: '#FFFFFF', hatLogo: 'TB', roster: ROSTERS['TB'] },
+            { abbr: '守護者', name: 'Guardians', lg: 'MLB', c1: '#00385D', c2: '#E50022', c3: '#FFF', jersey: '#FFFFFF', hatLogo: 'C', roster: ROSTERS['CLE'] },
+            { abbr: '老虎', name: 'Tigers', lg: 'MLB', c1: '#0C2340', c2: '#FA4616', c3: '#FFF', jersey: '#FFFFFF', hatLogo: 'D', roster: ROSTERS['DET'] },
+            { abbr: '皇家', name: 'Royals', lg: 'MLB', c1: '#004687', c2: '#BD9B60', c3: '#FFF', jersey: '#FFFFFF', hatLogo: 'KC', roster: ROSTERS['KC'] },
+            { abbr: '雙城', name: 'Twins', lg: 'MLB', c1: '#002B5C', c2: '#D31145', c3: '#FFF', jersey: '#FFFFFF', hatLogo: 'M', roster: ROSTERS['MIN'] },
+            { abbr: '白襪', name: 'White Sox', lg: 'MLB', c1: '#27251F', c2: '#C4CED4', c3: '#FFF', jersey: '#FFFFFF', hatLogo: 'CW', roster: ROSTERS['CWS'] },
+            { abbr: '太空人', name: 'Astros', lg: 'MLB', c1: '#002D62', c2: '#EB6E1F', c3: '#FFF', jersey: '#FFFFFF', hatLogo: 'H', roster: ROSTERS['HOU'] },
+            { abbr: '運動家', name: 'Athletics', lg: 'MLB', c1: '#003831', c2: '#EFB21E', c3: '#FFF', jersey: '#FFFFFF', hatLogo: 'A', roster: ROSTERS['ATH'] },
+            { abbr: '水手', name: 'Mariners', lg: 'MLB', c1: '#0C2C56', c2: '#005C5C', c3: '#FFF', jersey: '#FFFFFF', hatLogo: 'S', roster: ROSTERS['SEA'] },
+            { abbr: '遊騎兵', name: 'Rangers', lg: 'MLB', c1: '#003278', c2: '#C0111F', c3: '#FFF', jersey: '#FFFFFF', hatLogo: 'T', roster: ROSTERS['TEX'] },
+            { abbr: '天使', name: 'Angels', lg: 'MLB', c1: '#BA0021', c2: '#003263', c3: '#FFF', jersey: '#FFFFFF', hatLogo: 'LA', roster: ROSTERS['LAA'] },
+            { abbr: '大都會', name: 'Mets', lg: 'MLB', c1: '#002D72', c2: '#FF5910', c3: '#FFF', jersey: '#FFFFFF', hatLogo: 'NY', roster: ROSTERS['NYM'] },
+            { abbr: '費城人', name: 'Phillies', lg: 'MLB', c1: '#E81828', c2: '#002D72', c3: '#FFF', jersey: '#FFFFFF', hatLogo: 'P', roster: ROSTERS['PHI'] },
+            { abbr: '勇士', name: 'Braves', lg: 'MLB', c1: '#13274F', c2: '#CE1141', c3: '#FFF', jersey: '#FFFFFF', hatLogo: 'A', roster: ROSTERS['ATL'] },
+            { abbr: '馬林魚', name: 'Marlins', lg: 'MLB', c1: '#00A3E0', c2: '#EF3340', c3: '#FFF', jersey: '#FFFFFF', hatLogo: 'M', roster: ROSTERS['MIA'] },
+            { abbr: '國民', name: 'Nationals', lg: 'MLB', c1: '#AB0003', c2: '#14225A', c3: '#FFF', jersey: '#FFFFFF', hatLogo: 'W', roster: ROSTERS['WSH'] },
+            { abbr: '小熊', name: 'Cubs', lg: 'MLB', c1: '#0E3386', c2: '#CC3433', c3: '#FFF', jersey: '#FFFFFF', hatLogo: 'C', roster: ROSTERS['CHC'] },
+            { abbr: '釀酒人', name: 'Brewers', lg: 'MLB', c1: '#12284B', c2: '#FFC52F', c3: '#FFF', jersey: '#FFFFFF', hatLogo: 'M', roster: ROSTERS['MIL'] },
+            { abbr: '紅雀', name: 'Cardinals', lg: 'MLB', c1: '#C41E3A', c2: '#0C2340', c3: '#FFF', jersey: '#FFFFFF', hatLogo: 'StL', roster: ROSTERS['STL'] },
+            { abbr: '紅人', name: 'Reds', lg: 'MLB', c1: '#C6011F', c2: '#000000', c3: '#FFF', jersey: '#FFFFFF', hatLogo: 'C', roster: ROSTERS['CIN'] },
+            { abbr: '海盜', name: 'Pirates', lg: 'MLB', c1: '#27251F', c2: '#FDB827', c3: '#FFF', jersey: '#FFFFFF', hatLogo: 'P', roster: ROSTERS['PIT'] },
+            { abbr: '教士', name: 'Padres', lg: 'MLB', c1: '#2F241D', c2: '#FFC425', c3: '#FFF', jersey: '#FFFFFF', hatLogo: 'SD', roster: ROSTERS['SD'] },
+            { abbr: '巨人', name: 'Giants', lg: 'MLB', c1: '#FD5A1E', c2: '#27251F', c3: '#FFF', jersey: '#FFFFFF', hatLogo: 'SF', roster: ROSTERS['SF'] },
+            { abbr: '響尾蛇', name: 'Diamondbacks', lg: 'MLB', c1: '#A71930', c2: '#E3D4AD', c3: '#FFF', jersey: '#FFFFFF', hatLogo: 'AZ', roster: ROSTERS['ARI'] },
+            { abbr: '洛磯', name: 'Rockies', lg: 'MLB', c1: '#33006F', c2: '#C4CED4', c3: '#FFF', jersey: '#FFFFFF', hatLogo: 'CO', roster: ROSTERS['COL'] },
+            { abbr: '讀賣', name: 'Giants', lg: 'NPB', c1: '#F97709', c2: '#000000', c3: '#FFF', jersey: '#FFFFFF', hatLogo: 'G', roster: ROSTERS['YOG'] },
+            { abbr: '阪神', name: 'Tigers', lg: 'NPB', c1: '#FFE100', c2: '#000000', c3: '#FFF', jersey: '#FFE100', hatLogo: 'H', roster: ROSTERS['HAN'] },
+            { abbr: '中日', name: 'Dragons', lg: 'NPB', c1: '#002569', c2: '#FFFFFF', c3: '#FFF', jersey: '#002569', hatLogo: 'D', roster: ROSTERS['CHU'] },
+            { abbr: '廣島', name: 'Carp', lg: 'NPB', c1: '#E60012', c2: '#FFFFFF', c3: '#FFF', jersey: '#E60012', hatLogo: 'C', roster: ROSTERS['HIR'] },
+            { abbr: '養樂多', name: 'Swallows', lg: 'NPB', c1: '#1E1B57', c2: '#6AC6E5', c3: '#FFF', jersey: '#FFFFFF', hatLogo: 'S', roster: ROSTERS['YAK'] },
+            { abbr: '橫濱', name: 'BayStars', lg: 'NPB', c1: '#0055A5', c2: '#FFFFFF', c3: '#FFF', jersey: '#0055A5', hatLogo: 'Y', roster: ROSTERS['YDB'] },
+            { abbr: '軟銀', name: 'Hawks', lg: 'NPB', c1: '#F9D600', c2: '#000000', c3: '#FFF', jersey: '#F9D600', hatLogo: 'H', roster: ROSTERS['SOF'] },
+            { abbr: '日本火腿', name: 'Fighters', lg: 'NPB', c1: '#00538F', c2: '#B5985A', c3: '#FFF', jersey: '#FFFFFF', hatLogo: 'F', roster: ROSTERS['NIP'] },
+            { abbr: '歐力士', name: 'Buffaloes', lg: 'NPB', c1: '#BC9E5B', c2: '#000000', c3: '#FFF', jersey: '#0A1E50', hatLogo: 'B', roster: ROSTERS['ORI'] },
+            { abbr: '羅德', name: 'Marines', lg: 'NPB', c1: '#000000', c2: '#C0C0C0', c3: '#FFF', jersey: '#FFFFFF', hatLogo: 'M', roster: ROSTERS['LOT'] },
+            { abbr: '西武', name: 'Lions', lg: 'NPB', c1: '#1B2A5C', c2: '#B5985A', c3: '#FFF', jersey: '#FFFFFF', hatLogo: 'L', roster: ROSTERS['SEI'] },
+            { abbr: '金鷲', name: 'Eagles', lg: 'NPB', c1: '#860010', c2: '#B5985A', c3: '#FFF', jersey: '#FFFFFF', hatLogo: 'E', roster: ROSTERS['RKT'] }
         ];
 
         // 廖宣皓/廖宣瑜 available in all teams as both batter and pitcher substitutes
         TEAMS.forEach(team => {
             team.roster.batters = team.roster.batters.filter(b => b.name !== '廖宣皓' && b.name !== '廖宣瑜');
-            team.roster.batters.push({ name: '廖宣皓', bats: 'L', avg: '.285', hr: 10, rbi: 55, con: 80, pow: 75, spd: 82 });
-            team.roster.batters.push({ name: '廖宣瑜', bats: 'R', avg: '.310', hr: 15, rbi: 60, con: 85, pow: 80, spd: 78 });
+            team.roster.batters.push({ name: '廖宣皓', bats: 'R', throws: 'R', pos: 'SS', avg: '.312', hr: 24, rbi: 78, con: 82, pow: 78, spd: 80, arm: 80, def: 78, obp: 0.407, slg: 0.560 });
+            team.roster.batters.push({ name: '廖宣瑜', bats: 'R', throws: 'R', pos: 'CF', avg: '.325', hr: 30, rbi: 88, con: 86, pow: 84, spd: 76, arm: 82, def: 80, obp: 0.420, slg: 0.585 });
             team.roster.pitchers = team.roster.pitchers.filter(p => p.name !== '廖宣皓' && p.name !== '廖宣瑜');
-            team.roster.pitchers.push({ name: '廖宣皓', vel: 84, ctrl: 78, stm: 72, era: '4.20', k: 7, pitches: [{ id: 0, lv: 4 }, { id: 1, lv: 4 }, { id: 2, lv: 3 }] });
-            team.roster.pitchers.push({ name: '廖宣瑜', vel: 82, ctrl: 80, stm: 75, era: '4.00', k: 6, pitches: [{ id: 0, lv: 4 }, { id: 2, lv: 4 }, { id: 5, lv: 3 }] });
+            team.roster.pitchers.push({ name: '廖宣皓', throws: 'R', vel: 94, ctrl: 82, stm: 80, era: '2.80', k: 150, pitches: [{ id: 0, lv: 5 }, { id: 1, lv: 5 }, { id: 2, lv: 5 }, { id: 5, lv: 4 }] });
+            team.roster.pitchers.push({ name: '廖宣瑜', throws: 'R', vel: 92, ctrl: 85, stm: 78, era: '2.70', k: 140, pitches: [{ id: 0, lv: 5 }, { id: 2, lv: 5 }, { id: 5, lv: 5 }, { id: 4, lv: 4 }] });
         });
 
         const SCR = { TITLE: 0, SELECT: 1, LINEUP: 4, GAME: 2, OVER: 3, HALF_END: 5, HISTORY: 6 };
@@ -2306,9 +3590,10 @@
             if (G.scr === SCR.SELECT) {
                 if (isMouseJustPressed) {
                     if (G.selStep <= 1) {
+                        selTabLayout().forEach((r, ti) => { if (mouseX >= r.x && mouseX <= r.x + r.w && mouseY >= r.y && mouseY <= r.y + r.h) G.selTab = ti; });
                         const layout = teamBtnLayout();
                         layout.forEach(({ x, y, w, h }, i) => {
-                            if (mouseX >= x && mouseX <= x + w && mouseY >= y && mouseY <= y + h) {
+                            if (w && mouseX >= x && mouseX <= x + w && mouseY >= y && mouseY <= y + h) {
                                 G.cursor = i;
                                 if (G.selStep === 0) { G.awayIdx = G.cursor; G.selStep = 1; G.cursor = (G.cursor + 1) % TEAMS.length; }
                                 else if (G.cursor !== G.awayIdx) { G.homeIdx = G.cursor; G.selStep = 2; }
@@ -2932,17 +4217,21 @@
             txt(titleText, W / 2, 56, 24, titleCol);
 
             const layout = teamBtnLayout();
-            function sectionLabel(label, y, col) {
-                ctx.font = 'bold 11px Arial'; ctx.textAlign = 'left'; ctx.fillStyle = col; ctx.fillText(label, W / 2 - 247, y);
-                ctx.strokeStyle = col + '55'; ctx.lineWidth = 0.5;
-                ctx.beginPath(); ctx.moveTo(W / 2 - 247 + ctx.measureText(label).width + 6, y - 4); ctx.lineTo(W / 2 + 247, y - 4); ctx.stroke();
+            const curTab = LEAGUE_TABS[G.selTab || 0];
+            selTabLayout().forEach((r, i) => {
+                const tb = LEAGUE_TABS[i], on = i === (G.selTab || 0), hv = mouseX >= r.x && mouseX <= r.x + r.w && mouseY >= r.y && mouseY <= r.y + r.h;
+                ctx.fillStyle = on ? tb.col + '55' : hv ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.5)'; drawRoundRect(ctx, r.x, r.y, r.w, r.h, 8); ctx.fill();
+                ctx.strokeStyle = on ? tb.col : 'rgba(120,150,190,0.4)'; ctx.lineWidth = on ? 2 : 1; drawRoundRect(ctx, r.x, r.y, r.w, r.h, 8); ctx.stroke();
+                txt(tb.label, r.x + r.w / 2, r.y + 20, 13, on ? '#fff' : '#9fb4d0');
+            });
+            if (curTab.groups.length > 1) {
+                const lay = teamBtnLayout();
+                curTab.groups.forEach(([label, abs]) => { const r = lay[TEAMS.findIndex(t => t.abbr === abs[0])]; txt(label, r.x + r.w / 2, r.y - 8, 12, curTab.col); });
             }
-            sectionLabel('⚾ MLB', 93, '#88AAFF');
-            sectionLabel('🇹🇼 CPBL 中華職棒', 162, '#FF9944');
-            sectionLabel('🌏 WBC 2026 經典賽最新陣容', 312, '#44FFCC');
 
             TEAMS.forEach((t, i) => {
                 const { x, y, w: btnW, h: btnH } = layout[i];
+                if (!btnW) return;
                 const hover = mouseX >= x && mouseX <= x + btnW && mouseY >= y && mouseY <= y + btnH;
                 const isSelected = G.selStep === 1 && i === G.awayIdx;
 
@@ -2968,17 +4257,31 @@
             txt(G.selStep === 0 ? '選擇客隊' : '選擇您要操控的主隊', W / 2, H - 14, 13, 'rgba(160,190,255,0.55)', 'center', '', false);
         }
 
+        // team-select screen: one tab per league; each tab lays its teams out in columns (divisions) or a grid
+        const LEAGUE_TABS = [
+            { id: 'MLB', label: '⚾ MLB 美國職棒', col: '#88AAFF', groups: [
+                ['美聯東區', ['洋基', '紅襪', '藍鳥', '金鶯', '光芒']], ['美聯中區', ['守護者', '老虎', '皇家', '雙城', '白襪']], ['美聯西區', ['太空人', '運動家', '水手', '遊騎兵', '天使']],
+                ['國聯東區', ['大都會', '費城人', '勇士', '馬林魚', '國民']], ['國聯中區', ['小熊', '釀酒人', '紅雀', '紅人', '海盜']], ['國聯西區', ['道奇', '教士', '巨人', '響尾蛇', '洛磯']]] },
+            { id: 'NPB', label: '🇯🇵 NPB 日本職棒', col: '#FF6688', groups: [
+                ['中央聯盟', ['讀賣', '阪神', '中日', '廣島', '養樂多', '橫濱']], ['太平洋聯盟', ['軟銀', '日本火腿', '歐力士', '羅德', '西武', '金鷲']]] },
+            { id: 'CPBL', label: '🇹🇼 CPBL 中華職棒', col: '#FF9944', groups: [['', ['兄弟', '統一', '樂天', '富邦', '味全', '台鋼']]] },
+            { id: 'WBC', label: '🌏 WBC 經典賽', col: '#44FFCC', groups: [['', ['中華', '日本', '韓國', '澳洲', '美國', '多明尼加', '波多黎各', '墨西哥', '義大利']]] }
+        ];
+        function selTabLayout() {
+            const w = 190, h = 30, g = 6, x0 = W / 2 - (4 * w + 3 * g) / 2;
+            return LEAGUE_TABS.map((t, i) => ({ x: x0 + i * (w + g), y: 88, w, h }));
+        }
         function teamBtnLayout() {
-            const btnW = 154, btnH = 52, sx = 14, sy = 8;
-            const col3W = 3 * btnW + 2 * sx; const x3 = W / 2 - col3W / 2; const x2 = W / 2 - (2 * btnW + sx) / 2;
-            const mlbY = 98, cpblY = 170, wbcY = 320;
-            return TEAMS.map((t, i) => {
-                let x, y;
-                if (i < 2) { x = x2 + i * (btnW + sx); y = mlbY; }
-                else if (i < 8) { const ci = i - 2; x = x3 + (ci % 3) * (btnW + sx); y = cpblY + Math.floor(ci / 3) * (btnH + sy); }
-                else { const ci = i - 8; x = x3 + (ci % 3) * (btnW + sx); y = wbcY + Math.floor(ci / 3) * (btnH + sy); }
-                return { x, y, w: btnW, h: btnH };
-            });
+            const tab = LEAGUE_TABS[G.selTab || 0], out = TEAMS.map(() => ({ x: -999, y: -999, w: 0, h: 0 }));
+            const idxOf = ab => TEAMS.findIndex(t => t.abbr === ab);
+            if (tab.groups.length === 1) {                       // single list -> 3-column grid
+                const btnW = 154, btnH = 52, sx = 14, sy = 8, x3 = W / 2 - (3 * btnW + 2 * sx) / 2, y0 = 160;
+                tab.groups[0][1].forEach((ab, n) => { out[idxOf(ab)] = { x: x3 + (n % 3) * (btnW + sx), y: y0 + Math.floor(n / 3) * (btnH + sy), w: btnW, h: btnH }; });
+            } else {
+                const gap = 6, n = tab.groups.length, btnW = n > 3 ? 122 : 188, btnH = n > 3 ? 56 : 52, x0 = W / 2 - (n * btnW + (n - 1) * gap) / 2, y0 = 180;
+                tab.groups.forEach(([, abs], gi) => abs.forEach((ab, r) => { out[idxOf(ab)] = { x: x0 + gi * (btnW + gap), y: y0 + r * (btnH + 6), w: btnW, h: btnH }; }));
+            }
+            return out;
         }
 
         // each fielder's 守備 rating by position (an out-of-position fielder is worse), which sets how much ground he covers

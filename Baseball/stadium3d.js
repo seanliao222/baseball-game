@@ -999,6 +999,7 @@ const Stadium3D = (function () {
         }
         S.mitt.x = damp(S.mitt.x, tgt.x, 14, dt); S.mitt.y = damp(S.mitt.y, tgt.y, 14, dt);
         applyPose(p, P_CROUCH);
+        p.root.rotation.y = Math.PI;                    // a steal throw turns him toward the base; square him back up to face the pitcher
         p.torso.rotation.x = 0.55;
         p.root.updateMatrixWorld(true);
         v1.set(S.mitt.x, S.mitt.y, 0.22);
@@ -1645,7 +1646,7 @@ const Stadium3D = (function () {
             if (!o.root.visible || o.stealing) return;
             if (!o.path || !o.path.length) { // standing at base
                 applyPose(o, P_LEAD); o.phase += 0.05 * df; o.root.position.y = 0;
-                faceToward(o, o.root.position.x * 0.5 + 0, o.root.position.z - 8); o.hips.position.y += Math.sin(o.phase) * 0.01;
+                faceToward(o, 0, MOUND_Z);   // a runner leading off watches the pitcher o.hips.position.y += Math.sin(o.phase) * 0.01;
                 return;
             }
             const sp = (o.spd || (o.fast ? 0.62 : 0.34)) * df;
