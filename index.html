@@ -305,7 +305,7 @@
         </div>
     </div>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-    <script src="stadium3d.js?v=20261030v"></script>
+    <script src="stadium3d.js?v=20261030x"></script>
     <script src="https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.js"></script>
     <script>
@@ -2454,6 +2454,13 @@
                 Guardians: '1ygsE7hnK_E',       // 富邦悍將〈藍色力量〉2026 年度主題曲
                 Dragons: 'Y1miGzVWVvs',         // 味全龍〈Run & Roar〉2026 年度主題曲
                 Hawks: 'gYTXsthwNPs',           // 台鋼雄鷹〈做伙拚〉2026 年度形象影片
+                // 嗆司曲：壘上有人時改播（音樂按鈕旁可切換 自動／主曲／嗆司）
+                Brothers_chant: 'TKMHK9q1mKo',  // 中信兄弟嗆司曲〈王者信念〉（歐剋Baseball 影片）
+                Lions_chant: '933OBVHVlw8',     // 統一獅嗆司曲〈放手一搏〉（歐剋Baseball 影片）
+                Monkeys_chant: '2ZAEdun9SM0',   // 樂天桃猿〈勇敢前行〉（官方頻道）
+                Guardians_chant: 'R4k8iliIRJ8', // 富邦悍將嗆司曲〈Go 富邦悍將〉（官方頻道）
+                Dragons_chant: 'KAG68py6hI4',   // 味全龍〈龍光乍現（開蕊）〉（官方頻道）
+                Hawks_chant: 'PU7gTTMlc78',     // 台鋼雄鷹嗆司曲〈強棒出擊〉（官方頻道）
                 Dodgers: 'KcADqxnQA_4',         // Randy Newman — I Love L.A.
                 Yankees: 'le1QF3uoQNg',         // Frank Sinatra — Theme From New York, New York
                 Chinese_Taipei: 'kPXAiorEHTY',  // 緯來體育台 經典賽〈今天的我〉MV
@@ -2468,6 +2475,8 @@
                 window.onYouTubeIframeAPIReady = () => ytQueue.splice(0).forEach(f => f());
                 const sc = document.createElement('script'); sc.src = 'https://www.youtube.com/iframe_api'; sc.onerror = () => ytQueue.splice(0).forEach(f => f(true)); document.head.appendChild(sc);
             }
+            let mode = 'auto'; try { mode = localStorage.getItem('bb_music_mode') || 'auto'; } catch (e) { }   // auto = 壘上有人播嗆司曲 / main = 只播主曲 / chant = 只播嗆司曲
+            const MODE_LABEL = { auto: '自動', main: '主曲', chant: '嗆司' };
             let cur = null, vol = 0, want = null, actx = null, master = null, timer = null, step = 0, nextT = 0;
             let blocked = false, gestureAt = 0, monN = 0;      // blocked = the browser is not letting the music make sound yet (needs a tap)
             const fileState = {};                          // fileKey -> 'yes' | 'no'
@@ -2480,14 +2489,14 @@
                 return !!actx;
             }
             // ---- synthesized chant: 16-step loop, per-team root / tempo / rhythm ----
-            function synthStart(team) {
+            function synthStart(team, key) {
                 if (!ensureCtx()) return null;
                 const h = hash(team.name), root = [196, 220, 233, 247, 262, 294][h % 6], bpm = 128 + (h % 5) * 6;
                 const scale = [0, 2, 4, 7, 9, 12, 14], pat = [];
                 for (let i = 0; i < 16; i++) pat.push(((h >> (i % 11)) + i * 7) % 9 < 5 ? scale[(h + i * 3) % scale.length] : null);
                 [0, 4, 8, 12].forEach(i => { if (pat[i] === null) pat[i] = 0; });   // anchor the downbeats
                 const spb = 60 / bpm / 2;                                          // 8th-note length
-                const o = { type: 'synth', key: fileKey(team), stop() { clearInterval(timer); timer = null; } };
+                const o = { type: 'synth', key: key || fileKey(team), stop() { clearInterval(timer); timer = null; } };
                 step = 0; nextT = actx.currentTime + 0.1;
                 const note = (f, t, d, type, g) => {
                     const os = actx.createOscillator(), gn = actx.createGain();
@@ -2526,14 +2535,14 @@
             // Songs start at their "highlight" (~28% in, usually the first chorus) and resume where they left off,
             // so every offense half doesn't restart from the intro.
             const ytResume = {};
-            function ytStart(team, id) {
-                const key = fileKey(team), holder = document.createElement('div'), inner = document.createElement('div');
+            function ytStart(team, id, key) {
+                const holder = document.createElement('div'), inner = document.createElement('div');
                 holder.style.cssText = 'position:fixed;left:0;top:0;width:220px;height:220px;pointer-events:none;opacity:0.01;z-index:-1'; holder.appendChild(inner); document.body.appendChild(holder);
                 const o = {
                     type: 'yt', key, team, startedAt: performance.now(), ready: false, lastV: -1, player: null, hl: 0,
                     stop() { try { if (o.ready && o.player.getCurrentTime) ytResume[key] = o.player.getCurrentTime(); o.player && o.player.destroy(); } catch (e) { } holder.remove(); }
                 };
-                const fail = () => { if (cur === o) { o.stop(); cur = synthStart(team); } };
+                const fail = () => { if (cur === o) { o.stop(); cur = synthStart(team, key); } };
                 loadYT(err => {
                     if (err || !window.YT) return fail();
                     try {
@@ -2557,14 +2566,13 @@
                 });
                 return o;
             }
-            function fileStart(team) {
-                const key = fileKey(team);
-                if (fileState[key] !== 'yes' && YT_TRACKS[key]) return ytStart(team, YT_TRACKS[key]);
-                if (fileState[key] === 'no') return synthStart(team);
+            function fileStart(team, key) {
+                if (fileState[key] !== 'yes' && YT_TRACKS[key]) return ytStart(team, YT_TRACKS[key], key);
+                if (fileState[key] === 'no') return synthStart(team, key);
                 const el = new Audio('music/' + key + '.mp3'); el.loop = true; el.volume = 0;
                 const o = { type: 'file', key, el, stop() { el.pause(); el.src = ''; } };
                 el.addEventListener('canplay', () => { fileState[key] = 'yes'; }, { once: true });
-                el.addEventListener('error', () => { fileState[key] = 'no'; if (cur === o) { o.stop(); cur = synthStart(team); } }, { once: true });
+                el.addEventListener('error', () => { fileState[key] = 'no'; if (cur === o) { o.stop(); cur = synthStart(team, key); } }, { once: true });
                 el.play().catch(() => { });
                 return o;
             }
@@ -2589,7 +2597,7 @@
                     } else if (age > 2500) {
                         blocked = true;
                         if (gestureAt && now - gestureAt > 3500 && age > 6000) {             // tapped, but YouTube still will not start (common on iPhone)
-                            const t = cur.team; cur.stop(); cur = synthStart(t); if (cur) cur.startedAt = now;
+                            const t = cur.team, k = cur.key; cur.stop(); cur = synthStart(t, k); if (cur) cur.startedAt = now;
                         }
                     }
                 } else if (cur.type === 'synth') blocked = !!actx && actx.state !== 'running';
@@ -2616,13 +2624,14 @@
                 toggle() { enabled = !enabled; try { localStorage.setItem('bb_music', enabled ? 'on' : 'off'); } catch (e) { } },
                 unlock() { if (actx && actx.state === 'suspended') actx.resume().catch(() => { }); },
                 // call once per frame; team = batting team while a game is on screen, otherwise null
-                tick(team) {
+                tick(team, runnersOn) {
                     want = (enabled && team) ? team : null;
-                    const wantKey = want ? fileKey(want) : '';
+                    const base = want ? fileKey(want) : '', useChant = mode === 'chant' || (mode === 'auto' && runnersOn);
+                    const wantKey = want ? (useChant && YT_TRACKS[base + '_chant'] ? base + '_chant' : base) : '';
                     if (cur && cur.key !== wantKey) { vol = Math.max(0, vol - 0.05); if (vol <= 0) { cur.stop(); cur = null; } }
                     else if (cur) vol = Math.min(1, vol + 0.03);
                     if ((monN++ % 15) === 0) monitor();
-                    if (!cur && want && vol <= 0.02) { cur = fileStart(want); vol = 0.01; }
+                    if (!cur && want && vol <= 0.02) { cur = fileStart(want, wantKey); vol = 0.01; }
                     apply();
                 },
                 drawButton(mx, my) {
@@ -2633,7 +2642,17 @@
                     if (!enabled) { ctx.strokeStyle = '#ff6a5a'; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.moveTo(x + 10, y + 30); ctx.lineTo(x + 30, y + 10); ctx.stroke(); }
                     ctx.restore();
                 },
-                hit(mx, my) { const x = W - 163, y = 15; return mx >= x && mx <= x + 40 && my >= y && my <= y + 40; }
+                hit(mx, my) { const x = W - 163, y = 15; return mx >= x && mx <= x + 40 && my >= y && my <= y + 40; },
+                get mode() { return mode; },
+                hitMode(mx, my) { const x = W - 163 - 66, y = 21; return mx >= x && mx <= x + 60 && my >= y && my <= y + 28; },
+                cycleMode() { mode = mode === 'auto' ? 'main' : mode === 'main' ? 'chant' : 'auto'; try { localStorage.setItem('bb_music_mode', mode); } catch (e) { } },
+                drawModeButton(mx, my) {
+                    const x = W - 163 - 66, y = 21, w = 60, h = 28, hov = mx >= x && mx <= x + w && my >= y && my <= y + h;
+                    ctx.save(); ctx.fillStyle = hov ? 'rgba(40,60,90,0.95)' : 'rgba(14,20,34,0.88)'; drawRoundRect(ctx, x, y, w, h, 14); ctx.fill();
+                    ctx.strokeStyle = 'rgba(255,255,255,0.35)'; ctx.lineWidth = 1.5; drawRoundRect(ctx, x, y, w, h, 14); ctx.stroke();
+                    ctx.font = 'bold 13px "PingFang TC","Microsoft JhengHei",Arial'; ctx.textAlign = 'center'; ctx.fillStyle = enabled ? '#ffd23a' : '#8896aa'; ctx.fillText(MODE_LABEL[mode], x + w / 2, y + 19);
+                    ctx.restore();
+                }
             };
         })();
         ['pointerdown', 'pointerup', 'touchend', 'click', 'keydown'].forEach(ev => document.addEventListener(ev, () => MUSIC.unlockPlay(), { passive: true }));
@@ -2803,11 +2822,16 @@
         }
         // ── in-game defensive adjustments (while the player's team is pitching) ──
         const dfSide = () => (G.half === 0 ? 1 : 0);
-        function dfNatural(sd, i) {                 // is this fielder at a position he really plays?
+        // how badly a fielder is out of position, 0 (fine) .. 1 (fully): any outfield spot is the same job for an outfielder,
+        // and a fielder with a high 守備 rating handles a different position with little or no penalty
+        const OFPOS = { LF: 1, CF: 1, RF: 1, OF: 1 };
+        function dfOopFactor(sd, i) {
             const pl = TEAMS[sd === 0 ? G.awayIdx : G.homeIdx].roster.batters[G.lineups[sd][i]], ps = G.lineupPos[sd][i];
-            return ps === 'DH' || pl.pos === ps || (POS_FLEX[pl.pos] || []).includes(ps);
+            if (ps === 'DH' || pl.pos === ps || (POS_FLEX[pl.pos] || []).includes(ps) || (OFPOS[pl.pos] && OFPOS[ps])) return 0;
+            return clamp((80 - ratingsOf(pl).def) / 22, 0, 1);
         }
-        function dfPenalty(sd) { if (!G.lineupPos) return 0; let n = 0; for (let i = 0; i < 9; i++) if (!dfNatural(sd, i)) n++; return n; }
+        function dfNatural(sd, i) { return dfOopFactor(sd, i) === 0; }        // is this fielder at a position he really plays (or can cover without trouble)?
+        function dfPenalty(sd) { if (!G.lineupPos) return 0; let n = 0; for (let i = 0; i < 9; i++) n += dfOopFactor(sd, i); return n; }
         function dfLayout() {
             const pw = 470, ph = 520, px = W / 2 - pw / 2, py = H / 2 - ph / 2;
             return { px, py, pw, ph, close: { x: px + pw / 2 - 80, y: py + ph - 48, w: 160, h: 36 },
@@ -3705,6 +3729,7 @@
             }
 
             if (isMouseJustPressed && G.scr === SCR.GAME && MUSIC.hit(mouseX, mouseY)) { MUSIC.toggle(); isMouseJustPressed = false; }
+            if (isMouseJustPressed && G.scr === SCR.GAME && MUSIC.hitMode(mouseX, mouseY)) { MUSIC.cycleMode(); isMouseJustPressed = false; }
             if (isMouseJustPressed && G.scr === SCR.GAME) {
                 const qx = W - 115, qy = 15, qw = 100, qh = 40;
                 if (mouseX >= qx && mouseX <= qx + qw && mouseY >= qy && mouseY <= qy + qh) {
@@ -3856,7 +3881,7 @@
         function render() {
             ctx.setTransform(uiScale, 0, 0, uiScale, 0, 0);
             ctx.clearRect(0, 0, W, H);
-            MUSIC.tick(G.scr === SCR.GAME ? batTeamInfo() : null);
+            MUSIC.tick(G.scr === SCR.GAME ? batTeamInfo() : null, !!(G.runners && (G.runners[0] || G.runners[1] || G.runners[2])));
             const want3D = S3D.ok && (G.scr === SCR.GAME || G.scr === SCR.TITLE);
             if (want3D !== S3D.visible) { S3D.show(want3D); canvas.style.boxShadow = want3D ? 'none' : ''; }
             if (want3D && G.scr === SCR.TITLE) S3D.renderTitle();
@@ -4343,7 +4368,7 @@
         // each fielder's 守備 rating by position (an out-of-position fielder is worse), which sets how much ground he covers
         function fieldDefByPos() {
             ensureLineupPos(); const sd = G.half === 0 ? 1 : 0, bs = TEAMS[sd === 0 ? G.awayIdx : G.homeIdx].roster.batters, out = {};
-            for (let i = 0; i < 9; i++) { const ps = G.lineupPos[sd][i]; if (ps && ps !== 'DH') out[ps] = ratingsOf(bs[G.lineups[sd][i]]).def - (dfNatural(sd, i) ? 0 : 12); }
+            for (let i = 0; i < 9; i++) { const ps = G.lineupPos[sd][i]; if (ps && ps !== 'DH') out[ps] = ratingsOf(bs[G.lineups[sd][i]]).def - 12 * dfOopFactor(sd, i); }
             return out;
         }
         function stage3DInfo() {
@@ -4634,7 +4659,7 @@
             if (G.phase === PH.SUB_MENU) renderSubMenu();
             renderResult();
             renderSpeedGun3D();
-            MUSIC.drawButton(mouseX, mouseY);
+            MUSIC.drawButton(mouseX, mouseY); MUSIC.drawModeButton(mouseX, mouseY);
             const qx = W - 115, qy = 15, qw = 100, qh = 40;
             const qHover = mouseX >= qx && mouseX <= qx + qw && mouseY >= qy && mouseY <= qy + qh;
             drawGlossyPill(qx, qy, qw, qh, qHover, '🚪 離開', '#660000', '#AA2222', qHover ? '#FFD700' : '#FFF');
