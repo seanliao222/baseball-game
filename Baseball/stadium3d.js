@@ -1851,6 +1851,7 @@ const Stadium3D = (function () {
         }
         S.flight = keep; return out;
     };
+    api._batterVisible = () => actors.batterWrap.visible;     // test hook
     api._who = function (type, hk, n) {       // test hook: who plays a batted ball of this kind
         const out = {}, keep = S.flight;
         for (let i = 0; i < n; i++) { startFlight({ hitType: type, hitKind: hk, hitFlyDir: (Math.random() < 0.5 ? 1 : -1) * (0.6 + Math.random() * 0.8), curX: 0, frame: 0, nicePlay: false, dpPlay: false }, {}); const f = S.flight.fielder; const k = f ? f.pos : '-'; out[k] = (out[k] || 0) + 1; }
@@ -1909,7 +1910,7 @@ const Stadium3D = (function () {
         drawScoreboard(info.hud || G, info);
         // batter hides once he becomes a runner
         // after the swing is over a ball in play: the batter-runner is already running, so the one at the plate must not stay behind
-        const swungAway = (G.phase === info.PH.BATTING || G.phase === info.PH.RESULT) && ['1B', '2B', '3B', 'HR', 'OUT'].includes(G.hitType) && G.hitEffectFrame > 0 && G.frame - G.hitEffectFrame > 16;
+        const swungAway = (G.phase === info.PH.BATTING || G.phase === info.PH.RESULT) && ['1B', '2B', '3B', 'HR', 'OUT'].includes(G.hitType) && G.hitEffectFrame > 0 && G.hitEffectFrame > G.ballFrame && G.frame - G.hitEffectFrame > 16;      // only for the pitch that was just hit (hitType lingers from earlier at-bats)
         const hide = swungAway || G.phase === info.PH.HR_RUN || (G.phase === info.PH.RESULT && ['OUT', 'HIT', '2 BASE HIT', '3 BASE HIT', 'WALK', 'HOMERUN'].includes(G.resSub));
         actors.batterWrap.visible = !hide;
         if (G.phase === info.PH.INNING_START || (!G.ballActive && G.phase !== info.PH.RESULT)) { S.flight = null; }

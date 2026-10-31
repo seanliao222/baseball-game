@@ -305,7 +305,7 @@
         </div>
     </div>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-    <script src="stadium3d.js?v=20261031d"></script>
+    <script src="stadium3d.js?v=20261031g"></script>
     <script src="https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.js"></script>
     <script>
@@ -2471,6 +2471,8 @@
             };
             // 只循環這一段（秒）：key -> [開始, 結束]；〈我們的歌〉取 YouTube「重播次數最多」的高潮副歌
             const YT_RANGE = { CPBL_Legends: [201, 245] };
+            // 沒有專屬歌曲的球隊：改播這首（ARASHI — Five），一樣只循環「重播次數最多」的副歌
+            const DEFAULT_TRACK = '1DzBKtD3JzI', DEFAULT_RANGE = [51, 80];
             let ytLoading = false; const ytQueue = [];
             function loadYT(cb) {
                 if (window.YT && window.YT.Player) return cb();
@@ -2555,7 +2557,7 @@
                             events: {
                                 onReady: e => {
                                     const dur = e.target.getDuration() || 180;
-                                    const rg = YT_RANGE[key];
+                                    const rg = YT_RANGE[key] || (id === DEFAULT_TRACK ? DEFAULT_RANGE : null);
                                     o.hl = rg ? rg[0] : Math.max(15, dur * 0.28); o.end = rg ? rg[1] : 0;     // highlight (or fixed chorus range) start
                                     let pos = ytResume[key];
                                     if (pos == null || pos < o.hl - 1 || pos > (o.end || dur - 10)) pos = o.hl;  // first time / near the end -> highlight
@@ -2572,11 +2574,11 @@
             }
             function fileStart(team, key) {
                 if (fileState[key] !== 'yes' && YT_TRACKS[key]) return ytStart(team, YT_TRACKS[key], key);
-                if (fileState[key] === 'no') return synthStart(team, key);
+                if (fileState[key] === 'no') return ytStart(team, DEFAULT_TRACK, key);
                 const el = new Audio('music/' + key + '.mp3'); el.loop = true; el.volume = 0;
                 const o = { type: 'file', key, el, stop() { el.pause(); el.src = ''; } };
                 el.addEventListener('canplay', () => { fileState[key] = 'yes'; }, { once: true });
-                el.addEventListener('error', () => { fileState[key] = 'no'; if (cur === o) { o.stop(); cur = synthStart(team, key); } }, { once: true });
+                el.addEventListener('error', () => { fileState[key] = 'no'; if (cur === o) { o.stop(); cur = ytStart(team, DEFAULT_TRACK, key); } }, { once: true });
                 el.play().catch(() => { });
                 return o;
             }
