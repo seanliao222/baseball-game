@@ -1206,7 +1206,7 @@ const Stadium3D = (function () {
         // the batter runs to first (and is out when the ball gets there); in a double play the runner from first is forced at second
         const arrive = (fl.legs.length ? fl.legs[fl.legs.length - 1].t0 + fl.legs[fl.legs.length - 1].d : fl.t0 + fl.dur + 14) - fl.t0;
         const o = actors.extras.find(q => !q.root.visible && !q.runnerBusy);
-        if (o) { o.root.visible = true; o.runnerBusy = true; o.root.position.set(-0.9, 0, 0.1); o.path = [[BAG[1].x, BAG[1].z]]; o.spd = Math.max(0.3, Math.hypot(BAG[1].x + 0.9, BAG[1].z - 0.1) / (arrive + 3)); o.leaving = true; o.fast = false; o.arrived = false; o.phase = 0; o.stealing = false; }
+        if (o) { o.root.visible = true; o.runnerBusy = true; o.root.position.set(-0.9, 0, 0.1); o.path = [[BAG[1].x, BAG[1].z]]; o.spd = Math.max(0.3, Math.hypot(BAG[1].x + 0.9, BAG[1].z - 0.1) / (arrive + 3)); o.leaving = true; o.fast = false; o.arrived = false; o.phase = 0; o.stealing = false; fl.batRunner = o; }
         S.legCleanup = true;
     }
 
@@ -1559,6 +1559,13 @@ const Stadium3D = (function () {
         }
     }
 
+    // a grounder the fielder boots (ROE): the batter-runner already on his way to first as if he would be out stays on the field as the safe runner
+    function adoptBatRunner(hp) {
+        const fl = S.flight, o = fl && fl.batRunner;
+        if (!o || !o.root.visible || !o.runnerBusy) return null;
+        fl.batRunner = null; o.leaving = false; o.fast = false; o.arrived = false; o.spd = 0; o.slot = 0; o.path = [[hp.x, hp.z]];
+        return o;
+    }
     function updateRunners(G, info, dt, df) {
         const now = G.runners.slice();
         const pool = actors.extras;
@@ -1596,7 +1603,7 @@ const Stadium3D = (function () {
                     if (now[j] && !prev[j]) {
                         let src = -1; for (let k = j - 1; k >= 0; k--) if (prev[k] && !used[k] && S.runnerObjs[k]) { src = k; break; }
                         if (src >= 0) { used[src] = true; const o = S.runnerObjs[src]; o.path = []; for (let b = src + 2; b <= j + 1; b++) o.path.push(BASES[b % 4]); const hp = holdPos(j); if (o.path.length) o.path[o.path.length - 1] = [hp.x, hp.z]; else o.path.push([hp.x, hp.z]); o.arrived = false; newObjs[j] = o; o.slot = j; }
-                        else newObjs[j] = spawn(0, j);
+                        else newObjs[j] = (j === 0 && adoptBatRunner(holdPos(0))) || spawn(0, j);
                     }
                 }
                 const leavers = [];
@@ -1616,7 +1623,7 @@ const Stadium3D = (function () {
                     }
                     else releaseRunner(o);
                 });
-                for (let k = 0; k < 3; k++) if (now[k] && !newObjs[k]) newObjs[k] = spawn(0, k);
+                for (let k = 0; k < 3; k++) if (now[k] && !newObjs[k]) newObjs[k] = (k === 0 && adoptBatRunner(holdPos(0))) || spawn(0, k);
                 S.runnerObjs = newObjs;
                 // a base hit: run so as to beat the throw, not to stroll in after the ball is already at the bag
                 const hf = S.flight;
@@ -1901,7 +1908,9 @@ const Stadium3D = (function () {
         setFlagTeam(info.homeTeam);
         drawScoreboard(info.hud || G, info);
         // batter hides once he becomes a runner
-        const hide = G.phase === info.PH.HR_RUN || (G.phase === info.PH.RESULT && ['OUT', 'HIT', '2 BASE HIT', '3 BASE HIT', 'WALK', 'HOMERUN'].includes(G.resSub));
+        // after the swing is over a ball in play: the batter-runner is already running, so the one at the plate must not stay behind
+        const swungAway = (G.phase === info.PH.BATTING || G.phase === info.PH.RESULT) && ['1B', '2B', '3B', 'HR', 'OUT'].includes(G.hitType) && G.hitEffectFrame > 0 && G.frame - G.hitEffectFrame > 16;
+        const hide = swungAway || G.phase === info.PH.HR_RUN || (G.phase === info.PH.RESULT && ['OUT', 'HIT', '2 BASE HIT', '3 BASE HIT', 'WALK', 'HOMERUN'].includes(G.resSub));
         actors.batterWrap.visible = !hide;
         if (G.phase === info.PH.INNING_START || (!G.ballActive && G.phase !== info.PH.RESULT)) { S.flight = null; }
         updateFlight(G, info, dt);
