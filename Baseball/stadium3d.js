@@ -531,7 +531,7 @@ const Stadium3D = (function () {
 
     // painted almond eye (gradient iris, two catchlights, lash line, faint lid shadow); one shared material per iris colour
     // eye look, tunable live (F2 panel in the game): w/h = patch size, sq = squareness (lower = squarer), ir = iris radius, off = iris shift toward the nose, hl = catchlight size, lash = lash thickness
-    const EYE = { w: 0.31, h: 0.17, sq: 0.38, ir: 29, off: 16, hl: 9.5, lash: 5, sp: 0.04, ey: 0, browT: 13, browGap: 0.115, noseS: 1, noseY: -0.02, mouthW: 0.0165, mouthY: -0.057, mouthT: 0.0022, jawW: 1, headW: 1.12, headH: 1.1, skin: 2.3, vary: 0.8 };      // vary = how much each person differs (0 = everyone identical)
+    const EYE = { w: 0.31, h: 0.195, sq: 0.42, ir: 26, off: 16, hl: 9.5, lash: 4.5, sp: 0.04, ey: 0, browT: 17, browGap: 0.06, noseS: 1.15, noseY: -0.02, mouthW: 0.023, mouthY: -0.066, mouthT: 0.0018, jawW: 0.8, headW: 0.96, headH: 1.1, skin: 2.5, vary: 0 };      // vary = how much each person differs (0 = everyone identical)
     const eyeMats = {};
     function eyeMat(irisHex, mirror) {
         const ek = irisHex + (mirror ? 'm' : '');
