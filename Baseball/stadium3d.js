@@ -534,7 +534,7 @@ const Stadium3D = (function () {
             jersey: std(0xffffff), accent: std(0xcccccc), pants: std(0xeeeeee), sock: std(0xcccccc), skin: std(0xe0ac84, { roughness: 0.7 }),
             cap: std(0x222222, { roughness: 0.6 }), shoe: std(0x15151a, { roughness: 0.5 }), glove: std(0x6b3b1a, { roughness: 0.45, envMapIntensity: 0.9 }),
             dark: std(0x101014), gear: std(0x1a2238, { roughness: 0.6 }), bat: std(0xffffff, { roughness: 0.32, envMapIntensity: 1.0 }),
-            hips: std(0xeeeeee), hand: std(0xe0ac84, { roughness: 0.7 }), forearm: std(0xe0ac84, { roughness: 0.65 }), sleeve: std(0xffffff), band: std(0xffffff, { roughness: 0.6 }), hair: std(0x17120e, { roughness: 0.9 }), sole: std(0xe6e6ea, { roughness: 0.6 })
+            hips: std(0xeeeeee), hand: std(0xe0ac84, { roughness: 0.7 }), forearm: std(0xe0ac84, { roughness: 0.65 }), sleeve: std(0xffffff), band: std(0xffffff, { roughness: 0.6 }), hair: std(0x17120e, { roughness: 0.9 }), white: std(0xeee8e0, { roughness: 0.35 }), iris: std(0x2a1a12, { roughness: 0.25 }), lip: std(0xa8584c, { roughness: 0.55 }), sole: std(0xe6e6ea, { roughness: 0.6 })
         };
         const jerseyC = canvasOf(256, 256), jerseyT = new THREE.CanvasTexture(jerseyC);
         jerseyT.wrapS = THREE.RepeatWrapping; jerseyT.offset.x = 0.5; jerseyT.anisotropy = maxAniso; m.jersey.map = jerseyT;
@@ -553,11 +553,16 @@ const Stadium3D = (function () {
         part(geo.neck, m.skin, torso, false);
         const head = new THREE.Group(); head.position.set(0, 0.74, 0.01); torso.add(head);
         const skull = part(geo.head, m.skin, head); skull.scale.set(0.95, 1.1, 1.02);
-        blob(m.skin, head, 0.026, 0.03, 0.03, 0, -0.012, 0.108);              // nose
-        blob(m.skin, head, 0.022, 0.034, 0.02, 0.104, -0.005, 0); blob(m.skin, head, 0.022, 0.034, 0.02, -0.104, -0.005, 0); // ears
-        blob(m.skin, head, 0.055, 0.04, 0.05, 0, -0.085, 0.05);               // jaw
-        [-0.04, 0.04].forEach(x => blob(m.dark, head, 0.013, 0.013, 0.013, x, 0.018, 0.1));   // eyes
-        [-0.04, 0.04].forEach(x => { const br = blob(m.dark, head, 0.026, 0.005, 0.01, x, 0.045, 0.098); br.rotation.z = x > 0 ? -0.15 : 0.15; }); // brows
+        const F = {};
+        F.nose = blob(m.skin, head, 0.018, 0.022, 0.022, 0, -0.016, 0.106);               // nose
+        F.earL = blob(m.skin, head, 0.022, 0.034, 0.02, 0.104, -0.005, 0); F.earR = blob(m.skin, head, 0.022, 0.034, 0.02, -0.104, -0.005, 0); // ears
+        F.jaw = blob(m.skin, head, 0.055, 0.04, 0.05, 0, -0.085, 0.05);                  // jaw
+        F.scL = blob(m.white, head, 0.0175, 0.0105, 0.009, 0.04, 0.018, 0.097); F.scR = blob(m.white, head, 0.0175, 0.0105, 0.009, -0.04, 0.018, 0.097);   // eye whites
+        F.irL = blob(m.iris, head, 0.0085, 0.0095, 0.006, 0.04, 0.018, 0.103); F.irR = blob(m.iris, head, 0.0085, 0.0095, 0.006, -0.04, 0.018, 0.103);     // irises
+        F.lidL = blob(m.dark, head, 0.021, 0.0035, 0.01, 0.04, 0.0285, 0.099); F.lidR = blob(m.dark, head, 0.021, 0.0035, 0.01, -0.04, 0.0285, 0.099);    // upper lid line
+        F.bL = blob(m.hair, head, 0.027, 0.0065, 0.01, 0.04, 0.047, 0.097); F.bR = blob(m.hair, head, 0.027, 0.0065, 0.01, -0.04, 0.047, 0.097);          // brows
+        F.lip = blob(m.lip, head, 0.021, 0.0055, 0.011, 0, -0.058, 0.101);               // lips
+        F.burnL = blob(m.hair, head, 0.011, 0.028, 0.024, 0.097, 0.012, 0.03); F.burnR = blob(m.hair, head, 0.011, 0.028, 0.024, -0.097, 0.012, 0.03);    // sideburns
         blob(m.hair, head, 0.094, 0.07, 0.08, 0, 0.0, -0.04);                // hair under the cap
         // cap / helmet
         const capG = new THREE.Group(); head.add(capG);
@@ -625,7 +630,7 @@ const Stadium3D = (function () {
         const num = new THREE.Mesh(new THREE.PlaneGeometry(0.3, 0.3), new THREE.MeshBasicMaterial({ map: numT, transparent: true }));
         num.position.set(0, 0.33, -0.178); num.rotation.y = Math.PI; torso.add(num); num.visible = false;
 
-        const p = { kind, root, hips, torso, head, armL, armR, guards, legL, legR, mats: m, jerseyC, jerseyT, pantsC, pantsT, capG, flap, mask, logoC, logoT, numC, numT, num, gloveG, holder, bat, chest, shinGuardL, shinGuardR, brim, belt, fade: 1, teamKey: '' };
+        const p = { F, kind, root, hips, torso, head, armL, armR, guards, legL, legR, mats: m, jerseyC, jerseyT, pantsC, pantsT, capG, flap, mask, logoC, logoT, numC, numT, num, gloveG, holder, bat, chest, shinGuardL, shinGuardR, brim, belt, fade: 1, teamKey: '' };
         p.allMats = Object.values(m);
         root.traverse(o => { if (o.isMesh) o.frustumCulled = true; });
         scene.add(root);
@@ -717,9 +722,29 @@ const Stadium3D = (function () {
         } else p.num.visible = false;
     }
 
+    function setFace(p, seed) {
+        const F = p.F; if (!F) return;
+        const R = seeded(hash(String(seed)) + 7), r = (lo, hi) => lo + (hi - lo) * R();
+        const hairCols = [0x17120e, 0x120e0c, 0x2a1c12, 0x3b2a1a, 0x1d1a1a, 0x0d0b0b];
+        p.mats.hair.color.set(hairCols[Math.floor(R() * hairCols.length)]);
+        const sp = r(0.036, 0.045), ey = r(0.014, 0.022), es = r(0.92, 1.16);
+        [[F.scL, F.irL, F.lidL, F.bL, 1], [F.scR, F.irR, F.lidR, F.bR, -1]].forEach(([sc, ir, ld, br, sd]) => {
+            sc.position.set(sd * sp, ey, 0.097); sc.scale.set(0.0175 * es, 0.0105 * es, 0.009);
+            ir.position.set(sd * sp, ey, 0.103); ir.scale.set(0.0085 * es, 0.0095 * es, 0.006);
+            ld.position.set(sd * sp, ey + 0.0105 * es + 0.0005, 0.099); ld.scale.set(0.021 * es, 0.0035, 0.01);
+            br.position.set(sd * sp, ey + 0.029, 0.097); br.scale.set(r(0.024, 0.03), r(0.005, 0.0085), 0.01);
+        });
+        const tilt = r(-0.1, 0.22); F.bL.rotation.z = -tilt; F.bR.rotation.z = tilt;
+        const ns = r(0.85, 1.15); F.nose.scale.set(0.018 * ns, 0.022 * ns, 0.022 * ns);
+        F.lip.scale.set(r(0.018, 0.025), r(0.005, 0.0075), 0.011); F.lip.position.y = r(-0.062, -0.054);
+        const jw = r(0.93, 1.08); F.jaw.scale.set(0.055 * jw, r(0.038, 0.044), 0.05);
+        F.burnL.visible = F.burnR.visible = R() < 0.45;
+        p.faceSeed = seed;
+    }
     function setSkin(p, name) {
-        const tones = [0xf1c9a3, 0xe0ac84, 0xc98f63, 0xa8704a, 0x8a5a3a];
+        const tones = [0xeccaa8, 0xdfb48e, 0xcb9c76, 0xb58560, 0x956646];
         const k = hash(name || '') % tones.length; p.skinKey = k; p.skinColor = tones[k]; p.mats.skin.color.set(tones[k]); p.mats.forearm.color.set(tones[k]); p.mats.hand.color.set(p.gloves ? 0xf4f4f6 : tones[k]);
+        if (p.faceSeed !== name) setFace(p, name || '');
     }
 
     // ───────────── poses ─────────────
@@ -1669,14 +1694,15 @@ const Stadium3D = (function () {
         });
         // colours
         const home = G.half === 1; // bottom half → home team bats
-        pool.forEach(o => { if (o.root.visible) dressTeam(o, info.batTeam, home, { helmet: true }); });
+        pool.forEach((o, i) => { if (o.root.visible) { setSkin(o, info.batTeam.abbr + '|run' + i); dressTeam(o, info.batTeam, home, { helmet: true }); } });
     }
     function releaseRunner(o) { o.root.visible = false; o.runnerBusy = false; o.path = []; o.leaving = false; o.fast = false; o.spd = 0; }
 
     // ── umpire + catcher teams, colours ─────────────────
     function syncTeams(G, info) {
         const fieldHome = G.half === 0;
-        actors.fielders.forEach(f => dressTeam(f, info.pitTeam, fieldHome, {}));
+        actors.fielders.forEach(f => { setSkin(f, info.pitTeam.abbr + '|' + f.pos); dressTeam(f, info.pitTeam, fieldHome, {}); });
+        setSkin(actors.catcher, info.pitTeam.abbr + '|C'); setSkin(actors.umpire, 'ump');
         dressTeam(actors.pitcher, info.pitTeam, fieldHome, {});
         setSkin(actors.pitcher, info.pitcher.name);
         const bs = G.half === 1;
