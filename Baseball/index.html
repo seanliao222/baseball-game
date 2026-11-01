@@ -3084,8 +3084,8 @@
             if (!MP.active && !playerBatting()) {
                 const batter = getBatter();
                 const inZone = isStrikePos(G._actualAimX, G._actualAimY);
-                const aiSwingMult = [0.75, 1.2, 1.4][G.difficulty];
-                const aiErrMult = [2.2, 0.45, 0.25][G.difficulty];
+                const aiSwingMult = [1.0, 1.2, 1.4][G.difficulty];
+                const aiErrMult = [1.3, 0.45, 0.25][G.difficulty];
                 // the batter decides on where the pitch *looks* to be (eye-dependent noise), never on the true ball/strike call
                 const eyeR = ratingsOf(batter).eye, pn = (100 - eyeR) / 100 * 0.45 + 0.08;
                 const far = Math.max(Math.abs(G._actualAimX + rnd(-pn, pn)), Math.abs(G._actualAimY + rnd(-pn, pn))), prot = G.strikes >= 2 ? 1.35 : 1;
@@ -3154,7 +3154,7 @@
             const batter = getBatter();
             const contactDist = Math.sqrt(Math.pow(cx - G._actualAimX, 2) + Math.pow(cy - G._actualAimY, 2));
             const contactScore = clamp(1 - contactDist / ((1.1 + 0.9 * contactScale(batter)) * (G.power ? 0.6 : 1) * [1.15, 0.8, 0.65][G.difficulty]), 0, 1);      // power swing: a much smaller contact circle
-            const qualAdj = playerBatting() ? [0.20, -0.22, -0.30][G.difficulty] : [-0.20, 0.20, 0.28][G.difficulty];
+            const qualAdj = playerBatting() ? [0.20, -0.22, -0.30][G.difficulty] : [-0.08, 0.20, 0.28][G.difficulty];
             const _pt = getPitcher(), platoon = (batSideOf(batter, _pt) === (_pt.throws || 'R')) ? -0.03 : 0.015;      // same-handed matchups favour the pitcher
             const zoneFar = Math.max(Math.abs(G._actualAimX), Math.abs(G._actualAimY)), chase = Math.max(0, zoneFar - (1 + BALL_R));      // how far outside the zone the pitch is
             let quality = clamp(timingScore * 0.55 + contactScore * 0.45 + qualAdj + platoon - (G.pitchGreat ? 0.12 : 0), 0, 1);
