@@ -544,15 +544,15 @@ const Stadium3D = (function () {
         const sg = g.createRadialGradient(80, 52, 20, 80, 52, 80); sg.addColorStop(0, '#f6f3f4'); sg.addColorStop(1, '#cfc8dc');
         g.fillStyle = sg; g.fillRect(0, 0, 160, 100);                                                              // white that greys to lavender at the corners
         const ig = g.createLinearGradient(0, 8, 0, 96); ig.addColorStop(0, '#1e1016'); ig.addColorStop(0.55, irisHex); ig.addColorStop(1, '#6a3c4c');
-        g.fillStyle = ig; g.beginPath(); g.ellipse(80, 54, 44, 52, 0, 0, Math.PI * 2); g.fill();                  // big round iris, lighter lower rim
-        const rg = g.createRadialGradient(80, 56, 28, 80, 56, 50); rg.addColorStop(0, 'rgba(20,8,12,0)'); rg.addColorStop(1, 'rgba(20,8,12,0.55)');
-        g.fillStyle = rg; g.beginPath(); g.ellipse(80, 54, 44, 52, 0, 0, Math.PI * 2); g.fill();                  // dark outer ring of the iris
-        g.fillStyle = 'rgba(10,5,6,0.55)'; g.beginPath(); g.ellipse(80, 56, 15, 20, 0, 0, Math.PI * 2); g.fill();  // pupil
-        g.fillStyle = 'rgba(255,255,255,0.98)'; g.beginPath(); g.ellipse(64, 36, 13, 10, -0.3, 0, Math.PI * 2); g.fill();   // large catchlight, upper left
-        g.fillStyle = 'rgba(255,255,255,0.85)'; g.beginPath(); g.ellipse(98, 72, 5.5, 4.2, 0, 0, Math.PI * 2); g.fill();    // small one, lower right
+        g.fillStyle = ig; g.beginPath(); g.ellipse(80, 54, 33, 47, 0, 0, Math.PI * 2); g.fill();                  // iris: about half the eye width, whites visible each side; lighter lower rim
+        const rg = g.createRadialGradient(80, 56, 20, 80, 56, 40); rg.addColorStop(0, 'rgba(20,8,12,0)'); rg.addColorStop(1, 'rgba(20,8,12,0.55)');
+        g.fillStyle = rg; g.beginPath(); g.ellipse(80, 54, 33, 47, 0, 0, Math.PI * 2); g.fill();                  // dark outer ring of the iris
+        g.fillStyle = 'rgba(10,5,6,0.55)'; g.beginPath(); g.ellipse(80, 56, 12, 18, 0, 0, Math.PI * 2); g.fill();  // pupil
+        g.fillStyle = 'rgba(255,255,255,0.98)'; g.beginPath(); g.ellipse(70, 34, 11, 9, -0.3, 0, Math.PI * 2); g.fill();   // large catchlight, upper left
+        g.fillStyle = 'rgba(255,255,255,0.85)'; g.beginPath(); g.ellipse(92, 70, 5, 4, 0, 0, Math.PI * 2); g.fill();    // small one, lower right
         g.restore();
-        const lg = g.createLinearGradient(0, 0, 0, 32); lg.addColorStop(0, 'rgba(165,125,195,0)'); lg.addColorStop(1, 'rgba(165,125,195,0.32)');
-        g.fillStyle = lg; g.beginPath(); g.moveTo(8, 50); for (let x = 10; x <= 150; x += 4) g.lineTo(x, top(x) - 5); g.lineTo(152, 50); g.closePath(); g.fill();   // faint lavender lid
+        const lg = g.createLinearGradient(0, 0, 0, 60); lg.addColorStop(0, 'rgba(165,125,195,0)'); lg.addColorStop(1, 'rgba(165,125,195,0.3)');
+        g.fillStyle = lg; g.beginPath(); for (let x = 10; x <= 150; x += 4) { if (x === 10) g.moveTo(x, top(x) - 16); else g.lineTo(x, top(x) - 16); } for (let x = 150; x >= 10; x -= 4) g.lineTo(x, top(x) + 1); g.closePath(); g.fill();   // faint lavender lid, only above the lash line
         g.strokeStyle = '#150a0e'; g.lineCap = 'round'; g.lineJoin = 'round'; g.lineWidth = 7.5;
         g.beginPath(); for (let x = 10; x <= 150; x += 4) { const y = top(x) + 1; if (x === 10) g.moveTo(x, y); else g.lineTo(x, y); } g.stroke();
         g.lineWidth = 4.5; g.beginPath(); if (mirror) { g.moveTo(14, top(14) + 5); g.lineTo(3, top(14) - 4); } else { g.moveTo(146, top(146) + 5); g.lineTo(157, top(146) - 4); } g.stroke();
