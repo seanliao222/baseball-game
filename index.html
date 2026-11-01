@@ -27,6 +27,8 @@
             -webkit-user-select: none;
         }
 
+        body.portrait { align-items: flex-start; }
+
         canvas {
             display: block;
             cursor: crosshair;
@@ -325,7 +327,7 @@
         </div>
     </div>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-    <script src="stadium3d.js?v=20261102z"></script>
+    <script src="stadium3d.js?v=20261103a"></script>
     <script src="https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.js"></script>
     <script>
@@ -337,14 +339,17 @@
         const c3d = document.getElementById('c3d');
         let uiScale = 1;
         function resize() {
-            const s = Math.min(window.innerWidth / W, window.innerHeight / H);
+            const portrait = window.innerHeight > window.innerWidth * 1.05;          // portrait phone: game at the top, full width; the area below is for the touch controls
+            document.body.classList.toggle('portrait', portrait);
+            const s = portrait ? window.innerWidth / W : Math.min(window.innerWidth / W, window.innerHeight / H);
             const dpr = Math.min(window.devicePixelRatio || 1, 2);
             canvas.style.width = W * s + 'px'; canvas.style.height = H * s + 'px';
             canvas.width = Math.round(W * s * dpr); canvas.height = Math.round(H * s * dpr);
             uiScale = canvas.width / W;
             if (S3D.ok) {
                 const r = canvas.getBoundingClientRect();
-                S3D.resize(window.innerWidth, window.innerHeight, { x: r.left, y: r.top, w: r.width, h: r.height });
+                if (portrait) S3D.resize(window.innerWidth, Math.round(r.height), { x: r.left, y: r.top, w: r.width, h: r.height });      // the 3D view is only as tall as the game area
+                else S3D.resize(window.innerWidth, window.innerHeight, { x: r.left, y: r.top, w: r.width, h: r.height });
             }
         }
         S3D.init(c3d);
@@ -4030,12 +4035,6 @@
             else if (G.scr === SCR.HISTORY) renderHistory();
             if (G.scr === SCR.SELECT || G.scr === SCR.LINEUP) drawGameClock(14);
             if (G.scr === SCR.GAME) MUSIC.drawPrompt();
-            if (isMobile && window.innerHeight > window.innerWidth * 1.2) {
-                ctx.fillStyle = 'rgba(0,0,0,0.82)'; ctx.fillRect(0, 0, W, H);
-                ctx.save(); ctx.translate(W / 2, H / 2); txt('📱→📺', W / 2, 0, 52, '#FFD700', 'center', '', false); ctx.restore();
-                txt('請橫向使用手機', W / 2, H / 2 + 60, 26, '#FFFFFF');
-                txt('ROTATE DEVICE FOR BEST EXPERIENCE', W / 2, H / 2 + 95, 14, 'rgba(180,200,255,0.7)');
-            }
         }
 
         function jerseyStripe(team) {
