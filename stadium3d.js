@@ -530,12 +530,14 @@ const Stadium3D = (function () {
     }
 
     // painted almond eye (gradient iris, two catchlights, lash line, faint lid shadow); one shared material per iris colour
+    // eye look, tunable live (F2 panel in the game): w/h = patch size, sq = squareness (lower = squarer), ir = iris radius, off = iris shift toward the nose, hl = catchlight size, lash = lash thickness
+    const EYE = { w: 0.27, h: 0.125, sq: 0.3, ir: 33, off: 12, hl: 9, lash: 7.5 };
     const eyeMats = {};
     function eyeMat(irisHex, mirror) {
         const ek = irisHex + (mirror ? 'm' : '');
         if (eyeMats[ek]) return eyeMats[ek];
         const c = canvasOf(160, 100), g = c.getContext('2d');
-        const k = x => Math.pow(Math.sin(Math.PI * Math.min(1, Math.max(0, (x - 10) / 140))), 0.3);      // flatter top and bottom: a squarer eye
+        const k = x => Math.pow(Math.sin(Math.PI * Math.min(1, Math.max(0, (x - 10) / 140))), EYE.sq);      // flatter top and bottom: a squarer eye
         const top = x => 52 - 36 * k(x), bot = x => 52 + 32 * Math.pow(k(x), 0.8);          // rounder eye than an almond
         g.beginPath(); g.moveTo(10, 54);
         for (let x = 10; x <= 150; x += 4) g.lineTo(x, top(x) + 2);
@@ -544,17 +546,17 @@ const Stadium3D = (function () {
         const toNose = mirror ? 1 : -1;                                                                           // both irises sit toward the nose, white shows on the outer side
         const sg = g.createRadialGradient(80 + toNose * 14, 52, 14, 80, 52, 84); sg.addColorStop(0, '#dfe0ea'); sg.addColorStop(1, '#bcc0d6');
         g.fillStyle = sg; g.fillRect(0, 0, 160, 100);                                                              // blue-grey white of the eye
-        const icx = 80 + toNose * 12, icy = 53, ir = 33;
+        const icx = 80 + toNose * EYE.off, icy = 53, ir = EYE.ir;
         const ig = g.createLinearGradient(0, 14, 0, 92); ig.addColorStop(0, '#150a12'); ig.addColorStop(0.6, irisHex); ig.addColorStop(1, '#4e2a3e');
         g.fillStyle = ig; g.beginPath(); g.ellipse(icx, icy, ir, ir * 0.94, 0, 0, Math.PI * 2); g.fill();            // big round iris, no separate pupil
         g.strokeStyle = 'rgba(12,5,10,0.85)'; g.lineWidth = 3; g.beginPath(); g.ellipse(icx, icy, ir, ir * 0.94, 0, 0, Math.PI * 2); g.stroke();   // dark rim
         g.strokeStyle = 'rgba(226,176,206,0.6)'; g.lineWidth = 5; g.lineCap = 'round';
-        g.beginPath(); if (toNose === -1) g.ellipse(icx, icy, 20, 19, 0, Math.PI * 0.62, Math.PI * 0.98); else g.ellipse(icx, icy, 20, 19, 0, Math.PI * 0.02, Math.PI * 0.38); g.stroke();     // soft pink crescent, lower outer side
-        g.fillStyle = 'rgba(255,255,255,0.98)'; g.beginPath(); g.ellipse(icx + toNose * 11, icy - 17, 9, 9 * 0.94, 0, 0, Math.PI * 2); g.fill();      // big round catchlight, upper, toward the nose
+        g.beginPath(); if (toNose === -1) g.ellipse(icx, icy, ir * 0.6, ir * 0.57, 0, Math.PI * 0.62, Math.PI * 0.98); else g.ellipse(icx, icy, ir * 0.6, ir * 0.57, 0, Math.PI * 0.02, Math.PI * 0.38); g.stroke();     // soft pink crescent, lower outer side
+        g.fillStyle = 'rgba(255,255,255,0.98)'; g.beginPath(); g.ellipse(icx + toNose * ir * 0.33, icy - ir * 0.5, EYE.hl, EYE.hl * 0.94, 0, 0, Math.PI * 2); g.fill();      // big round catchlight, upper, toward the nose
         g.restore();
         const lg = g.createLinearGradient(0, 0, 0, 60); lg.addColorStop(0, 'rgba(170,130,205,0)'); lg.addColorStop(1, 'rgba(170,130,205,0.45)');
         g.fillStyle = lg; g.beginPath(); for (let x = 10; x <= 150; x += 4) { if (x === 10) g.moveTo(x, top(x) - 16); else g.lineTo(x, top(x) - 16); } for (let x = 150; x >= 10; x -= 4) g.lineTo(x, top(x) + 1); g.closePath(); g.fill();   // faint lavender lid, only above the lash line
-        g.strokeStyle = '#150a0e'; g.lineCap = 'round'; g.lineJoin = 'round'; g.lineWidth = 7.5;
+        g.strokeStyle = '#150a0e'; g.lineCap = 'round'; g.lineJoin = 'round'; g.lineWidth = EYE.lash;
         g.beginPath(); for (let x = 10; x <= 150; x += 4) { const y = top(x) + 1; if (x === 10) g.moveTo(x, y); else g.lineTo(x, y); } g.stroke();
         g.lineWidth = 4.5; g.beginPath(); if (mirror) { g.moveTo(14, top(14) + 5); g.lineTo(3, top(14) - 4); } else { g.moveTo(146, top(146) + 5); g.lineTo(157, top(146) - 4); } g.stroke();
         g.strokeStyle = 'rgba(120,70,80,0.5)'; g.lineWidth = 2.2; g.beginPath(); for (let x = 22; x <= 138; x += 4) { const y = bot(x) + 1; if (x === 22) g.moveTo(x, y); else g.lineTo(x, y); } g.stroke();
@@ -829,7 +831,7 @@ const Stadium3D = (function () {
         const irisCols = ['#1e0f1c', '#1a0e1e', '#261416', '#190d18', '#20112a'], ic = irisCols[Math.floor(R() * irisCols.length)];
         [[F.eyeL, 1, false], [F.eyeR, -1, true]].forEach(([e, sd, mir]) => {
             e.material = eyeMat(ic, mir);
-            const dphi = Math.asin(Math.min(0.9, sp / 0.1026)), th = Math.PI / 2 - ey / 0.12, hw = 0.27 * es, hh = 0.125 * es;
+            const dphi = Math.asin(Math.min(0.9, sp / 0.1026)), th = Math.PI / 2 - ey / 0.12, hw = EYE.w * es, hh = EYE.h * es;
             if (e.geometry) e.geometry.dispose();
             e.geometry = new THREE.SphereGeometry(0.1095, 18, 10, Math.PI / 2 + sd * dphi - hw, hw * 2, th - hh, hh * 2);
         });
@@ -1981,6 +1983,12 @@ const Stadium3D = (function () {
         const out = {}, keep = S.flight;
         for (let i = 0; i < n; i++) { startFlight({ hitType: type, hitKind: hk, hitFlyDir: (Math.random() < 0.5 ? 1 : -1) * (0.6 + Math.random() * 0.8), curX: 0, frame: 0, nicePlay: false, dpPlay: false }, {}); const f = S.flight.fielder; const k = f ? f.pos : '-'; out[k] = (out[k] || 0) + 1; }
         S.flight = keep; return out;
+    };
+    api.eye = EYE;
+    api.rebuildEyes = function () {
+        Object.keys(eyeMats).forEach(k => delete eyeMats[k]);
+        const all = [...actors.fielders, actors.pitcher, actors.catcher, actors.umpire, actors.batter, ...actors.extras];
+        all.forEach(p => { if (p && p.F) setFace(p, p.faceSeed != null ? p.faceSeed : ''); });
     };
     api.debugCam = function (pos, look, fov) { S.dbgCam = pos ? { pos: new THREE.Vector3(...pos), look: new THREE.Vector3(...look), fov: fov || 30, shift: 0 } : null; };
     api.pitchPoint = (G, t) => { const o = new THREE.Vector3(); pitchWorld(G, t, o); return [+o.x.toFixed(2), +o.y.toFixed(2), +o.z.toFixed(2)]; };

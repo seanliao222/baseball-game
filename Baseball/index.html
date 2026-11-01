@@ -305,7 +305,7 @@
         </div>
     </div>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-    <script src="stadium3d.js?v=20261102n"></script>
+    <script src="stadium3d.js?v=20261102p"></script>
     <script src="https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.js"></script>
     <script>
@@ -2668,6 +2668,34 @@
         let mouseX = W / 2, mouseY = H / 2, isMouseJustPressed = false, isMouseJustReleased = false;
 
         document.addEventListener('keydown', e => { if (!keys[e.code]) jp[e.code] = true; keys[e.code] = true; });
+        // ── eye tuning panel (F2): sliders change the painted eyes live; "close-up" parks the camera on the pitcher's face ──
+        (function () {
+            const SPEC = [['w', '眼睛寬度', 0.15, 0.4, 0.005], ['h', '眼睛高度', 0.07, 0.22, 0.005], ['sq', '方圓（小=更方）', 0.12, 1.0, 0.02], ['ir', '黑眼珠半徑', 14, 48, 1], ['off', '眼珠偏向鼻側', 0, 30, 1], ['hl', '反光大小', 3, 18, 0.5], ['lash', '上眼線粗細', 2, 12, 0.5]];
+            let box = null;
+            function build() {
+                box = document.createElement('div');
+                box.style.cssText = 'position:fixed;right:8px;top:8px;z-index:9999;background:rgba(10,14,24,0.92);color:#fff;font:12px/1.4 sans-serif;padding:10px 12px;border-radius:10px;width:230px;box-shadow:0 4px 18px rgba(0,0,0,.5)';
+                box.innerHTML = '<div style="font-weight:bold;margin-bottom:6px">眼睛調整（F2 關閉）</div>';
+                SPEC.forEach(([k, label, lo, hi, st]) => {
+                    const row = document.createElement('div'); row.style.cssText = 'display:flex;align-items:center;gap:6px;margin:3px 0';
+                    const lb = document.createElement('span'); lb.style.cssText = 'width:96px'; lb.textContent = label;
+                    const inp = document.createElement('input'); inp.type = 'range'; inp.min = lo; inp.max = hi; inp.step = st; inp.value = S3D.eye[k]; inp.style.cssText = 'flex:1;min-width:0';
+                    const val = document.createElement('span'); val.style.cssText = 'width:36px;text-align:right'; val.textContent = inp.value;
+                    inp.addEventListener('input', () => { S3D.eye[k] = parseFloat(inp.value); val.textContent = inp.value; S3D.rebuildEyes(); });
+                    row.append(lb, inp, val); box.appendChild(row);
+                });
+                const bar = document.createElement('div'); bar.style.cssText = 'display:flex;gap:6px;margin-top:8px';
+                const mk = (t, f) => { const b = document.createElement('button'); b.textContent = t; b.style.cssText = 'flex:1;padding:4px;border-radius:6px;border:0;background:#2a6bd6;color:#fff;cursor:pointer'; b.onclick = f; return b; };
+                const out = document.createElement('div'); out.style.cssText = 'margin-top:6px;word-break:break-all;color:#9fe3a2';
+                bar.append(mk('近拍', () => { try { const a = S3D.debug.actors.pitcher, v = new THREE.Vector3(), q = new THREE.Vector3(); a.head.getWorldPosition(v); a.root.getWorldDirection(q); S3D.debugCam([v.x + q.x * 0.8, v.y, v.z + q.z * 0.8], [v.x, v.y, v.z], 14); } catch (e) { } }),
+                    mk('還原鏡頭', () => { S3D.debugCam(null); }),
+                    mk('顯示數值', () => { out.textContent = JSON.stringify(S3D.eye); }));
+                box.append(bar, out); document.body.appendChild(box);
+            }
+            document.addEventListener('keydown', e => { if (e.code === 'F2') { e.preventDefault(); if (box) { box.remove(); box = null; } else if (S3D.ok) build(); } });
+            window.__eyePanel = () => { if (!box && S3D.ok) build(); };
+        })();
+
         document.addEventListener('keyup', e => { keys[e.code] = false; delete jp[e.code]; });
 
         function updatePointerPos(clientX, clientY) {
