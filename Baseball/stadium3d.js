@@ -551,20 +551,14 @@ const Stadium3D = (function () {
         const belt = part(new THREE.CylinderGeometry(0.157, 0.157, 0.04, 18).translate(0, -0.02, 0), m.dark, torso, false); belt.scale.set(1.1, 1, 0.8);
         const collar = part(new THREE.TorusGeometry(0.075, 0.016, 8, 16), m.accent, torso, false); collar.rotation.x = Math.PI / 2; collar.position.y = 0.625; collar.scale.y = 0.8;
         part(geo.neck, m.skin, torso, false);
-        const head = new THREE.Group(); head.position.set(0, 0.80, 0.01); head.scale.setScalar(1.5); torso.add(head);      // chibi: oversized head
+        const head = new THREE.Group(); head.position.set(0, 0.80, 0.01); head.scale.set(1.68, 1.46, 1.5); torso.add(head);      // chibi: oversized head
         const skull = part(geo.head, m.skin, head); skull.scale.set(0.97, 1.08, 1.02);
         const F = {};
         F.skull = skull;
-        F.nose = blob(m.skin, head, 0.02, 0.018, 0.02, 0, -0.03, 0.108);
         F.earL = blob(m.skin, head, 0.02, 0.032, 0.018, 0.104, -0.01, 0); F.earR = blob(m.skin, head, 0.02, 0.032, 0.018, -0.104, -0.01, 0);
-        F.jaw = blob(m.skin, head, 0.045, 0.026, 0.04, 0, -0.07, 0.03);
-        F.eyeL = blob(m.white, head, 0.026, 0.03, 0.012, 0.042, -0.006, 0.094); F.eyeR = blob(m.white, head, 0.026, 0.03, 0.012, -0.042, -0.006, 0.094);
-        F.irisL = blob(m.dark, head, 0.017, 0.023, 0.008, 0.042, -0.008, 0.101); F.irisR = blob(m.dark, head, 0.017, 0.023, 0.008, -0.042, -0.008, 0.101);
-        F.hiL = blob(m.white, head, 0.005, 0.006, 0.004, 0.048, 0.0, 0.108); F.hiR = blob(m.white, head, 0.005, 0.006, 0.004, -0.036, 0.0, 0.108);
-        F.browL = blob(m.hair, head, 0.027, 0.005, 0.01, 0.042, 0.036, 0.097); F.browR = blob(m.hair, head, 0.027, 0.005, 0.01, -0.042, 0.036, 0.097);
-        F.mouth = part(new THREE.TorusGeometry(0.02, 0.0042, 6, 12, Math.PI), m.mouth, head, false); F.mouth.rotation.z = Math.PI; F.mouth.position.set(0, -0.052, 0.097);
-        F.blushL = blob(m.blush, head, 0.024, 0.014, 0.006, 0.065, -0.036, 0.087); F.blushR = blob(m.blush, head, 0.024, 0.014, 0.006, -0.065, -0.036, 0.087);
-        F.blushL.castShadow = F.blushR.castShadow = false;
+        // the face itself is a painted decal on a patch of sphere (drawn per person in setFace)
+        F.faceMat = new THREE.MeshStandardMaterial({ transparent: true, roughness: 0.8, metalness: 0, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 });
+        F.decal = new THREE.Mesh(new THREE.SphereGeometry(0.1088, 28, 18, Math.PI / 2 - 0.9, 1.8, 1.0, 1.2), F.faceMat); F.decal.scale.set(0.97, 1.08, 1.02); F.decal.rotation.y = 0; head.add(F.decal);
         F.hair = blob(m.hair, head, 0.098, 0.07, 0.08, 0, 0.0, -0.04);                // hair under the cap
         F.burnL = blob(m.hair, head, 0.012, 0.03, 0.025, 0.098, 0.02, 0.03); F.burnR = blob(m.hair, head, 0.012, 0.03, 0.025, -0.098, 0.02, 0.03);
         // cap / helmet
@@ -726,28 +720,54 @@ const Stadium3D = (function () {
         } else p.num.visible = false;
     }
 
-    // every person gets their own face: eye shape and spacing, brows, nose, mouth, face width, hair colour
+    // every person gets their own face, painted on a canvas: eye shape/size/spacing, brows, mouth, blush, nose, hair colour
+    const faceCache = {};
+    function paintFace(seed) {
+        const R = seeded(hash(String(seed)) + 7), r = (lo, hi) => lo + (hi - lo) * R();
+        const c = canvasOf(256, 256), g = c.getContext('2d');
+        const hairCols = ['#17120e', '#120e0c', '#2a1c12', '#3b2a1a', '#1d1a1a', '#4a3320', '#0d0b0b'];
+        const hair = hairCols[Math.floor(R() * hairCols.length)];
+        const cx = 128, ey = r(128, 140), sp = r(52, 62), ew = r(17, 21), eh = r(22, 27);
+        const irisCols = ['#5a3420', '#3a2418', '#2b2a3a', '#6b4528', '#243a3a'], iris = irisCols[Math.floor(R() * irisCols.length)];
+        // blush
+        const bl = r(0.15, 0.32);
+        [-1, 1].forEach(sd => { const gr = g.createRadialGradient(cx + sd * (sp + 14), ey + 36, 2, cx + sd * (sp + 14), ey + 36, 24); gr.addColorStop(0, `rgba(255,110,110,${bl})`); gr.addColorStop(1, 'rgba(255,110,110,0)'); g.fillStyle = gr; g.fillRect(0, 0, 256, 256); });
+        // eyes: big glossy anime-style eyes with a coloured iris
+        [-1, 1].forEach(sd => {
+            const x = cx + sd * sp;
+            g.fillStyle = '#fbf6f2'; g.beginPath(); g.ellipse(x, ey, ew, eh, 0, 0, Math.PI * 2); g.fill();
+            const ig = g.createLinearGradient(x, ey - eh, x, ey + eh); ig.addColorStop(0, '#120c0a'); ig.addColorStop(0.45, iris); ig.addColorStop(1, '#a8795a');
+            g.fillStyle = ig; g.beginPath(); g.ellipse(x, ey + 1, ew * 0.82, eh * 0.95, 0, 0, Math.PI * 2); g.fill();
+            g.fillStyle = '#0a0606'; g.beginPath(); g.ellipse(x, ey + 1, ew * 0.4, eh * 0.52, 0, 0, Math.PI * 2); g.fill();
+            g.fillStyle = 'rgba(255,255,255,0.96)'; g.beginPath(); g.ellipse(x + ew * 0.34, ey - eh * 0.38, ew * 0.3, eh * 0.24, 0, 0, Math.PI * 2); g.fill();
+            g.beginPath(); g.ellipse(x - ew * 0.34, ey + eh * 0.4, ew * 0.15, eh * 0.12, 0, 0, Math.PI * 2); g.fill();
+            g.strokeStyle = hair; g.lineWidth = 5; g.lineCap = 'round';
+            g.beginPath(); g.ellipse(x, ey, ew + 2, eh + 2, 0, Math.PI * 1.08, Math.PI * 1.92); g.stroke();   // heavy upper lash line
+        });
+        // brows
+        const tilt = r(-0.18, 0.28), bw = r(14, 21), bt = r(3.5, 6), by = ey - eh - r(10, 16);
+        [-1, 1].forEach(sd => {
+            const x = cx + sd * (sp + 1);
+            g.strokeStyle = hair; g.lineWidth = bt; g.lineCap = 'round';
+            g.beginPath(); g.moveTo(x - bw, by + sd * tilt * bw * -1); g.lineTo(x + bw, by + sd * tilt * bw); g.stroke();
+        });
+        // nose: a soft shadow, not a lump
+        const ny = ey + r(36, 42);
+        const ng = g.createRadialGradient(cx, ny, 1, cx, ny, 9); ng.addColorStop(0, 'rgba(150,80,60,0.32)'); ng.addColorStop(1, 'rgba(150,80,60,0)'); g.fillStyle = ng; g.fillRect(cx - 12, ny - 12, 24, 24);
+        // mouth
+        const my = ey + r(62, 72), mw = r(9, 16), sm = r(2, 8), open = R() < 0.22;
+        if (open) { g.fillStyle = '#7a2a2a'; g.beginPath(); g.ellipse(cx, my + 2, mw * 0.7, sm + 3, 0, 0, Math.PI); g.fill(); }
+        else { g.strokeStyle = '#8a3636'; g.lineWidth = 3.2; g.lineCap = 'round'; g.beginPath(); g.moveTo(cx - mw, my - 1); g.quadraticCurveTo(cx, my + sm * 1.6, cx + mw, my - 1); g.stroke(); }
+        const t = new THREE.CanvasTexture(c); t.anisotropy = maxAniso;
+        return { tex: t, hair, burn: R() < 0.4, ear: r(0.85, 1.2), fw: r(0.95, 1.06), hairHex: parseInt(hair.slice(1), 16) };
+    }
     function setFace(p, seed) {
         const F = p.F; if (!F) return;
-        const R = seeded(hash(String(seed)) + 7), r = (lo, hi) => lo + (hi - lo) * R();
-        const hairCols = [0x17120e, 0x120e0c, 0x2a1c12, 0x3b2a1a, 0x1d1a1a, 0x4a3320, 0x0d0b0b];
-        p.mats.hair.color.set(hairCols[Math.floor(R() * hairCols.length)]);
-        const sp = r(0.036, 0.05), ey = r(-0.014, 0.004), ew = r(0.021, 0.03), eh = r(0.024, 0.036), ir = r(0.6, 0.78);
-        [[F.eyeL, F.irisL, F.hiL, F.browL, 1], [F.eyeR, F.irisR, F.hiR, F.browR, -1]].forEach(([e, i, h, b, sd]) => {
-            e.position.set(sd * sp, ey, 0.094); e.scale.set(ew, eh, 0.012);
-            i.position.set(sd * sp, ey - 0.002, 0.101); i.scale.set(ew * ir, eh * 0.78, 0.008);
-            h.position.set(sd * sp + 0.006, ey + 0.008, 0.108);
-            b.position.set(sd * sp, ey + eh + 0.012, 0.097); b.scale.set(r(0.022, 0.03), r(0.0042, 0.0075), 0.01);
-        });
-        const tilt = r(-0.22, 0.25); F.browL.rotation.z = -tilt; F.browR.rotation.z = tilt;
-        const ns = r(0.75, 1.35); F.nose.scale.set(0.02 * ns, 0.018 * ns, 0.02 * ns); F.nose.position.y = ey - 0.02 - 0.008 * ns;
-        const mw = r(0.7, 1.25); F.mouth.scale.set(mw, r(0.35, 1.2), 1); F.mouth.position.y = ey - 0.042 - r(0, 0.008);
-        const fw = r(0.93, 1.07); F.skull.scale.set(0.97 * fw, r(1.03, 1.12), 1.02);
-        F.jaw.scale.set(0.045 * fw * r(0.85, 1.15), r(0.022, 0.03), 0.04); F.earL.scale.setScalar(r(0.8, 1.25) * 0.02); F.earR.scale.copy(F.earL.scale);
-        F.earL.scale.y *= 1.6; F.earR.scale.y *= 1.6;
-        F.earL.position.x = 0.104 * fw; F.earR.position.x = -0.104 * fw;
-        const bl = r(0.6, 1.3); F.blushL.scale.set(0.024 * bl, 0.014 * bl, 0.006); F.blushR.scale.copy(F.blushL.scale);
-        const burn = R() < 0.4; F.burnL.visible = F.burnR.visible = burn;
+        const key = String(seed), f = faceCache[key] || (faceCache[key] = paintFace(key));
+        F.faceMat.map = f.tex; F.faceMat.needsUpdate = true;
+        p.mats.hair.color.set(f.hairHex);
+        F.burnL.visible = F.burnR.visible = f.burn;
+        F.earL.scale.set(0.02 * f.ear, 0.032 * f.ear, 0.018); F.earR.scale.copy(F.earL.scale);
         p.faceSeed = seed;
     }
     function setSkin(p, name) {
