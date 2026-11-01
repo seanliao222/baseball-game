@@ -3652,18 +3652,21 @@
             histSave(a);
         }
 
-        // elapsed play time (real clock; only runs during the game itself, not on menus)
+        // elapsed time since the player entered team selection (real clock; stops on the game-over screen)
         function tickClock() {
             const now = performance.now(), dt = Math.min(1000, now - (G.clkLast || now)); G.clkLast = now;
-            if (G.tk && (G.scr === SCR.GAME || G.scr === SCR.HALF_END)) G.tk.ms = (G.tk.ms || 0) + dt;
+            const run = G.scr === SCR.SELECT || G.scr === SCR.LINEUP || G.scr === SCR.GAME || G.scr === SCR.HALF_END;
+            if (G.scr === SCR.SELECT && !G.clkRun) G.clkMs = 0;
+            G.clkRun = run;
+            if (run) G.clkMs = (G.clkMs || 0) + dt;
         }
         function clockText() {
-            const sec = Math.floor(((G.tk && G.tk.ms) || 0) / 1000), h = Math.floor(sec / 3600), m = Math.floor(sec % 3600 / 60), s = sec % 60;
+            const sec = Math.floor((G.clkMs || 0) / 1000), h = Math.floor(sec / 3600), m = Math.floor(sec % 3600 / 60), s = sec % 60;
             const p = n => String(n).padStart(2, '0');
             return (h ? h + ':' + p(m) : p(m)) + ':' + p(s);
         }
-        function drawGameClock() {
-            const x = 14, y = 112, w = 96, h = 24;
+        function drawGameClock(y = 112) {
+            const x = 14, w = 96, h = 24;
             hudPanel(x, y, w, h, 8);
             hudText('⏱ ' + clockText(), x + 10, y + 17, 15, 'rgba(255,255,255,0.9)');
         }
@@ -3923,6 +3926,7 @@
             else if (G.scr === SCR.OVER) renderOver();
             else if (G.scr === SCR.HALF_END) renderHalfEnd();
             else if (G.scr === SCR.HISTORY) renderHistory();
+            if (G.scr === SCR.SELECT || G.scr === SCR.LINEUP) drawGameClock(14);
             if (G.scr === SCR.GAME) MUSIC.drawPrompt();
             if (isMobile && window.innerHeight > window.innerWidth * 1.2) {
                 ctx.fillStyle = 'rgba(0,0,0,0.82)'; ctx.fillRect(0, 0, W, H);
