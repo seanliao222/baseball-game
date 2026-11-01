@@ -305,7 +305,7 @@
         </div>
     </div>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-    <script src="stadium3d.js?v=20261101h"></script>
+    <script src="stadium3d.js?v=20261101i"></script>
     <script src="https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.js"></script>
     <script>
@@ -2493,45 +2493,44 @@
                 if (actx && actx.state === 'suspended') actx.resume().catch(() => { });
                 return !!actx;
             }
-            // ---- synthesized chant: 16-step loop, per-team root / tempo / rhythm ----
+            // ---- synthesized fallback (used when YouTube is unreachable): a bright stadium tune, 4 bars, per-team key / tempo / melody ----
             function synthStart(team, key) {
                 if (!ensureCtx()) return null;
-                const h = hash(team.name), root = [196, 220, 233, 247, 262, 294][h % 6], bpm = 128 + (h % 5) * 6;
-                const scale = [0, 2, 4, 7, 9, 12, 14], pat = [];
-                for (let i = 0; i < 16; i++) pat.push(((h >> (i % 11)) + i * 7) % 9 < 5 ? scale[(h + i * 3) % scale.length] : null);
-                [0, 4, 8, 12].forEach(i => { if (pat[i] === null) pat[i] = 0; });   // anchor the downbeats
-                const spb = 60 / bpm / 2;                                          // 8th-note length
+                const h = hash(team.name), root = [196, 220, 233, 247, 262, 294][h % 6], bpm = 118 + (h % 5) * 5;
+                const spb = 60 / bpm / 2;                                           // 8th-note length
+                const prog = [[0, 4, 7], [7, 11, 14], [9, 12, 16], [5, 9, 12]];    // I  V  vi  IV, one chord per bar (semitones above the root)
+                const bassN = [0, 7, 9, 5];
+                const pent = [0, 2, 4, 7, 9, 12, 14, 16];
+                let sd = (h + 11) | 0; const R = () => { sd = (sd * 1664525 + 1013904223) | 0; return ((sd >>> 0) % 100000) / 100000; }, motif = [];
+                for (let i = 0; i < 8; i++) motif.push(R() < 0.72 ? pent[Math.floor(R() * pent.length)] : null);   // an 8-step motif, answered with a variation
                 const o = { type: 'synth', key: key || fileKey(team), stop() { clearInterval(timer); timer = null; } };
                 step = 0; nextT = actx.currentTime + 0.1;
-                const note = (f, t, d, type, g) => {
+                const hz = (semi, oct = 0) => root * Math.pow(2, semi / 12 + oct);
+                const tone = (f, t, d, type, g, dest) => {
                     const os = actx.createOscillator(), gn = actx.createGain();
-                    os.type = type; os.frequency.value = f; os.connect(gn); gn.connect(master);
-                    gn.gain.setValueAtTime(0, t); gn.gain.linearRampToValueAtTime(g, t + 0.01); gn.gain.exponentialRampToValueAtTime(0.0001, t + d);
-                    os.start(t); os.stop(t + d + 0.02);
+                    os.type = type; os.frequency.value = f; os.connect(gn); gn.connect(dest || master);
+                    gn.gain.setValueAtTime(0, t); gn.gain.linearRampToValueAtTime(g, t + 0.012); gn.gain.exponentialRampToValueAtTime(0.0001, t + d);
+                    os.start(t); os.stop(t + d + 0.03);
                 };
                 const noise = (t, d, g, hp) => {
-                    const buf = actx.createBuffer(1, actx.sampleRate * d, actx.sampleRate), ch = buf.getChannelData(0);
+                    const buf = actx.createBuffer(1, Math.max(1, Math.floor(actx.sampleRate * d)), actx.sampleRate), ch = buf.getChannelData(0);
                     for (let i = 0; i < ch.length; i++) ch[i] = (Math.random() * 2 - 1) * (1 - i / ch.length);
                     const src = actx.createBufferSource(), f = actx.createBiquadFilter(), gn = actx.createGain();
-                    f.type = hp ? 'highpass' : 'bandpass'; f.frequency.value = hp ? 6000 : 1800; src.buffer = buf; gn.gain.value = g;
+                    f.type = hp ? 'highpass' : 'bandpass'; f.frequency.value = hp ? 7000 : 1800; src.buffer = buf; gn.gain.value = g;
                     src.connect(f); f.connect(gn); gn.connect(master); src.start(t);
                 };
-                const lp = actx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 900; lp.connect(master);
-                const horn = (f, t, d, g) => {
-                    [1, 1.5].forEach((m2, k) => {
-                        const os = actx.createOscillator(), gn = actx.createGain(); os.type = 'sawtooth'; os.frequency.value = f * m2; os.detune.value = k ? 4 : -4;
-                        os.connect(gn); gn.connect(lp);
-                        gn.gain.setValueAtTime(0, t); gn.gain.linearRampToValueAtTime(g, t + 0.05); gn.gain.linearRampToValueAtTime(g * 0.6, t + d * 0.6); gn.gain.exponentialRampToValueAtTime(0.0001, t + d);
-                        os.start(t); os.stop(t + d + 0.05);
-                    });
-                };
+                const soft = actx.createBiquadFilter(); soft.type = 'lowpass'; soft.frequency.value = 2400; soft.connect(master);   // rounds off the lead so it is never harsh
+                const kick = t => { const os = actx.createOscillator(), gn = actx.createGain(); os.frequency.setValueAtTime(140, t); os.frequency.exponentialRampToValueAtTime(48, t + 0.12); os.connect(gn); gn.connect(master); gn.gain.setValueAtTime(0.5, t); gn.gain.exponentialRampToValueAtTime(0.0001, t + 0.2); os.start(t); os.stop(t + 0.22); };
                 timer = setInterval(() => {
                     while (nextT < actx.currentTime + 0.25) {
-                        const i = step % 16, t = nextT;
-                        if (i % 4 === 0 || i % 4 === 1) note(62, t, 0.2, 'sine', 0.42);         // stomp stomp
-                        if (i % 4 === 2) { noise(t, 0.09, 0.2, false); note(180, t, 0.08, 'triangle', 0.08); }   // clap
-                        if (i === 0 || i === 8) horn(root, t, spb * 3.2, 0.028);                 // soft brass swell
-                        if (i === 12) horn(root * Math.pow(2, scale[2] / 12), t, spb * 3.2, 0.024);
+                        const t = nextT, st = step % 32, bar = Math.floor(st / 8), i = st % 8, ch = prog[bar];
+                        if (i % 2 === 0) kick(t);                                                      // four on the floor, gently
+                        if (i === 2 || i === 6) { noise(t, 0.1, 0.16, false); tone(190, t, 0.07, 'triangle', 0.06); }   // snare-ish clap on 2 and 4
+                        noise(t, 0.03, 0.035, true);                                                   // hi-hat on every 8th
+                        if (i % 4 === 0) tone(hz(bassN[bar], -1), t, spb * 3.4, 'triangle', 0.3);       // bass
+                        if (i % 2 === 1) ch.forEach(n => tone(hz(n), t, spb * 0.9, 'triangle', 0.05, soft));   // off-beat chord stabs
+                        let n = motif[i]; if (n !== null && bar % 2 === 1 && i >= 4) n = pent[(pent.indexOf(n) + 2) % pent.length];   // second half of every other bar answers the motif
+                        if (n !== null) { tone(hz(n, 1), t, spb * 1.7, 'square', 0.04, soft); tone(hz(n, 1) * 1.003, t, spb * 1.7, 'triangle', 0.05, soft); }
                         nextT += spb; step++;
                     }
                 }, 50);
