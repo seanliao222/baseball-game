@@ -17,7 +17,7 @@ const Stadium3D = (function () {
     if (typeof THREE === 'undefined') return api;
 
     // ───────────────────────── constants ─────────────────────────
-    const GW = 800, GH = 600;      // logical game size (matches W/H in index.html)
+    let GW = 800, GH = 600;      // logical game size (matches W/H in index.html; W is narrower in portrait)
     const SZX = 400, SZY = 400;    // strike-zone centre in game px
     const K = 180;                 // game px per metre on the plate plane
     const ZONE_Y = 0.80;           // zone centre height (m)
@@ -1001,7 +1001,8 @@ const Stadium3D = (function () {
     BAT_CAM.fov = 2 * Math.atan(GH / (2 * BAT_CAM.pos.distanceTo(BAT_CAM.look) * K)) * 180 / Math.PI;
 
     function applyCamera(cam, st) {
-        cam.position.copy(st.pos); cam.fov = st.fov; cam.aspect = rect.w / rect.h;
+        cam.position.copy(st.pos); cam.aspect = rect.w / rect.h;
+        cam.fov = cam.aspect < 0.9 ? Math.min(78, st.fov * (1 + (0.9 - cam.aspect) * 1.5)) : st.fov;      // portrait: widen the vertical FOV so the sides are not cropped away completely
         const sh = st.shift * rect.h / GH;
         cam.setViewOffset(rect.w, rect.h, -rect.x, -rect.y - sh, cw, ch);
         cam.lookAt(st.look); cam.updateMatrixWorld(true);
@@ -1021,7 +1022,7 @@ const Stadium3D = (function () {
 
     function resize(winW, winH, gameRect) {
         if (!renderer) return;
-        cw = winW; ch = winH; rect = { x: gameRect.x, y: gameRect.y, w: gameRect.w, h: gameRect.h };
+        cw = winW; ch = winH; rect = { x: gameRect.x, y: gameRect.y, w: gameRect.w, h: gameRect.h }; if (gameRect.gw) GW = gameRect.gw; if (gameRect.gh) GH = gameRect.gh;
         renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
         renderer.setSize(cw, ch, false);
         canvas3d.style.width = cw + 'px'; canvas3d.style.height = ch + 'px';
@@ -2004,11 +2005,34 @@ const Stadium3D = (function () {
         for (let i = 0; i < n; i++) { startFlight({ hitType: type, hitKind: hk, hitFlyDir: (Math.random() < 0.5 ? 1 : -1) * (0.6 + Math.random() * 0.8), curX: 0, frame: 0, nicePlay: false, dpPlay: false }, {}); const f = S.flight.fielder; const k = f ? f.pos : '-'; out[k] = (out[k] || 0) + 1; }
         S.flight = keep; return out;
     };
+    // a stand-alone head-and-shoulders preview on its own canvas (used by the face tuning panel on the team-select screen)
+    const previews = [];
+    api.facePreview = function (cvs, team) {
+        if (!api.ok) return null;
+        const w = cvs.clientWidth || 240, h = cvs.clientHeight || 240;
+        const rd = new THREE.WebGLRenderer({ canvas: cvs, antialias: true, alpha: true });
+        rd.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2)); rd.setSize(w, h, false);
+        rd.outputEncoding = renderer.outputEncoding; rd.toneMapping = renderer.toneMapping; rd.toneMappingExposure = renderer.toneMappingExposure;
+        const sc = new THREE.Scene(); if (scene.environment) sc.environment = scene.environment;
+        sc.add(new THREE.HemisphereLight(0xffffff, 0x8899aa, 0.9)); const dl = new THREE.DirectionalLight(0xffffff, 0.9); dl.position.set(1.5, 2.5, 3); sc.add(dl);
+        const p = makePerson('pitcher'); scene.remove(p.root); sc.add(p.root); upgradePerson(p);
+        p.faceSeed = null; setSkin(p, 'preview'); if (team) dressTeam(p, team, true, {});
+        p.root.updateMatrixWorld(true);
+        const hv = new THREE.Vector3(); p.head.getWorldPosition(hv);
+        const cam = new THREE.PerspectiveCamera(22, w / h, 0.05, 10); cam.position.set(hv.x, hv.y + 0.02, hv.z + 0.85); cam.lookAt(hv.x, hv.y - 0.02, hv.z);
+        const o = {
+            render() { rd.render(sc, cam); },
+            refresh() { setSkin(p, 'preview'); setFace(p, 'preview'); },
+            dispose() { const i = previews.indexOf(o); if (i >= 0) previews.splice(i, 1); sc.remove(p.root); rd.dispose(); }
+        };
+        previews.push(o); return o;
+    };
     api.eye = EYE;
     api.rebuildEyes = function () {
         Object.keys(eyeMats).forEach(k => delete eyeMats[k]);
         const all = [...actors.fielders, actors.pitcher, actors.catcher, actors.umpire, actors.batter, ...actors.extras];
         all.forEach(p => { if (p && p.F) { const sd = p.faceSeed != null ? p.faceSeed : ''; setSkin(p, sd); setFace(p, sd); } });
+        previews.forEach(o => o.refresh());
     };
     api.debugCam = function (pos, look, fov) { S.dbgCam = pos ? { pos: new THREE.Vector3(...pos), look: new THREE.Vector3(...look), fov: fov || 30, shift: 0 } : null; };
     api.pitchPoint = (G, t) => { const o = new THREE.Vector3(); pitchWorld(G, t, o); return [+o.x.toFixed(2), +o.y.toFixed(2), +o.z.toFixed(2)]; };
