@@ -551,11 +551,11 @@ const Stadium3D = (function () {
         const belt = part(new THREE.CylinderGeometry(0.157, 0.157, 0.04, 18).translate(0, -0.02, 0), m.dark, torso, false); belt.scale.set(1.1, 1, 0.8);
         const collar = part(new THREE.TorusGeometry(0.075, 0.016, 8, 16), m.accent, torso, false); collar.rotation.x = Math.PI / 2; collar.position.y = 0.625; collar.scale.y = 0.8;
         part(geo.neck, m.skin, torso, false);
-        const head = new THREE.Group(); head.position.set(0, 0.79, 0.01); head.scale.set(1.5, 1.34, 1.42); torso.add(head);      // chibi: oversized head
+        const head = new THREE.Group(); head.position.set(0, 0.79, 0.01); head.scale.set(1.85, 1.3, 1.5); torso.add(head);      // chibi: oversized head
         const skull = part(geo.head, m.skin, head); skull.scale.set(0.97, 1.08, 1.02);
         const F = {};
         F.skull = skull;
-        F.earL = blob(m.skin, head, 0.02, 0.032, 0.018, 0.104, -0.01, 0); F.earR = blob(m.skin, head, 0.02, 0.032, 0.018, -0.104, -0.01, 0);
+        F.earL = blob(m.skin, head, 0.02, 0.032, 0.018, 0.104, -0.01, 0); F.earR = blob(m.skin, head, 0.02, 0.032, 0.018, -0.104, -0.01, 0); F.earL.visible = F.earR.visible = false;
         // the face itself is a painted decal on a patch of sphere (drawn per person in setFace)
         F.faceMat = new THREE.MeshStandardMaterial({ transparent: true, roughness: 0.8, metalness: 0, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 });
         F.decal = new THREE.Mesh(new THREE.SphereGeometry(0.1088, 28, 18, Math.PI / 2 - 0.9, 1.8, 1.0, 1.2), F.faceMat); F.decal.scale.set(0.97, 1.08, 1.02); F.decal.rotation.y = 0; head.add(F.decal);
@@ -563,8 +563,8 @@ const Stadium3D = (function () {
         F.burnL = blob(m.hair, head, 0.012, 0.03, 0.025, 0.098, 0.02, 0.03); F.burnR = blob(m.hair, head, 0.012, 0.03, 0.025, -0.098, 0.02, 0.03);
         // cap / helmet
         const capG = new THREE.Group(); head.add(capG);
-        const dome = part(geo.cap, m.cap, capG); dome.position.y = 0.034; dome.scale.set(1, 1.0, 1.05);
-        const brim = part(geo.brim, m.cap, capG, false); brim.position.set(0, 0.05, 0.06); brim.rotation.x = -0.14; brim.scale.set(0.95, 1, 1.25);
+        const dome = part(geo.cap, m.cap, capG); dome.position.y = 0.03; dome.scale.set(1.04, 1.12, 1.1);
+        const brim = part(geo.brim, m.cap, capG, false); brim.position.set(0, 0.05, 0.06); brim.rotation.x = -0.14; brim.scale.set(1.05, 1.3, 1.5);
         const flap = part(new THREE.BoxGeometry(0.03, 0.1, 0.11), m.cap, head, false); flap.position.set(0.115, 0.0, 0.0); flap.visible = false;
         // logo on cap front
         const logoC = canvasOf(64, 64), logoT = new THREE.CanvasTexture(logoC);
@@ -585,7 +585,7 @@ const Stadium3D = (function () {
             const guard = blob(m.dark, el, 0.062, 0.07, 0.062, 0, 0.0, 0); guard.visible = false; guards.push(guard);
             part(geo.foreArm, m.hand === undefined ? m.skin : m.forearm, el).scale.set(1.2, 1, 1.2);
             const hand = new THREE.Group(); hand.position.y = -0.285; el.add(hand);
-            blob(m.hand, hand, 0.046, 0.058, 0.042, 0, -0.012, 0);
+            blob(m.hand, hand, 0.078, 0.082, 0.074, 0, -0.02, 0);
             const wb = part(new THREE.CylinderGeometry(0.041, 0.039, 0.05, 12).translate(0, -0.235, 0), m.band, el, false);
             return { sh, el, hand };
         };
@@ -630,7 +630,7 @@ const Stadium3D = (function () {
         const p = { F, kind, root, hips, torso, head, armL, armR, guards, legL, legR, mats: m, jerseyC, jerseyT, pantsC, pantsT, capG, flap, mask, logoC, logoT, numC, numT, num, gloveG, holder, bat, chest, shinGuardL, shinGuardR, brim, belt, fade: 1, teamKey: '' };
         p.allMats = Object.values(m);
         root.traverse(o => { if (o.isMesh) o.frustumCulled = true; });
-        root.scale.setScalar(0.95);
+        root.scale.setScalar(0.9);
         scene.add(root);
         return p;
     }
@@ -706,7 +706,7 @@ const Stadium3D = (function () {
         p.mats.sock.color.set(U ? U.sock : c2);
         p.mats.cap.color.set(U && U.cap ? U.cap : team.c1);
         p.flap.visible = !!opts.helmet;
-        p.mats.cap.roughness = opts.helmet ? 0.18 : 0.75; p.mats.cap.metalness = opts.helmet ? 0.25 : 0; p.mats.cap.envMapIntensity = opts.helmet ? 1.6 : 0.5;
+        p.mats.cap.roughness = opts.helmet ? 0.15 : 0.4; p.mats.cap.metalness = opts.helmet ? 0.25 : 0; p.mats.cap.envMapIntensity = opts.helmet ? 1.6 : 0.8;
         // cap logo
         const g = p.logoC.getContext('2d'); g.clearRect(0, 0, 64, 64);
         const hc = lum(team.c1) > 0.5 ? '#111' : '#fff';
@@ -727,35 +727,27 @@ const Stadium3D = (function () {
         const c = canvasOf(256, 256), g = c.getContext('2d');
         const hairCols = ['#17120e', '#120e0c', '#2a1c12', '#3b2a1a', '#1d1a1a', '#4a3320', '#0d0b0b'];
         const hair = hairCols[Math.floor(R() * hairCols.length)];
-        const cx = 128, ey = r(134, 142), sp = r(40, 48), ew = r(9, 12), eh = r(9, 12);
-        const irisCols = ['#2a1a12', '#1c1412', '#33221a', '#241c1c'], iris = irisCols[Math.floor(R() * irisCols.length)];
-        // light cheek colour only
-        [-1, 1].forEach(sd => { const gr = g.createRadialGradient(cx + sd * (sp + 14), ey + 34, 2, cx + sd * (sp + 14), ey + 34, 24); gr.addColorStop(0, 'rgba(230,120,100,0.12)'); gr.addColorStop(1, 'rgba(230,120,100,0)'); g.fillStyle = gr; g.fillRect(0, 0, 256, 256); });
-        // eye black (a baseball touch) on some players
-        if (R() < 0.45) [-1, 1].forEach(sd => { g.fillStyle = 'rgba(15,12,12,0.78)'; g.beginPath(); g.ellipse(cx + sd * sp, ey + eh + 11, ew + 5, 5, 0, 0, Math.PI * 2); g.fill(); });
-        // eyes: small dark ovals with one highlight (simple, sports-game style)
+        const cx = 128, ey = r(142, 150), sp = r(52, 60), ew = r(25, 29), eh = r(21, 25);
+        const irisCols = ['#5b2a2e', '#4a2a3a', '#3b2420', '#2e2a46', '#4a3020'], iris = irisCols[Math.floor(R() * irisCols.length)];
+        // big glossy eyes (iris colour varies), long upper lashes, thin brows; no nose or mouth, like a sports-game character
         [-1, 1].forEach(sd => {
             const x = cx + sd * sp;
-            g.fillStyle = '#f3ede6'; g.beginPath(); g.ellipse(x, ey, ew, eh + 1, 0, 0, Math.PI * 2); g.fill();
-            g.fillStyle = '#1a100c'; g.beginPath(); g.ellipse(x + sd * -1, ey, ew * 0.66, eh + 1, 0, 0, Math.PI * 2); g.fill();
-            g.fillStyle = 'rgba(255,255,255,0.95)'; g.beginPath(); g.ellipse(x + ew * 0.2, ey - eh * 0.3, 2.6, 2.6, 0, 0, Math.PI * 2); g.fill();
-            g.strokeStyle = hair; g.lineWidth = 3.5; g.lineCap = 'round';
-            g.beginPath(); g.ellipse(x, ey, ew + 1, eh + 2, 0, Math.PI * 1.05, Math.PI * 1.95); g.stroke();
+            g.fillStyle = '#f6f0ea'; g.beginPath(); g.ellipse(x, ey, ew, eh, 0, 0, Math.PI * 2); g.fill();
+            const ig = g.createLinearGradient(x, ey - eh, x, ey + eh); ig.addColorStop(0, '#1a0c10'); ig.addColorStop(0.5, iris); ig.addColorStop(1, '#9a6a78');
+            g.fillStyle = ig; g.beginPath(); g.ellipse(x, ey + 1, ew * 0.74, eh * 0.98, 0, 0, Math.PI * 2); g.fill();
+            g.fillStyle = '#140a0c'; g.beginPath(); g.ellipse(x, ey + 1, ew * 0.34, eh * 0.5, 0, 0, Math.PI * 2); g.fill();
+            g.fillStyle = 'rgba(255,255,255,0.96)'; g.beginPath(); g.ellipse(x + sd * -ew * 0.22, ey - eh * 0.36, ew * 0.26, eh * 0.22, 0, 0, Math.PI * 2); g.fill();
+            g.beginPath(); g.ellipse(x + sd * ew * 0.28, ey + eh * 0.36, ew * 0.12, eh * 0.1, 0, 0, Math.PI * 2); g.fill();
+            g.strokeStyle = '#120a0a'; g.lineWidth = 6; g.lineCap = 'round';
+            g.beginPath(); g.ellipse(x, ey, ew + 2, eh + 2, 0, Math.PI * 1.04, Math.PI * 1.96); g.stroke();
+            g.lineWidth = 4; g.beginPath(); g.moveTo(x + sd * (ew + 1), ey - 3); g.lineTo(x + sd * (ew + 9), ey - 10); g.stroke();   // outer lash flick
         });
-        // brows: thick, strong
-        const tilt = r(-0.05, 0.28), bw = r(15, 21), bt = r(5.5, 8.5), by = ey - eh - r(10, 14);
+        const tilt = r(-0.05, 0.22), bw = r(18, 24), bt = r(3, 4.5), by = ey - eh - r(8, 11);
         [-1, 1].forEach(sd => {
-            const x = cx + sd * (sp + 1);
+            const x = cx + sd * (sp + 2);
             g.strokeStyle = hair; g.lineWidth = bt; g.lineCap = 'round';
             g.beginPath(); g.moveTo(x - bw, by + sd * tilt * bw * -1); g.lineTo(x + bw, by + sd * tilt * bw); g.stroke();
         });
-        // nose: a soft shadow, not a lump
-        const ny = ey + r(30, 36);
-        const ng = g.createRadialGradient(cx, ny, 1, cx, ny, 9); ng.addColorStop(0, 'rgba(150,80,60,0.32)'); ng.addColorStop(1, 'rgba(150,80,60,0)'); g.fillStyle = ng; g.fillRect(cx - 12, ny - 12, 24, 24);
-        // mouth
-        const my = ey + r(48, 54), mw = r(8, 13), sm = r(-1, 4);
-        if (R() < 0.35) { const sg = g.createRadialGradient(cx, my + 14, 6, cx, my + 14, 50); sg.addColorStop(0, 'rgba(20,16,14,0.22)'); sg.addColorStop(1, 'rgba(20,16,14,0)'); g.fillStyle = sg; g.fillRect(0, my - 16, 256, 70); }
-        g.strokeStyle = '#7a3a34'; g.lineWidth = 3.4; g.lineCap = 'round'; g.beginPath(); g.moveTo(cx - mw, my); g.quadraticCurveTo(cx, my + sm * 1.4, cx + mw, my); g.stroke();
         const t = new THREE.CanvasTexture(c); t.anisotropy = maxAniso;
         return { tex: t, hair, burn: R() < 0.4, ear: r(0.85, 1.2), fw: r(0.95, 1.06), hairHex: parseInt(hair.slice(1), 16) };
     }
