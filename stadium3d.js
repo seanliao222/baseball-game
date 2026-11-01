@@ -531,7 +531,7 @@ const Stadium3D = (function () {
 
     // painted almond eye (gradient iris, two catchlights, lash line, faint lid shadow); one shared material per iris colour
     // eye look, tunable live (F2 panel in the game): w/h = patch size, sq = squareness (lower = squarer), ir = iris radius, off = iris shift toward the nose, hl = catchlight size, lash = lash thickness
-    const EYE = { w: 0.27, h: 0.125, sq: 0.3, ir: 33, off: 12, hl: 9, lash: 7.5 };
+    const EYE = { w: 0.31, h: 0.17, sq: 0.38, ir: 29, off: 16, hl: 9.5, lash: 5 };
     const eyeMats = {};
     function eyeMat(irisHex, mirror) {
         const ek = irisHex + (mirror ? 'm' : '');
@@ -558,10 +558,26 @@ const Stadium3D = (function () {
         g.fillStyle = lg; g.beginPath(); for (let x = 10; x <= 150; x += 4) { if (x === 10) g.moveTo(x, top(x) - 16); else g.lineTo(x, top(x) - 16); } for (let x = 150; x >= 10; x -= 4) g.lineTo(x, top(x) + 1); g.closePath(); g.fill();   // faint lavender lid, only above the lash line
         g.strokeStyle = '#150a0e'; g.lineCap = 'round'; g.lineJoin = 'round'; g.lineWidth = EYE.lash;
         g.beginPath(); for (let x = 10; x <= 150; x += 4) { const y = top(x) + 1; if (x === 10) g.moveTo(x, y); else g.lineTo(x, y); } g.stroke();
-        g.lineWidth = 4.5; g.beginPath(); if (mirror) { g.moveTo(14, top(14) + 5); g.lineTo(3, top(14) - 4); } else { g.moveTo(146, top(146) + 5); g.lineTo(157, top(146) - 4); } g.stroke();
         g.strokeStyle = 'rgba(120,70,80,0.5)'; g.lineWidth = 2.2; g.beginPath(); for (let x = 22; x <= 138; x += 4) { const y = bot(x) + 1; if (x === 22) g.moveTo(x, y); else g.lineTo(x, y); } g.stroke();
         const t = new THREE.CanvasTexture(c); t.anisotropy = maxAniso; 
         return eyeMats[ek] = new THREE.MeshBasicMaterial({ map: t, transparent: true, toneMapped: false, depthWrite: false, side: THREE.DoubleSide, polygonOffset: true, polygonOffsetFactor: -3, polygonOffsetUnits: -3 });      // unlit, so the painted colours show exactly
+    }
+
+    // painted eyebrow on a curved patch: thick at the inner end, tapering outward with a slight arch
+    const browMats = {};
+    function browMat(hex, thick, mirror) {
+        const bk = hex + '|' + thick + '|' + (mirror ? 1 : 0);
+        if (browMats[bk]) return browMats[bk];
+        const c = canvasOf(160, 48), g = c.getContext('2d');
+        const ix = mirror ? 146 : 14, ox = mirror ? 14 : 146, dir = ox > ix ? 1 : -1;
+        const pts = n => { const a = []; for (let i = 0; i <= n; i++) { const t = i / n; a.push([ix + (ox - ix) * t, 30 - 14 * t - 7 * Math.sin(Math.PI * t), thick * (1 - 0.75 * t)]); } return a; };
+        const P = pts(24);
+        g.fillStyle = '#' + hex; g.beginPath();
+        P.forEach(([x, y, w], i) => { if (i === 0) g.moveTo(x, y - w / 2); else g.lineTo(x, y - w / 2); });
+        for (let i = P.length - 1; i >= 0; i--) g.lineTo(P[i][0], P[i][1] + P[i][2] / 2);
+        g.closePath(); g.fill();
+        const t = new THREE.CanvasTexture(c); t.anisotropy = maxAniso;
+        return browMats[bk] = new THREE.MeshBasicMaterial({ map: t, transparent: true, toneMapped: false, depthWrite: false, side: THREE.DoubleSide, polygonOffset: true, polygonOffsetFactor: -3, polygonOffsetUnits: -3 });
     }
 
     function makePerson(kind) {
@@ -599,6 +615,8 @@ const Stadium3D = (function () {
         F.lidL = blob(m.dark, head, 0.0165, 0.0013, 0.008, 0.04, 0.0195, 0.1105); F.lidR = blob(m.dark, head, 0.0165, 0.0013, 0.008, -0.04, 0.0195, 0.1105);   // soft lid edge
         F.eyeL = new THREE.Mesh(new THREE.SphereGeometry(0.1095, 2, 2), eyeMat('#1e0f1c', false)); F.eyeR = new THREE.Mesh(new THREE.SphereGeometry(0.1095, 2, 2), eyeMat('#1e0f1c', true));
         F.eyeL.scale.set(0.95, 1.1, 1.02); F.eyeR.scale.set(0.95, 1.1, 1.02); head.add(F.eyeL); head.add(F.eyeR);
+        F.browPL = new THREE.Mesh(new THREE.SphereGeometry(0.1095, 2, 2), browMat('17120e', 16, false)); F.browPR = new THREE.Mesh(new THREE.SphereGeometry(0.1095, 2, 2), browMat('17120e', 16, true));
+        F.browPL.scale.set(0.95, 1.1, 1.02); F.browPR.scale.set(0.95, 1.1, 1.02); head.add(F.browPL); head.add(F.browPR);
         [F.scL, F.scR, F.irL, F.irR, F.hiL, F.hiR, F.skL, F.skR, F.lidL, F.lidR].forEach(o => { o.visible = false; });   // the painted eyes replace the blob eyes
         F.bL = blob(m.hair, head, 0.027, 0.0065, 0.01, 0.04, 0.047, 0.097); F.bR = blob(m.hair, head, 0.027, 0.0065, 0.01, -0.04, 0.047, 0.097);          // brows
         F.lip = blob(m.lip, head, 0.017, 0.0022, 0.008, 0, -0.058, 0.1);               // lips
@@ -834,7 +852,11 @@ const Stadium3D = (function () {
             const dphi = Math.asin(Math.min(0.9, sp / 0.1026)), th = Math.PI / 2 - ey / 0.12, hw = EYE.w * es, hh = EYE.h * es;
             if (e.geometry) e.geometry.dispose();
             e.geometry = new THREE.SphereGeometry(0.1095, 18, 10, Math.PI / 2 + sd * dphi - hw, hw * 2, th - hh, hh * 2);
+            const bp = sd === 1 ? F.browPL : F.browPR; bp.material = browMat(p.mats.hair.color.getHexString(), Math.round(r(11, 16)), mir);
+            if (bp.geometry) bp.geometry.dispose();
+            bp.geometry = new THREE.SphereGeometry(0.1095, 18, 6, Math.PI / 2 + sd * dphi - hw * 1.02, hw * 2.04, th - hh - 0.115, 0.13);
         });
+        F.bL.visible = F.bR.visible = false;      // the painted brows replace the blob brows
         const tilt = r(-0.06, 0.03); F.bL.rotation.z = tilt; F.bR.rotation.z = -tilt;
         const ns = r(0.85, 1.15); F.nose.scale.set(0.0085 * ns, 0.0095 * ns, 0.009 * ns);
         F.lip.scale.set(r(0.014, 0.019), 0.0022, 0.008); F.lip.position.y = r(-0.06, -0.054);
