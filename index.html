@@ -305,7 +305,7 @@
         </div>
     </div>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-    <script src="stadium3d.js?v=20261102t"></script>
+    <script src="stadium3d.js?v=20261102u"></script>
     <script src="https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.js"></script>
     <script>
@@ -2703,6 +2703,13 @@
             }
             document.addEventListener('keydown', e => { if (e.code === 'F2') { e.preventDefault(); if (box) { box.remove(); box = null; } else if (S3D.ok) build(); } });
             window.__eyePanel = () => { if (!box && S3D.ok) build(); };
+            // always-visible button during a match (F2 needs the Fn key on a Mac laptop)
+            const tb = document.createElement('button');
+            tb.textContent = '🎨 臉部調整';
+            tb.style.cssText = 'position:fixed;left:8px;bottom:8px;z-index:9998;padding:8px 12px;border-radius:10px;border:0;background:#2a6bd6;color:#fff;font:bold 14px sans-serif;cursor:pointer;display:none;box-shadow:0 3px 10px rgba(0,0,0,.5)';
+            tb.onclick = () => { if (box) { box.remove(); box = null; } else if (S3D.ok) build(); };
+            document.body.appendChild(tb);
+            setInterval(() => { tb.style.display = (S3D.ok && G.scr === SCR.GAME) ? 'block' : 'none'; }, 400);
         })();
 
         document.addEventListener('keyup', e => { keys[e.code] = false; delete jp[e.code]; });
