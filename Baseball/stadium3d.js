@@ -535,7 +535,7 @@ const Stadium3D = (function () {
         const ek = irisHex + (mirror ? 'm' : '');
         if (eyeMats[ek]) return eyeMats[ek];
         const c = canvasOf(160, 100), g = c.getContext('2d');
-        const k = x => Math.sin(Math.PI * Math.min(1, Math.max(0, (x - 10) / 140)));
+        const k = x => Math.pow(Math.sin(Math.PI * Math.min(1, Math.max(0, (x - 10) / 140))), 0.5);      // flatter top and bottom: a squarer eye
         const top = x => 52 - 36 * k(x), bot = x => 52 + 32 * Math.pow(k(x), 0.8);          // rounder eye than an almond
         g.beginPath(); g.moveTo(10, 54);
         for (let x = 10; x <= 150; x += 4) g.lineTo(x, top(x) + 2);
@@ -544,12 +544,12 @@ const Stadium3D = (function () {
         const sg = g.createRadialGradient(80, 52, 20, 80, 52, 80); sg.addColorStop(0, '#f6f3f4'); sg.addColorStop(1, '#cfc8dc');
         g.fillStyle = sg; g.fillRect(0, 0, 160, 100);                                                              // white that greys to lavender at the corners
         const ig = g.createLinearGradient(0, 8, 0, 96); ig.addColorStop(0, '#1e1016'); ig.addColorStop(0.55, irisHex); ig.addColorStop(1, '#6a3c4c');
-        g.fillStyle = ig; g.beginPath(); g.ellipse(80, 54, 31, 40, 0, 0, Math.PI * 2); g.fill();                  // iris: about half the eye width, whites visible each side; lighter lower rim
-        const rg = g.createRadialGradient(80, 56, 20, 80, 56, 40); rg.addColorStop(0, 'rgba(20,8,12,0)'); rg.addColorStop(1, 'rgba(20,8,12,0.55)');
-        g.fillStyle = rg; g.beginPath(); g.ellipse(80, 54, 31, 40, 0, 0, Math.PI * 2); g.fill();                  // dark outer ring of the iris
-        g.fillStyle = 'rgba(10,5,6,0.55)'; g.beginPath(); g.ellipse(80, 55, 11, 15, 0, 0, Math.PI * 2); g.fill();  // pupil
-        g.fillStyle = 'rgba(255,255,255,0.98)'; g.beginPath(); g.ellipse(70, 38, 10, 8, -0.3, 0, Math.PI * 2); g.fill();   // large catchlight, upper left
-        g.fillStyle = 'rgba(255,255,255,0.85)'; g.beginPath(); g.ellipse(92, 66, 4.5, 3.6, 0, 0, Math.PI * 2); g.fill();    // small one, lower right
+        g.fillStyle = ig; g.beginPath(); g.ellipse(80, 54, 34, 34 * 1.165, 0, 0, Math.PI * 2); g.fill();          // iris: a true circle on the face, about half the eye width, whites visible each side; lighter lower rim
+        const rg = g.createRadialGradient(80, 56, 22, 80, 56, 40); rg.addColorStop(0, 'rgba(20,8,12,0)'); rg.addColorStop(1, 'rgba(20,8,12,0.55)');
+        g.fillStyle = rg; g.beginPath(); g.ellipse(80, 54, 34, 34 * 1.165, 0, 0, Math.PI * 2); g.fill();                  // dark outer ring of the iris
+        g.fillStyle = 'rgba(10,5,6,0.55)'; g.beginPath(); g.ellipse(80, 55, 13, 13 * 1.165, 0, 0, Math.PI * 2); g.fill();  // pupil
+        g.fillStyle = 'rgba(255,255,255,0.98)'; g.beginPath(); g.ellipse(70, 38, 9, 9 * 1.165, 0, 0, Math.PI * 2); g.fill();   // large catchlight, upper left
+        g.fillStyle = 'rgba(255,255,255,0.85)'; g.beginPath(); g.ellipse(92, 66, 4, 4 * 1.165, 0, 0, Math.PI * 2); g.fill();    // small one, lower right
         g.restore();
         const lg = g.createLinearGradient(0, 0, 0, 60); lg.addColorStop(0, 'rgba(165,125,195,0)'); lg.addColorStop(1, 'rgba(165,125,195,0.3)');
         g.fillStyle = lg; g.beginPath(); for (let x = 10; x <= 150; x += 4) { if (x === 10) g.moveTo(x, top(x) - 16); else g.lineTo(x, top(x) - 16); } for (let x = 150; x >= 10; x -= 4) g.lineTo(x, top(x) + 1); g.closePath(); g.fill();   // faint lavender lid, only above the lash line
