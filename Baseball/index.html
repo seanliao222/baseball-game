@@ -3089,7 +3089,7 @@
                 // the batter decides on where the pitch *looks* to be (eye-dependent noise), never on the true ball/strike call
                 const eyeR = ratingsOf(batter).eye, pn = (100 - eyeR) / 100 * 0.45 + 0.08;
                 const far = Math.max(Math.abs(G._actualAimX + rnd(-pn, pn)), Math.abs(G._actualAimY + rnd(-pn, pn))), prot = G.strikes >= 2 ? 1.35 : 1;
-                const base = far < 0.6 ? 0.78 : far < 1.0 ? 0.68 : far < 1.35 ? 0.48 : far < 1.8 ? 0.27 : 0.10;
+                const base = G.difficulty === 0 ? 0.65 : far < 0.6 ? 0.78 : far < 1.0 ? 0.68 : far < 1.35 ? 0.48 : far < 1.8 ? 0.27 : 0.10;      // easy: swings freely, strike or ball
                 const skill = 1.0 + (batter.con - 60) / 250 - (eyeR - 60) / 400 * (far > 1 ? 1 : 0);
                 G.aiSwing = Math.random() < Math.min(0.95, base * prot * skill * aiSwingMult + (G.strikes >= 2 ? 0.08 : 0));
                 const sacSit = G.outs < 2 && (G.runners[0] || G.runners[1]) && !G.runners[2] && G.strikes < 2 && Math.abs(G.score[0] - G.score[1]) <= 2;
