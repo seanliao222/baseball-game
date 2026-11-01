@@ -645,6 +645,40 @@ const Stadium3D = (function () {
     }
 
     // team-specific uniform looks; anything not listed falls back to the generic colour-based style
+    // ── "fancy" model upgrade (prototype on the pitcher): curved cap with piping, black leather glove, shaded face ──
+    const FANCY_CAP = { Brothers: '#14224a' };
+    function upgradePerson(p) {
+        const m = p.mats, head = p.head, capG = p.capG;
+        p.fancy = true;
+        const ball = (mat, parent, sx, sy, sz, x, y, z) => { const me = new THREE.Mesh(geo.ball, mat); me.scale.set(sx, sy, sz); me.position.set(x, y, z); parent.add(me); return me; };
+        // taller, rounder crown
+        const dome = capG.children[0]; dome.scale.set(1.0, 1.16, 1.08); dome.position.y = 0.03;
+        p.brim.visible = false;
+        // curved visor: bends down at the sides
+        const nu = 20, nv = 5, pos = [], idx = [];
+        const bp = (u, v) => [u * 0.13 * (1 - 0.22 * v), 0.058 - 0.045 * u * u - 0.022 * v, 0.05 + v * 0.118 * (1 - 0.4 * u * u)];
+        for (let j = 0; j <= nv; j++) for (let i = 0; i <= nu; i++) pos.push(...bp(-1 + 2 * i / nu, j / nv));
+        for (let j = 0; j < nv; j++) for (let i = 0; i < nu; i++) { const a = j * (nu + 1) + i, b = a + 1, c = a + nu + 1, d = c + 1; idx.push(a, c, b, b, c, d); }
+        const bg = new THREE.BufferGeometry(); bg.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); bg.setIndex(idx); bg.computeVertexNormals();
+        m.cap.side = THREE.DoubleSide;
+        const visor = new THREE.Mesh(bg, m.cap); visor.castShadow = true; capG.add(visor);
+        // piping along the visor edge + a button on top
+        const edge = []; for (let i = 0; i <= nu; i++) edge.push(new THREE.Vector3(...bp(-1 + 2 * i / nu, 1)));
+        const pipe = new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(edge), 24, 0.0036, 6, false), m.band); capG.add(pipe);
+        ball(m.band, capG, 0.012, 0.012, 0.012, 0, 0.03 + 0.122 * 1.16 - 0.002, 0);
+        // black leather glove
+        m.glove.color.set(0x15151a); m.glove.roughness = 0.5;
+        // soft facial shading (eye sockets, under the nose, cheeks, chin)
+        m.shade = std(0x6b3a22, { transparent: true, opacity: 0.2, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -1 });
+        [1, -1].forEach(sd => {
+            ball(m.shade, head, 0.027, 0.016, 0.01, sd * 0.04, 0.019, 0.092);       // eye socket
+            ball(m.shade, head, 0.02, 0.012, 0.01, sd * 0.058, -0.03, 0.086);       // cheek hollow
+        });
+        ball(m.shade, head, 0.017, 0.006, 0.012, 0, -0.037, 0.102);                  // under the nose
+        ball(m.shade, head, 0.03, 0.009, 0.012, 0, -0.092, 0.088);                   // under the chin
+        if (p.F) { p.F.burnL.visible = p.F.burnR.visible = true; }
+    }
+
     const UNI = {
         Dodgers: { noPiping: true, trim: '#005A9C', front: h => h ? 'Dodgers' : 'Los Angeles', frontCol: '#005A9C', sock: '#005A9C', accent: '#005A9C', frontSize: 40 },
         // 統一獅 2026: orange jersey with black side panels, white piping, UNILIONS across the chest (road: grey-white with the same trim)
@@ -689,7 +723,17 @@ const Stadium3D = (function () {
             }
             if (U && U.pinstripe && isHome) { g.fillStyle = U.pinstripe; g.globalAlpha = 0.85; for (let x = 4; x < w; x += 9) g.fillRect(x, 0, 1.6, h); g.globalAlpha = 1; }   // home pinstripes
             g.fillStyle = 'rgba(0,0,0,0.18)'; g.fillRect(0, h - 10, w, 10);
-            const front = U ? U.front(isHome) : (team.abbr || ''), lt = front.length;
+            const front = p.fancy && !U ? '' : (U ? U.front(isHome) : (team.abbr || '')), lt = front.length;
+            if (p.fancy && !U) {
+                // script wordmark, placket with buttons, piped collar
+                const ink = FANCY_CAP[team.name] || team.c1, trim = lum(ink) > 0.6 ? '#14224a' : (team.c2 && lum(team.c2) > 0.5 ? team.c2 : '#ffd34a');
+                g.fillStyle = 'rgba(0,0,0,0.16)'; g.fillRect(w / 2 - 1, 36, 2, h - 46);
+                g.fillStyle = '#f4efe2'; for (let by = 56; by < h - 24; by += 34) { g.beginPath(); g.arc(w / 2, by, 3.2, 0, Math.PI * 2); g.fill(); }
+                g.font = 'italic bold ' + (team.name.length > 7 ? 26 : 31) + 'px "Brush Script MT","Segoe Script","Snell Roundhand",cursive'; g.textAlign = 'center'; g.textBaseline = 'middle';
+                g.lineJoin = 'round'; g.lineWidth = 6; g.strokeStyle = trim; g.strokeText(team.name, w / 2, 100);
+                g.fillStyle = ink; g.fillText(team.name, w / 2, 100);
+                g.strokeStyle = ink; g.lineWidth = 3.4; g.beginPath(); g.moveTo(w / 2 - 48, 120); g.quadraticCurveTo(w / 2, 130, w / 2 + 48, 120); g.stroke();   // swash underline
+            }
             if (front) {
                 g.font = (U ? 'italic bold ' + (U.frontSize || 40) : 'bold ' + (lt <= 2 ? 58 : lt === 3 ? 46 : 36)) + 'px "PingFang TC","Microsoft JhengHei",Arial'; g.textAlign = 'center'; g.textBaseline = 'middle';
                 if (!U) { g.lineWidth = 6; g.strokeStyle = pipe; g.lineJoin = 'round'; g.strokeText(front, w / 2, 112); }
@@ -706,7 +750,7 @@ const Stadium3D = (function () {
         }
         p.gloves = !!opts.helmet; p.mats.hand.color.set(p.gloves ? 0xf4f4f6 : (p.skinColor || 0xe0ac84)); p.mats.forearm.color.set(p.skinColor || 0xe0ac84);
         p.mats.sock.color.set(U ? U.sock : c2);
-        p.mats.cap.color.set(U && U.cap ? U.cap : team.c1);
+        p.mats.cap.color.set(U && U.cap ? U.cap : (p.fancy && FANCY_CAP[team.name]) || team.c1);
         p.flap.visible = !!opts.helmet;
         p.mats.cap.roughness = opts.helmet ? 0.18 : 0.75; p.mats.cap.metalness = opts.helmet ? 0.25 : 0; p.mats.cap.envMapIntensity = opts.helmet ? 1.6 : 0.5;
         // cap logo
@@ -828,7 +872,7 @@ const Stadium3D = (function () {
             p.home = { x: f.x, z: f.z }; p.cur = { x: f.x, z: f.z }; p.pos = f.k; p.phase = rnd(0, 6.28); p.chase = null; p.speed = 0;
             actors.fielders.push(p);
         }
-        const pit = makePerson('pitcher'); pit.gloveG.visible = true; pit.root.position.set(0, 0.26, MOUND_Z + 0.1); pit.root.rotation.y = 0; actors.pitcher = pit;
+        const pit = makePerson('pitcher'); pit.gloveG.visible = true; pit.root.position.set(0, 0.26, MOUND_Z + 0.1); pit.root.rotation.y = 0; actors.pitcher = pit; upgradePerson(pit);
         const cat = makePerson('catcher'); cat.chest.visible = true; cat.mask.visible = true; cat.shinGuardL.visible = cat.shinGuardR.visible = true; cat.gloveG.visible = true;
         cat.root.position.set(0, 0, 0.95); cat.root.rotation.y = Math.PI; actors.catcher = cat;
         cat.mats.cap.color.set(0x1a2238); cat.mats.jersey.color.set(0x1a2238); cat.flap.visible = true;
