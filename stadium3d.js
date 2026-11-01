@@ -1027,6 +1027,9 @@ const Stadium3D = (function () {
         renderer.setSize(cw, ch, false);
         canvas3d.style.width = cw + 'px'; canvas3d.style.height = ch + 'px';
         applyCamera(zoneCam, { pos: BAT_CAM.pos, look: BAT_CAM.look, fov: BAT_CAM.fov, shift: BAT_CAM.shift });
+        // where the zone lands on screen for the batter camera: projected from the real camera, so it is right for any screen shape (portrait included)
+        { const bc = [[-ZHW, ZONE_Y - ZHH], [ZHW, ZONE_Y + ZHH]].map(([x, y]) => { _pv.set(x, y, 0).project(zoneCam); return { x: ((_pv.x * 0.5 + 0.5) * cw - rect.x) / rect.w * GW, y: ((-_pv.y * 0.5 + 0.5) * ch - rect.y) / rect.h * GH }; });
+          BOX.bat = { cx: (bc[0].x + bc[1].x) / 2, cy: (bc[0].y + bc[1].y) / 2, hw: Math.abs(bc[1].x - bc[0].x) / 2, hh: Math.abs(bc[1].y - bc[0].y) / 2 }; }
         // where the zone lands on screen for the pitcher camera (computed from a frozen copy of that camera)
         applyCamera(pitchZoneCam, { pos: PITCH_CAM.pos, look: PITCH_CAM.look, fov: PITCH_CAM.fov, shift: PITCH_CAM.shift });
         const pc = [[-ZHW, ZONE_Y - ZHH], [ZHW, ZONE_Y + ZHH]].map(([x, y]) => { _pv.set(x, y, 0).project(pitchZoneCam); return { x: ((_pv.x * 0.5 + 0.5) * cw - rect.x) / rect.w * GW, y: ((-_pv.y * 0.5 + 0.5) * ch - rect.y) / rect.h * GH }; });

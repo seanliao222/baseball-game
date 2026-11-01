@@ -332,7 +332,7 @@
         </div>
     </div>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-    <script src="stadium3d.js?v=20261103f"></script>
+    <script src="stadium3d.js?v=20261103i"></script>
     <script src="https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.js"></script>
     <script>
@@ -3769,12 +3769,14 @@
         }
 
         // ── virtual joystick: tilt = speed of the batting cursor (host / single player move it directly; a guest sends the position to the host like a pointer) ──
-        const JOY = { active: false, x: 0, y: 0 };
+        const JOY = { active: false, x: 0, y: 0, last: 0 };
+        const JOY_SPEED = 6.0;      // cursor units per second at full tilt (the whole zone width is 2 units)
+        function joyDt() { const n = performance.now(), d = JOY.last ? Math.min(0.05, (n - JOY.last) / 1000) : 1 / 60; JOY.last = n; return d; }
         const JOY_FORCE = /[?&]joystick=1/.test(location.search);                                  // test switch only
         const JOY_TOUCH = !!(window.matchMedia && window.matchMedia('(pointer: coarse)').matches);      // a finger is the primary pointer: phone / tablet, not a laptop with a touch screen
         function joyStep() {
             if (!JOY.active || !uiBatting() || (MP.active && !MP.isHost)) return false;
-            G.curX = clamp(G.curX + JOY.x * 0.04, -1.5, 1.5); G.curY = clamp(G.curY + JOY.y * 0.04, -1.5, 1.5);
+            const dt = joyDt(); G.curX = clamp(G.curX + JOY.x * JOY_SPEED * dt, -1.5, 1.5); G.curY = clamp(G.curY + JOY.y * JOY_SPEED * dt, -1.5, 1.5);
             G.baseCurX = G.curX; G.baseCurY = G.curY; G.dragStartX = mouseX; G.dragStartY = mouseY;      // a later drag continues from here
             return true;
         }
@@ -3783,7 +3785,7 @@
             const ph = [PH.PITCH_SELECT, PH.AIM, PH.POWER_GAUGE, PH.WAIT_PITCH, PH.BATTING];
             if (!JOY.active || G.scr !== SCR.GAME || !uiBatting() || !ph.includes(G.phase)) { GJ.on = false; return; }
             if (!GJ.on) { GJ.x = G.curX || 0; GJ.y = G.curY || 0; GJ.on = true; }
-            GJ.x = clamp(GJ.x + JOY.x * 0.04, -1.5, 1.5); GJ.y = clamp(GJ.y + JOY.y * 0.04, -1.5, 1.5);
+            const dt = joyDt(); GJ.x = clamp(GJ.x + JOY.x * JOY_SPEED * dt, -1.5, 1.5); GJ.y = clamp(GJ.y + JOY.y * JOY_SPEED * dt, -1.5, 1.5);
             const now = performance.now(); if (now - GJ.t < 25) return; GJ.t = now;
             mpSend({ t: 'ptr', x: SZcx + GJ.x * (SZw / 2), y: SZcy + GJ.y * (SZh / 2) });
         }
@@ -4566,7 +4568,7 @@
         function renderPitchHistory() {
             const log = G.pitchLog; if (!log || !log.length) return;
             if (G.phase === PH.STEAL_MENU || G.phase === PH.SUB_MENU || G.phase === PH.HR_RUN || G.phase === PH.POWER_GAUGE) return;
-            const x0 = portraitGame ? 14 : 248, y0 = portraitGame ? 278 : H - 84, w = 232, h = 70, rows = log.slice(-3);
+            const x0 = portraitGame ? 14 : 248, y0 = portraitGame ? 224 : H - 84, w = 232, h = 70, rows = log.slice(-3);
             hudPanel(x0, y0, w, h, 12, '#6aa8ff');
             // mini zone (x,y in [-1.8,1.8]; the strike zone itself is [-1,1])
             const cx = x0 + 44, cy = y0 + h / 2, u = 29 / 1.45;       // mini zone shows +-1.45 zone half-widths
@@ -4672,6 +4674,30 @@
             hudText('S', x0 + 94, y0 + 83, 13, '#9fb0cc'); hudDots(x0 + 112, y0 + 78, G.strikes, 2, '#ffd23a');
             hudText('O', x0 + 160, y0 + 83, 13, '#9fb0cc'); hudDots(x0 + 178, y0 + 78, GV.outs, 2, '#ff5a44');
 
+            if (portraitGame) {
+                // portrait: slim cards so the field gets the screen (pitcher 40px, batter 58px)
+                { const px = 14, py = 112, pw = W - 28, ph = 40;
+                  hudPanel(px, py, pw, ph, 10, hudTeamColor(pitTeam));
+                  hudText(pitcher.name, px + 12, py + 22, 15, '#fff');
+                  const sideIdx = G.half === 0 ? 1 : 0, pc = G.pitchCounts[sideIdx], stm = Math.max(0, 1 - effLoad(sideIdx) / pitcher.stm), tired = stm < 0.4;
+                  hudText(`${handText(pitcher, false)} 防禦率 ${pitcher.era}  K ${pitcher.k}`, px + 100, py + 22, 11, 'rgba(200,215,240,0.85)', 'left', 'normal');
+                  hudText(`${pc} 球${tired ? ' ⚠' : ''}`, px + pw - 12, py + 22, 11, tired ? '#ff7a55' : 'rgba(200,215,240,0.85)', 'right', 'normal');
+                  ctx.fillStyle = 'rgba(255,255,255,0.1)'; drawRoundRect(ctx, px + 12, py + 30, pw - 24, 4, 2); ctx.fill();
+                  ctx.save(); drawRoundRect(ctx, px + 12, py + 30, pw - 24, 4, 2); ctx.clip(); ctx.fillStyle = stm > 0.6 ? '#3de07a' : stm > 0.3 ? '#ffc93a' : '#ff4d3a'; ctx.fillRect(px + 12, py + 30, (pw - 24) * stm, 4); ctx.restore(); }
+                { const cx = 14, cy = 158, cw = W - 28, chh = 58;
+                  hudPanel(cx, cy, cw, chh, 10, hudTeamColor(batTeam));
+                  ctx.fillStyle = hudTeamColor(batTeam); ctx.beginPath(); ctx.arc(cx + 24, cy + 22, 12, 0, Math.PI * 2); ctx.fill();
+                  hudText(String(G.batOrder[G.half] + 1), cx + 24, cy + 27, 14, '#fff', 'center');
+                  const _lp = G.lineupPos && G.lineupPos[G.half] && G.lineupPos[G.half][G.batOrder[G.half]];
+                  hudText(batter.name, cx + 46, cy + 22, 16, '#fff');
+                  hudText(`${_lp ? POS_NAME[_lp] + ' ' : ''}${handText(batter, true) ? handText(batter, true) + ' ' : ''}${batter.avg}  ${batter.hr}轟  ${batter.rbi}打點`, cx + 46, cy + 38, 11, 'rgba(200,215,240,0.85)', 'left', 'normal');
+                  const rating = Math.round((batter.con + batter.pow + batter.spd) / 3);
+                  hudText(rating >= 85 ? '絕好調' : rating >= 72 ? '好調' : '普通', cx + cw - 12, cy + 22, 11, rating >= 85 ? '#ff9a3a' : rating >= 72 ? '#5dff9a' : '#aab', 'right');
+                  { const R = ratingsOf(batter), gc = v => v >= 80 ? '#ff9a3a' : v >= 70 ? '#ffd23a' : v >= 60 ? '#9ee86a' : '#9fb0cc';
+                    [['彈', R.traj, '' + R.traj], ['巧', R.con], ['力', R.pow], ['走', R.spd], ['肩', R.arm], ['守', R.def]].forEach((e, i) => { const x = cx + 14 + i * 66, v = e[1], t = e[2] || gradeOf(v); hudText(e[0], x, cy + 52, 9, '#9fb0cc'); hudText(t, x + 12, cy + 53, 11, e[2] ? '#ffd23a' : gc(v)); }); } }
+                return;
+            }
+
             // ── batter card (bottom-left) ──
             const cx = 14, cy = portraitGame ? 186 : H - 98, cw = portraitGame ? 422 : 226, chh = 84;
             hudPanel(cx, cy, cw, chh, 12, hudTeamColor(batTeam));
@@ -4712,7 +4738,7 @@
             if (!G.lastPitchKmh || !G.speedGunTimer || G.speedGunTimer <= 0) return;
             G.speedGunTimer--;
             const a = Math.min(1, G.speedGunTimer / 14);
-            const pw = 234, px = W - pw - 14, py = portraitGame ? 276 : 140;
+            const pw = 234, px = W - pw - 14, py = portraitGame ? 158 + 58 + 78 : 140;
             ctx.save(); ctx.globalAlpha = a;
             hudPanel(px, py, pw, 38, 10, '#ffcc33');
             hudText(G.lastPitchName, px + 16, py + 24, 14, 'rgba(210,225,255,0.9)');
@@ -6177,10 +6203,10 @@
                 const r = jo.getBoundingClientRect(); let dx = e.clientX - (r.left + r.width / 2), dy = e.clientY - (r.top + r.height / 2);
                 const len = Math.hypot(dx, dy), k = len > MAXR ? MAXR / len : 1; dx *= k; dy *= k;
                 kn.style.transform = `translate(${dx}px,${dy}px)`;
-                const m = Math.min(1, Math.hypot(dx, dy) / MAXR), dead = 0.12, mag = m < dead ? 0 : Math.pow((m - dead) / (1 - dead), 1.5);      // dead zone + soft start for fine control
+                const m = Math.min(1, Math.hypot(dx, dy) / MAXR), dead = 0.08, mag = m < dead ? 0 : Math.pow((m - dead) / (1 - dead), 1.2);      // dead zone + soft start for fine control
                 const ang = Math.atan2(dy, dx); JOY.x = Math.cos(ang) * mag; JOY.y = Math.sin(ang) * mag; JOY.active = true;
             }
-            function end() { pid = null; JOY.active = false; JOY.x = JOY.y = 0; kn.style.transform = ''; }
+            function end() { pid = null; JOY.active = false; JOY.x = JOY.y = 0; JOY.last = 0; kn.style.transform = ''; }
             jo.addEventListener('pointerdown', e => { e.preventDefault(); pid = e.pointerId; try { jo.setPointerCapture(pid); } catch (x) { } upd(e); });
             jo.addEventListener('pointermove', e => { if (e.pointerId === pid) { e.preventDefault(); upd(e); } });
             jo.addEventListener('pointerup', e => { if (e.pointerId === pid) end(); });
