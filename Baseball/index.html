@@ -305,7 +305,7 @@
         </div>
     </div>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-    <script src="stadium3d.js?v=20261102w"></script>
+    <script src="stadium3d.js?v=20261102x"></script>
     <script src="https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.js"></script>
     <script>
@@ -2677,7 +2677,7 @@
                 '鼻子・嘴巴', ['noseS', '鼻子大小（0=沒有）', 0, 2.5, 0.05], ['noseY', '鼻子高低', -0.045, 0.0, 0.001], ['mouthW', '嘴巴寬度', 0.006, 0.035, 0.0005], ['mouthY', '嘴巴高低', -0.085, -0.035, 0.001], ['mouthT', '嘴巴粗細', 0.001, 0.008, 0.0002],
                 '頭・臉', ['headW', '頭寬', 0.9, 1.7, 0.01], ['headH', '頭高', 0.9, 1.5, 0.01], ['jawW', '下巴寬', 0.6, 1.6, 0.02], ['skin', '膚色（0淺→4深）', 0, 4, 0.05],
                 '個別差異', ['vary', '每個人的差異程度（0=都一樣）', 0, 2, 0.05]];
-            const PW_HASH = 'e2ac2db26235be83f11feb702dcf397dbf88e6bfe06c4f6a2f6d5c07aab9bd55';
+            const PW_HASH = '08bb12607e645638d8a29bf185646837a53941f9d723f6dc2bdb4b83635ae0fa';
             const sha = async t => [...new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(t)))].map(b => b.toString(16).padStart(2, '0')).join('');
             let unlocked = false; try { unlocked = localStorage.getItem('bb_face_ok') === PW_HASH; } catch (e) { }
             // saved values from an earlier session
