@@ -536,14 +536,14 @@ const Stadium3D = (function () {
         if (eyeMats[ek]) return eyeMats[ek];
         const c = canvasOf(160, 100), g = c.getContext('2d');
         const k = x => Math.sin(Math.PI * Math.min(1, Math.max(0, (x - 10) / 140)));
-        const top = x => 52 - 38 * k(x), bot = x => 52 + 40 * Math.pow(k(x), 0.8);          // rounder eye than an almond
+        const top = x => 52 - 44 * k(x), bot = x => 52 + 46 * Math.pow(k(x), 0.8);          // rounder eye than an almond
         g.beginPath(); g.moveTo(10, 54);
         for (let x = 10; x <= 150; x += 4) g.lineTo(x, top(x) + 2);
         for (let x = 150; x >= 10; x -= 4) g.lineTo(x, bot(x));
         g.closePath(); g.save(); g.clip();
         g.fillStyle = '#f5f2ef'; g.fillRect(0, 0, 160, 100);                                                       // plain white of the eye
         const ig = g.createLinearGradient(0, 10, 0, 94); ig.addColorStop(0, '#24130e'); ig.addColorStop(0.55, irisHex); ig.addColorStop(1, '#6e4630');
-        g.fillStyle = ig; g.beginPath(); g.ellipse(80, 54, 38, 46, 0, 0, Math.PI * 2); g.fill();                  // one big round dark iris
+        g.fillStyle = ig; g.beginPath(); g.ellipse(80, 54, 46, 52, 0, 0, Math.PI * 2); g.fill();                  // one big round dark iris
         g.fillStyle = 'rgba(10,5,4,0.45)'; g.beginPath(); g.ellipse(80, 56, 15, 20, 0, 0, Math.PI * 2); g.fill(); // pupil, barely darker
         g.fillStyle = 'rgba(255,255,255,0.98)'; g.beginPath(); g.ellipse(66, 34, 13, 10, -0.3, 0, Math.PI * 2); g.fill();   // large catchlight, upper left
         g.fillStyle = 'rgba(255,255,255,0.8)'; g.beginPath(); g.ellipse(98, 72, 5, 4, 0, 0, Math.PI * 2); g.fill();
@@ -581,7 +581,7 @@ const Stadium3D = (function () {
         const head = new THREE.Group(); head.position.set(0, 0.74, 0.01); torso.add(head);
         const skull = part(geo.head, m.skin, head); skull.scale.set(0.95, 1.1, 1.02);
         const F = {};
-        F.nose = blob(m.skin, head, 0.0145, 0.018, 0.018, 0, -0.016, 0.105);               // nose
+        F.nose = blob(m.skin, head, 0.0085, 0.0095, 0.009, 0, -0.02, 0.104);               // nose
         F.earL = blob(m.skin, head, 0.022, 0.034, 0.02, 0.104, -0.005, 0); F.earR = blob(m.skin, head, 0.022, 0.034, 0.02, -0.104, -0.005, 0); // ears
         F.jaw = blob(m.skin, head, 0.044, 0.03, 0.04, 0, -0.082, 0.03);                  // jaw
         F.scL = blob(m.white, head, 0.0155, 0.0078, 0.008, 0.04, 0.018, 0.097); F.scR = blob(m.white, head, 0.0155, 0.0078, 0.008, -0.04, 0.018, 0.097);   // eye whites (flattened)
@@ -705,11 +705,6 @@ const Stadium3D = (function () {
         m.glove.color.set(0x15151a); m.glove.roughness = 0.5;
         // soft facial shading (eye sockets, under the nose, cheeks, chin)
         m.shade = std(0x6b3a22, { transparent: true, opacity: 0.2, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -1 });
-        [1, -1].forEach(sd => {
-            ball(m.shade, head, 0.027, 0.016, 0.01, sd * 0.04, 0.019, 0.092);       // eye socket
-            ball(m.shade, head, 0.02, 0.012, 0.01, sd * 0.058, -0.03, 0.086);       // cheek hollow
-        });
-        ball(m.shade, head, 0.017, 0.006, 0.012, 0, -0.037, 0.102);                  // under the nose
         if (p.F) { p.F.burnL.visible = p.F.burnR.visible = false; p.F.hair.scale.set(0.1, 0.075, 0.086); }
     }
 
@@ -828,12 +823,12 @@ const Stadium3D = (function () {
         const irisCols = ['#4a2a1e', '#3a2218', '#52301f', '#2e1c20', '#40281e'], ic = irisCols[Math.floor(R() * irisCols.length)];
         [[F.eyeL, 1, false], [F.eyeR, -1, true]].forEach(([e, sd, mir]) => {
             e.material = eyeMat(ic, mir);
-            const dphi = Math.asin(Math.min(0.9, sp / 0.1026)), th = Math.PI / 2 - ey / 0.12, hw = 0.27 * es, hh = 0.15 * es;
+            const dphi = Math.asin(Math.min(0.9, sp / 0.1026)), th = Math.PI / 2 - ey / 0.12, hw = 0.225 * es, hh = 0.17 * es;
             if (e.geometry) e.geometry.dispose();
             e.geometry = new THREE.SphereGeometry(0.1095, 18, 10, Math.PI / 2 + sd * dphi - hw, hw * 2, th - hh, hh * 2);
         });
         const tilt = r(-0.06, 0.03); F.bL.rotation.z = tilt; F.bR.rotation.z = -tilt;
-        const ns = r(0.85, 1.15); F.nose.scale.set(0.0145 * ns, 0.018 * ns, 0.018 * ns);
+        const ns = r(0.85, 1.15); F.nose.scale.set(0.0085 * ns, 0.0095 * ns, 0.009 * ns);
         F.lip.scale.set(r(0.014, 0.019), 0.0022, 0.008); F.lip.position.y = r(-0.06, -0.054);
         const jw = r(0.93, 1.08); F.jaw.scale.set(0.044 * jw, r(0.028, 0.032), 0.04);
         F.burnL.visible = F.burnR.visible = false;
