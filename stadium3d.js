@@ -534,7 +534,7 @@ const Stadium3D = (function () {
             jersey: std(0xffffff), accent: std(0xcccccc), pants: std(0xeeeeee), sock: std(0xcccccc), skin: std(0xe0ac84, { roughness: 0.7 }),
             cap: std(0x222222, { roughness: 0.6 }), shoe: std(0x15151a, { roughness: 0.5 }), glove: std(0x6b3b1a, { roughness: 0.45, envMapIntensity: 0.9 }),
             dark: std(0x101014), gear: std(0x1a2238, { roughness: 0.6 }), bat: std(0xffffff, { roughness: 0.32, envMapIntensity: 1.0 }),
-            hips: std(0xeeeeee), hand: std(0xe0ac84, { roughness: 0.7 }), forearm: std(0xe0ac84, { roughness: 0.65 }), sleeve: std(0xffffff), band: std(0xffffff, { roughness: 0.6 }), hair: std(0x17120e, { roughness: 0.9 }), white: std(0xeee8e0, { roughness: 0.35 }), iris: std(0x2a1a12, { roughness: 0.25 }), lip: std(0xa8584c, { roughness: 0.55 }), sole: std(0xe6e6ea, { roughness: 0.6 })
+            hips: std(0xeeeeee), hand: std(0xe0ac84, { roughness: 0.7 }), forearm: std(0xe0ac84, { roughness: 0.65 }), sleeve: std(0xffffff), band: std(0xffffff, { roughness: 0.6 }), hair: std(0x17120e, { roughness: 0.9 }), white: std(0xeee8e0, { roughness: 0.35 }), iris: std(0x2a1a12, { roughness: 0.25 }), lip: std(0xb8705f, { roughness: 0.55 }), sole: std(0xe6e6ea, { roughness: 0.6 })
         };
         const jerseyC = canvasOf(256, 256), jerseyT = new THREE.CanvasTexture(jerseyC);
         jerseyT.wrapS = THREE.RepeatWrapping; jerseyT.offset.x = 0.5; jerseyT.anisotropy = maxAniso; m.jersey.map = jerseyT;
@@ -554,7 +554,7 @@ const Stadium3D = (function () {
         const head = new THREE.Group(); head.position.set(0, 0.74, 0.01); torso.add(head);
         const skull = part(geo.head, m.skin, head); skull.scale.set(0.95, 1.1, 1.02);
         const F = {};
-        F.nose = blob(m.skin, head, 0.018, 0.022, 0.022, 0, -0.016, 0.106);               // nose
+        F.nose = blob(m.skin, head, 0.0145, 0.018, 0.018, 0, -0.016, 0.105);               // nose
         F.earL = blob(m.skin, head, 0.022, 0.034, 0.02, 0.104, -0.005, 0); F.earR = blob(m.skin, head, 0.022, 0.034, 0.02, -0.104, -0.005, 0); // ears
         F.jaw = blob(m.skin, head, 0.055, 0.04, 0.05, 0, -0.085, 0.05);                  // jaw
         F.scL = blob(m.white, head, 0.0175, 0.0105, 0.009, 0.04, 0.018, 0.097); F.scR = blob(m.white, head, 0.0175, 0.0105, 0.009, -0.04, 0.018, 0.097);   // eye whites
@@ -563,7 +563,7 @@ const Stadium3D = (function () {
         F.bL = blob(m.hair, head, 0.027, 0.0065, 0.01, 0.04, 0.047, 0.097); F.bR = blob(m.hair, head, 0.027, 0.0065, 0.01, -0.04, 0.047, 0.097);          // brows
         F.lip = blob(m.lip, head, 0.021, 0.0055, 0.011, 0, -0.058, 0.101);               // lips
         F.burnL = blob(m.hair, head, 0.011, 0.028, 0.024, 0.097, 0.012, 0.03); F.burnR = blob(m.hair, head, 0.011, 0.028, 0.024, -0.097, 0.012, 0.03);    // sideburns
-        blob(m.hair, head, 0.094, 0.07, 0.08, 0, 0.0, -0.04);                // hair under the cap
+        F.hair = blob(m.hair, head, 0.094, 0.07, 0.08, 0, 0.0, -0.04);                // hair under the cap
         // cap / helmet
         const capG = new THREE.Group(); head.add(capG);
         const dome = part(geo.cap, m.cap, capG); dome.position.y = 0.034; dome.scale.set(1, 1.0, 1.05);
@@ -646,11 +646,13 @@ const Stadium3D = (function () {
 
     // team-specific uniform looks; anything not listed falls back to the generic colour-based style
     // ── "fancy" model upgrade (prototype on the pitcher): curved cap with piping, black leather glove, shaded face ──
-    const FANCY_CAP = { Brothers: '#14224a' };
-    function upgradePerson(p) {
+    // team-specific look (only teams listed here get these colours / wordmark; everyone else keeps their own)
+    const FANCY_TEAMS = { Brothers: { cap: '#14224a', ink: '#14224a', trim: '#ffd34a' } };
+    function upgradePerson(p, withCap = true) {
         const m = p.mats, head = p.head, capG = p.capG;
         p.fancy = true;
         const ball = (mat, parent, sx, sy, sz, x, y, z) => { const me = new THREE.Mesh(geo.ball, mat); me.scale.set(sx, sy, sz); me.position.set(x, y, z); parent.add(me); return me; };
+        if (withCap) {
         // taller, rounder crown
         const dome = capG.children[0]; dome.scale.set(1.0, 1.16, 1.08); dome.position.y = 0.03;
         p.brim.visible = false;
@@ -666,6 +668,7 @@ const Stadium3D = (function () {
         const edge = []; for (let i = 0; i <= nu; i++) edge.push(new THREE.Vector3(...bp(-1 + 2 * i / nu, 1)));
         const pipe = new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(edge), 24, 0.0036, 6, false), m.band); capG.add(pipe);
         ball(m.band, capG, 0.012, 0.012, 0.012, 0, 0.03 + 0.122 * 1.16 - 0.002, 0);
+        }
         // black leather glove
         m.glove.color.set(0x15151a); m.glove.roughness = 0.5;
         // soft facial shading (eye sockets, under the nose, cheeks, chin)
@@ -676,7 +679,7 @@ const Stadium3D = (function () {
         });
         ball(m.shade, head, 0.017, 0.006, 0.012, 0, -0.037, 0.102);                  // under the nose
         ball(m.shade, head, 0.03, 0.009, 0.012, 0, -0.092, 0.088);                   // under the chin
-        if (p.F) { p.F.burnL.visible = p.F.burnR.visible = true; }
+        if (p.F) { p.F.burnL.visible = p.F.burnR.visible = true; p.F.hair.scale.set(0.1, 0.075, 0.086); }
     }
 
     const UNI = {
@@ -688,7 +691,7 @@ const Stadium3D = (function () {
         Yankees: { noPiping: true, pinstripe: '#0c2340', trim: '#0c2340', front: h => h ? '' : 'NEW YORK', frontCol: '#0c2340', sock: '#0c2340', accent: '#0c2340', frontSize: 34 }
     };
     function dressTeam(p, team, isHome, opts = {}) {
-        const key = [team.abbr, isHome, opts.helmet, opts.number, p.skinKey].join('|');
+        const key = [team.abbr, isHome, opts.helmet, opts.number, p.skinKey, p.chestNum].join('|');
         if (p.teamKey === key) return; p.teamKey = key;
         const jl = lum(team.jersey || '#ffffff');
         const U0 = UNI[team.name] || null;
@@ -696,6 +699,7 @@ const Stadium3D = (function () {
         const c2 = team.c2 && team.c2.toLowerCase() !== '#ffffff' ? team.c2 : team.c1;
         p.mats.jersey.color.set(0xffffff); p.mats.pants.color.set(0xffffff); p.mats.sleeve.color.set(jersey); p.mats.hips.color.set(isHome ? '#f3f3f6' : '#c9ced8');
         p.mats.accent.color.set(isHome ? (jl > 0.6 ? '#f1f1f4' : c2) : c2);
+        if (p.fancy && FANCY_TEAMS[team.name] && !UNI[team.name]) p.mats.accent.color.set(FANCY_TEAMS[team.name].ink);
         p.mats.band.color.set(c2);
         const U = UNI[team.name] || null, pantsHex = (isHome || (U && U.whitePants)) ? '#f3f3f6' : '#c9ced8';
         if (U) { p.mats.accent.color.set(U.accent); p.mats.band.color.set(U.accent); }
@@ -723,15 +727,19 @@ const Stadium3D = (function () {
             }
             if (U && U.pinstripe && isHome) { g.fillStyle = U.pinstripe; g.globalAlpha = 0.85; for (let x = 4; x < w; x += 9) g.fillRect(x, 0, 1.6, h); g.globalAlpha = 1; }   // home pinstripes
             g.fillStyle = 'rgba(0,0,0,0.18)'; g.fillRect(0, h - 10, w, 10);
-            const front = p.fancy && !U ? '' : (U ? U.front(isHome) : (team.abbr || '')), lt = front.length;
-            if (p.fancy && !U) {
+            const fx = p.fancy && !U ? FANCY_TEAMS[team.name] : null;
+            const front = fx ? '' : (U ? U.front(isHome) : (team.abbr || '')), lt = front.length;
+            if (fx) {
                 // script wordmark, placket with buttons, piped collar
-                const ink = FANCY_CAP[team.name] || team.c1, trim = lum(ink) > 0.6 ? '#14224a' : (team.c2 && lum(team.c2) > 0.5 ? team.c2 : '#ffd34a');
+                const ink = fx.ink, trim = fx.trim;
                 g.fillStyle = 'rgba(0,0,0,0.16)'; g.fillRect(w / 2 - 1, 36, 2, h - 46);
                 g.fillStyle = '#f4efe2'; for (let by = 56; by < h - 24; by += 34) { g.beginPath(); g.arc(w / 2, by, 3.2, 0, Math.PI * 2); g.fill(); }
                 g.font = 'italic bold ' + (team.name.length > 7 ? 26 : 31) + 'px "Brush Script MT","Segoe Script","Snell Roundhand",cursive'; g.textAlign = 'center'; g.textBaseline = 'middle';
                 g.lineJoin = 'round'; g.lineWidth = 6; g.strokeStyle = trim; g.strokeText(team.name, w / 2, 100);
                 g.fillStyle = ink; g.fillText(team.name, w / 2, 100);
+                g.fillStyle = ink; g.beginPath(); g.moveTo(w / 2 - 30, 0); g.lineTo(w / 2 + 30, 0); g.lineTo(w / 2, 46); g.closePath(); g.fill();   // dark collar V
+                g.strokeStyle = trim; g.lineWidth = 3; g.beginPath(); g.moveTo(w / 2 - 33, 0); g.lineTo(w / 2, 50); g.lineTo(w / 2 + 33, 0); g.stroke();
+                if (p.chestNum != null) { g.font = 'bold 38px Arial'; g.lineWidth = 5; g.strokeStyle = trim; g.strokeText(String(p.chestNum), w / 2 + 56, 160); g.fillStyle = ink; g.fillText(String(p.chestNum), w / 2 + 56, 160); }
                 g.strokeStyle = ink; g.lineWidth = 3.4; g.beginPath(); g.moveTo(w / 2 - 48, 120); g.quadraticCurveTo(w / 2, 130, w / 2 + 48, 120); g.stroke();   // swash underline
             }
             if (front) {
@@ -750,13 +758,19 @@ const Stadium3D = (function () {
         }
         p.gloves = !!opts.helmet; p.mats.hand.color.set(p.gloves ? 0xf4f4f6 : (p.skinColor || 0xe0ac84)); p.mats.forearm.color.set(p.skinColor || 0xe0ac84);
         p.mats.sock.color.set(U ? U.sock : c2);
-        p.mats.cap.color.set(U && U.cap ? U.cap : (p.fancy && FANCY_CAP[team.name]) || team.c1);
+        p.mats.cap.color.set(U && U.cap ? U.cap : (p.fancy && FANCY_TEAMS[team.name] && FANCY_TEAMS[team.name].cap) || team.c1);
         p.flap.visible = !!opts.helmet;
         p.mats.cap.roughness = opts.helmet ? 0.18 : 0.75; p.mats.cap.metalness = opts.helmet ? 0.25 : 0; p.mats.cap.envMapIntensity = opts.helmet ? 1.6 : 0.5;
         // cap logo
         const g = p.logoC.getContext('2d'); g.clearRect(0, 0, 64, 64);
         const hc = lum(team.c1) > 0.5 ? '#111' : '#fff';
-        g.fillStyle = hc; g.font = 'bold ' + ((team.hatLogo || '').length > 1 ? 30 : 42) + 'px Arial'; g.textAlign = 'center'; g.textBaseline = 'middle';
+        const fxl = p.fancy && FANCY_TEAMS[team.name];
+        g.fillStyle = hc; g.font = (fxl ? 'italic 900 ' : 'bold ') + ((team.hatLogo || '').length > 1 ? 30 : (fxl ? 50 : 42)) + 'px Arial'; g.textAlign = 'center'; g.textBaseline = 'middle';
+        if (fxl && (team.hatLogo || '').length <= 1) {
+            const capHex = '#' + p.mats.cap.color.getHexString(), dark = lum(capHex) <= 0.5;
+            g.lineJoin = 'round'; g.lineWidth = 7; g.strokeStyle = dark ? (team.c2 && lum(team.c2) > 0.5 ? team.c2 : '#ffd34a') : '#14224a'; g.strokeText(team.hatLogo || '', 32, 34);
+            g.fillStyle = dark ? '#ffffff' : '#14224a';
+        }
         g.fillText(team.hatLogo || '', 32, 34); p.logoT.needsUpdate = true;
         if (opts.number != null) {
             const n = p.numC.getContext('2d'); n.clearRect(0, 0, 128, 128);
@@ -778,15 +792,15 @@ const Stadium3D = (function () {
             ld.position.set(sd * sp, ey + 0.0105 * es + 0.0005, 0.099); ld.scale.set(0.021 * es, 0.0035, 0.01);
             br.position.set(sd * sp, ey + 0.029, 0.097); br.scale.set(r(0.024, 0.03), r(0.005, 0.0085), 0.01);
         });
-        const tilt = r(-0.1, 0.22); F.bL.rotation.z = -tilt; F.bR.rotation.z = tilt;
-        const ns = r(0.85, 1.15); F.nose.scale.set(0.018 * ns, 0.022 * ns, 0.022 * ns);
-        F.lip.scale.set(r(0.018, 0.025), r(0.005, 0.0075), 0.011); F.lip.position.y = r(-0.062, -0.054);
+        const tilt = r(0.08, 0.3); F.bL.rotation.z = tilt; F.bR.rotation.z = -tilt;
+        const ns = r(0.85, 1.15); F.nose.scale.set(0.0145 * ns, 0.018 * ns, 0.018 * ns);
+        F.lip.scale.set(r(0.015, 0.02), r(0.0035, 0.0055), 0.01); F.lip.position.y = r(-0.062, -0.054);
         const jw = r(0.93, 1.08); F.jaw.scale.set(0.055 * jw, r(0.038, 0.044), 0.05);
         F.burnL.visible = F.burnR.visible = R() < 0.45;
         p.faceSeed = seed;
     }
     function setSkin(p, name) {
-        const tones = [0xeccaa8, 0xdfb48e, 0xcb9c76, 0xb58560, 0x956646];
+        const tones = [0xe9ccae, 0xdcb893, 0xc9a07c, 0xb58a66, 0x966b4c];
         const k = hash(name || '') % tones.length; p.skinKey = k; p.skinColor = tones[k]; p.mats.skin.color.set(tones[k]); p.mats.forearm.color.set(tones[k]); p.mats.hand.color.set(p.gloves ? 0xf4f4f6 : tones[k]);
         if (p.faceSeed !== name) setFace(p, name || '');
     }
@@ -868,7 +882,7 @@ const Stadium3D = (function () {
     function buildActors() {
         buildGeos();
         for (const f of FIELD_POS) {
-            const p = makePerson('field'); p.gloveG.visible = true; p.root.position.set(f.x, 0, f.z);
+            const p = makePerson('field'); upgradePerson(p); p.gloveG.visible = true; p.root.position.set(f.x, 0, f.z);
             p.home = { x: f.x, z: f.z }; p.cur = { x: f.x, z: f.z }; p.pos = f.k; p.phase = rnd(0, 6.28); p.chase = null; p.speed = 0;
             actors.fielders.push(p);
         }
@@ -881,10 +895,10 @@ const Stadium3D = (function () {
         ump.logoC.getContext('2d').clearRect(0, 0, 64, 64);
 
         const wrap = new THREE.Group(); scene.add(wrap); actors.batterWrap = wrap;
-        const bt = makePerson('batter'); scene.remove(bt.root); wrap.add(bt.root);
+        const bt = makePerson('batter'); upgradePerson(bt, false); scene.remove(bt.root); wrap.add(bt.root);
         bt.root.position.set(-0.95, 0, 0.05); bt.root.rotation.y = Math.PI / 2; bt.holder.visible = true; bt.flap.visible = true; actors.batter = bt;
 
-        for (let i = 0; i < 5; i++) { const r = makePerson('runner'); r.root.visible = false; r.hold = i; actors.extras.push(r); }
+        for (let i = 0; i < 5; i++) { const r = makePerson('runner'); upgradePerson(r, false); r.root.visible = false; r.hold = i; actors.extras.push(r); }
 
         // ball
         const bm = new THREE.MeshStandardMaterial({ map: ballTexture(), roughness: 0.55, emissive: 0x333330, emissiveIntensity: 0.55 });
@@ -1745,12 +1759,12 @@ const Stadium3D = (function () {
     // ── umpire + catcher teams, colours ─────────────────
     function syncTeams(G, info) {
         const fieldHome = G.half === 0;
-        actors.fielders.forEach(f => { setSkin(f, info.pitTeam.abbr + '|' + f.pos); dressTeam(f, info.pitTeam, fieldHome, {}); });
+        actors.fielders.forEach(f => { setSkin(f, info.pitTeam.abbr + '|' + f.pos); f.chestNum = 1 + hash(info.pitTeam.abbr + f.pos) % 60; dressTeam(f, info.pitTeam, fieldHome, {}); });
         setSkin(actors.catcher, info.pitTeam.abbr + '|C'); setSkin(actors.umpire, 'ump');
-        dressTeam(actors.pitcher, info.pitTeam, fieldHome, {});
+        actors.pitcher.chestNum = info.pitcher.num != null ? info.pitcher.num : 11; dressTeam(actors.pitcher, info.pitTeam, fieldHome, {});
         setSkin(actors.pitcher, info.pitcher.name);
         const bs = G.half === 1;
-        dressTeam(actors.batter, info.batTeam, bs, { helmet: true, number: G.batOrder[G.half] + 1 });
+        actors.batter.chestNum = info.batter.num != null ? info.batter.num : null; dressTeam(actors.batter, info.batTeam, bs, { helmet: true, number: G.batOrder[G.half] + 1 });
         setSkin(actors.batter, info.batter.name);
     }
 
