@@ -3652,9 +3652,26 @@
             histSave(a);
         }
 
+        // elapsed play time (real clock; only runs during the game itself, not on menus)
+        function tickClock() {
+            const now = performance.now(), dt = Math.min(1000, now - (G.clkLast || now)); G.clkLast = now;
+            if (G.tk && (G.scr === SCR.GAME || G.scr === SCR.HALF_END)) G.tk.ms = (G.tk.ms || 0) + dt;
+        }
+        function clockText() {
+            const sec = Math.floor(((G.tk && G.tk.ms) || 0) / 1000), h = Math.floor(sec / 3600), m = Math.floor(sec % 3600 / 60), s = sec % 60;
+            const p = n => String(n).padStart(2, '0');
+            return (h ? h + ':' + p(m) : p(m)) + ':' + p(s);
+        }
+        function drawGameClock() {
+            const x = 14, y = 112, w = 96, h = 24;
+            hudPanel(x, y, w, h, 8);
+            hudText('⏱ ' + clockText(), x + 10, y + 17, 15, 'rgba(255,255,255,0.9)');
+        }
+
         function update() {
             mpSyncInput();
             G.frame++;
+            tickClock();
             G.runnerAnimPhase = (G.runnerAnimPhase + 0.12) % (Math.PI * 2);
             trackGame();
             if (G.scoreFlash[0] > 0) G.scoreFlash[0]--;
@@ -4665,6 +4682,7 @@
             if (S3D.isBatCam() && uiBatting() && (G.phase === PH.WAIT_PITCH || G.phase === PH.BATTING || mpBatterWaiting())) renderBatCursor();
             renderHitFlash();
             renderBroadcastHUD();
+            drawGameClock();
             renderHitKindChip();
             renderMpBanner();
             renderPitchChangeNotice();
@@ -4704,6 +4722,7 @@
 
             renderHitEffect();
             renderClassicUI();
+            drawGameClock();
             renderPhaseUI();
 
             if (G.phase === PH.SUB_MENU) renderSubMenu();
@@ -5648,6 +5667,7 @@
             ctx.shadowColor = '#FF0000'; ctx.shadowBlur = 20; txt('GAME OVER', W / 2, 38, 34, '#FF4444'); ctx.shadowBlur = 0;
             const aw = TEAMS[G.awayIdx], hw = TEAMS[G.homeIdx];
             txt(`${aw.abbr} ${G.score[0]} - ${G.score[1]} ${hw.abbr}`, W / 2, 84, 36, '#FFD700');
+            txt('⏱ 比賽時間 ' + clockText(), W - 20, 30, 15, 'rgba(255,255,255,0.75)', 'right');
             const diff = G.score[1] - G.score[0];
             let msg = ''; let col = '';
             if (diff > 0) { msg = '恭喜獲勝！ YOU WIN!'; col = '#44FF88'; }
