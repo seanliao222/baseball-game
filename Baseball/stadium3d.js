@@ -541,19 +541,24 @@ const Stadium3D = (function () {
         for (let x = 10; x <= 150; x += 4) g.lineTo(x, top(x) + 2);
         for (let x = 150; x >= 10; x -= 4) g.lineTo(x, bot(x));
         g.closePath(); g.save(); g.clip();
-        g.fillStyle = '#f5f2ef'; g.fillRect(0, 0, 160, 100);                                                       // plain white of the eye
-        const ig = g.createLinearGradient(0, 10, 0, 94); ig.addColorStop(0, '#24130e'); ig.addColorStop(0.55, irisHex); ig.addColorStop(1, '#6e4630');
-        g.fillStyle = ig; g.beginPath(); g.ellipse(80, 54, 46, 52, 0, 0, Math.PI * 2); g.fill();                  // one big round dark iris
-        g.fillStyle = 'rgba(10,5,4,0.45)'; g.beginPath(); g.ellipse(80, 56, 15, 20, 0, 0, Math.PI * 2); g.fill(); // pupil, barely darker
-        g.fillStyle = 'rgba(255,255,255,0.98)'; g.beginPath(); g.ellipse(66, 34, 13, 10, -0.3, 0, Math.PI * 2); g.fill();   // large catchlight, upper left
-        g.fillStyle = 'rgba(255,255,255,0.8)'; g.beginPath(); g.ellipse(98, 72, 5, 4, 0, 0, Math.PI * 2); g.fill();
+        const sg = g.createRadialGradient(80, 52, 20, 80, 52, 80); sg.addColorStop(0, '#f6f3f4'); sg.addColorStop(1, '#cfc8dc');
+        g.fillStyle = sg; g.fillRect(0, 0, 160, 100);                                                              // white that greys to lavender at the corners
+        const ig = g.createLinearGradient(0, 8, 0, 96); ig.addColorStop(0, '#1e1016'); ig.addColorStop(0.55, irisHex); ig.addColorStop(1, '#6a3c4c');
+        g.fillStyle = ig; g.beginPath(); g.ellipse(80, 54, 44, 52, 0, 0, Math.PI * 2); g.fill();                  // big round iris, lighter lower rim
+        const rg = g.createRadialGradient(80, 56, 28, 80, 56, 50); rg.addColorStop(0, 'rgba(20,8,12,0)'); rg.addColorStop(1, 'rgba(20,8,12,0.55)');
+        g.fillStyle = rg; g.beginPath(); g.ellipse(80, 54, 44, 52, 0, 0, Math.PI * 2); g.fill();                  // dark outer ring of the iris
+        g.fillStyle = 'rgba(10,5,6,0.55)'; g.beginPath(); g.ellipse(80, 56, 15, 20, 0, 0, Math.PI * 2); g.fill();  // pupil
+        g.fillStyle = 'rgba(255,255,255,0.98)'; g.beginPath(); g.ellipse(64, 36, 13, 10, -0.3, 0, Math.PI * 2); g.fill();   // large catchlight, upper left
+        g.fillStyle = 'rgba(255,255,255,0.85)'; g.beginPath(); g.ellipse(98, 72, 5.5, 4.2, 0, 0, Math.PI * 2); g.fill();    // small one, lower right
         g.restore();
-        g.strokeStyle = '#1a0e0a'; g.lineCap = 'round'; g.lineJoin = 'round'; g.lineWidth = 6;
+        const lg = g.createLinearGradient(0, 0, 0, 32); lg.addColorStop(0, 'rgba(165,125,195,0)'); lg.addColorStop(1, 'rgba(165,125,195,0.32)');
+        g.fillStyle = lg; g.beginPath(); g.moveTo(8, 50); for (let x = 10; x <= 150; x += 4) g.lineTo(x, top(x) - 5); g.lineTo(152, 50); g.closePath(); g.fill();   // faint lavender lid
+        g.strokeStyle = '#150a0e'; g.lineCap = 'round'; g.lineJoin = 'round'; g.lineWidth = 7.5;
         g.beginPath(); for (let x = 10; x <= 150; x += 4) { const y = top(x) + 1; if (x === 10) g.moveTo(x, y); else g.lineTo(x, y); } g.stroke();
         g.lineWidth = 4.5; g.beginPath(); if (mirror) { g.moveTo(14, top(14) + 5); g.lineTo(3, top(14) - 4); } else { g.moveTo(146, top(146) + 5); g.lineTo(157, top(146) - 4); } g.stroke();
         g.strokeStyle = 'rgba(120,70,80,0.5)'; g.lineWidth = 2.2; g.beginPath(); for (let x = 22; x <= 138; x += 4) { const y = bot(x) + 1; if (x === 22) g.moveTo(x, y); else g.lineTo(x, y); } g.stroke();
         const t = new THREE.CanvasTexture(c); t.anisotropy = maxAniso; 
-        return eyeMats[ek] = new THREE.MeshStandardMaterial({ map: t, transparent: true, roughness: 0.4, metalness: 0, depthWrite: false, side: THREE.DoubleSide, polygonOffset: true, polygonOffsetFactor: -3, polygonOffsetUnits: -3 });
+        return eyeMats[ek] = new THREE.MeshBasicMaterial({ map: t, transparent: true, toneMapped: false, depthWrite: false, side: THREE.DoubleSide, polygonOffset: true, polygonOffsetFactor: -3, polygonOffsetUnits: -3 });      // unlit, so the painted colours show exactly
     }
 
     function makePerson(kind) {
@@ -589,7 +594,7 @@ const Stadium3D = (function () {
         F.hiL = blob(m.white, head, 0.003, 0.003, 0.003, 0.0425, 0.0185, 0.109); F.hiR = blob(m.white, head, 0.003, 0.003, 0.003, -0.0375, 0.0185, 0.109);   // catchlight
         F.skL = blob(m.skin, head, 0.0185, 0.0064, 0.009, 0.04, 0.0255, 0.1035); F.skR = blob(m.skin, head, 0.0185, 0.0064, 0.009, -0.04, 0.0255, 0.1035);   // upper eyelid covering the top of the eye
         F.lidL = blob(m.dark, head, 0.0165, 0.0013, 0.008, 0.04, 0.0195, 0.1105); F.lidR = blob(m.dark, head, 0.0165, 0.0013, 0.008, -0.04, 0.0195, 0.1105);   // soft lid edge
-        F.eyeL = new THREE.Mesh(new THREE.SphereGeometry(0.1095, 2, 2), eyeMat('#4a2a1e', false)); F.eyeR = new THREE.Mesh(new THREE.SphereGeometry(0.1095, 2, 2), eyeMat('#4a2a1e', true));
+        F.eyeL = new THREE.Mesh(new THREE.SphereGeometry(0.1095, 2, 2), eyeMat('#2e1620', false)); F.eyeR = new THREE.Mesh(new THREE.SphereGeometry(0.1095, 2, 2), eyeMat('#2e1620', true));
         F.eyeL.scale.set(0.95, 1.1, 1.02); F.eyeR.scale.set(0.95, 1.1, 1.02); head.add(F.eyeL); head.add(F.eyeR);
         [F.scL, F.scR, F.irL, F.irR, F.hiL, F.hiR, F.skL, F.skR, F.lidL, F.lidR].forEach(o => { o.visible = false; });   // the painted eyes replace the blob eyes
         F.bL = blob(m.hair, head, 0.027, 0.0065, 0.01, 0.04, 0.047, 0.097); F.bR = blob(m.hair, head, 0.027, 0.0065, 0.01, -0.04, 0.047, 0.097);          // brows
@@ -820,7 +825,7 @@ const Stadium3D = (function () {
             ld.position.set(sd * sp, ey + 0.0025 * es, 0.1105); ld.scale.set(0.0165 * es, 0.0013, 0.008);
             br.position.set(sd * sp, ey + 0.034, 0.097); br.scale.set(r(0.024, 0.03), r(0.005, 0.0075), 0.01);
         });
-        const irisCols = ['#4a2a1e', '#3a2218', '#52301f', '#2e1c20', '#40281e'], ic = irisCols[Math.floor(R() * irisCols.length)];
+        const irisCols = ['#2e1620', '#281424', '#3a201a', '#221420', '#2c1830'], ic = irisCols[Math.floor(R() * irisCols.length)];
         [[F.eyeL, 1, false], [F.eyeR, -1, true]].forEach(([e, sd, mir]) => {
             e.material = eyeMat(ic, mir);
             const dphi = Math.asin(Math.min(0.9, sp / 0.1026)), th = Math.PI / 2 - ey / 0.12, hw = 0.225 * es, hh = 0.17 * es;
