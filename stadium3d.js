@@ -551,7 +551,7 @@ const Stadium3D = (function () {
         const belt = part(new THREE.CylinderGeometry(0.157, 0.157, 0.04, 18).translate(0, -0.02, 0), m.dark, torso, false); belt.scale.set(1.1, 1, 0.8);
         const collar = part(new THREE.TorusGeometry(0.075, 0.016, 8, 16), m.accent, torso, false); collar.rotation.x = Math.PI / 2; collar.position.y = 0.625; collar.scale.y = 0.8;
         part(geo.neck, m.skin, torso, false);
-        const head = new THREE.Group(); head.position.set(0, 0.80, 0.01); head.scale.set(1.68, 1.46, 1.5); torso.add(head);      // chibi: oversized head
+        const head = new THREE.Group(); head.position.set(0, 0.79, 0.01); head.scale.set(1.5, 1.34, 1.42); torso.add(head);      // chibi: oversized head
         const skull = part(geo.head, m.skin, head); skull.scale.set(0.97, 1.08, 1.02);
         const F = {};
         F.skull = skull;
@@ -630,7 +630,7 @@ const Stadium3D = (function () {
         const p = { F, kind, root, hips, torso, head, armL, armR, guards, legL, legR, mats: m, jerseyC, jerseyT, pantsC, pantsT, capG, flap, mask, logoC, logoT, numC, numT, num, gloveG, holder, bat, chest, shinGuardL, shinGuardR, brim, belt, fade: 1, teamKey: '' };
         p.allMats = Object.values(m);
         root.traverse(o => { if (o.isMesh) o.frustumCulled = true; });
-        root.scale.setScalar(0.93);
+        root.scale.setScalar(0.95);
         scene.add(root);
         return p;
     }
@@ -727,37 +727,35 @@ const Stadium3D = (function () {
         const c = canvasOf(256, 256), g = c.getContext('2d');
         const hairCols = ['#17120e', '#120e0c', '#2a1c12', '#3b2a1a', '#1d1a1a', '#4a3320', '#0d0b0b'];
         const hair = hairCols[Math.floor(R() * hairCols.length)];
-        const cx = 128, ey = r(128, 140), sp = r(52, 62), ew = r(17, 21), eh = r(22, 27);
-        const irisCols = ['#5a3420', '#3a2418', '#2b2a3a', '#6b4528', '#243a3a'], iris = irisCols[Math.floor(R() * irisCols.length)];
-        // blush
-        const bl = r(0.15, 0.32);
-        [-1, 1].forEach(sd => { const gr = g.createRadialGradient(cx + sd * (sp + 14), ey + 36, 2, cx + sd * (sp + 14), ey + 36, 24); gr.addColorStop(0, `rgba(255,110,110,${bl})`); gr.addColorStop(1, 'rgba(255,110,110,0)'); g.fillStyle = gr; g.fillRect(0, 0, 256, 256); });
-        // eyes: big glossy anime-style eyes with a coloured iris
+        const cx = 128, ey = r(134, 142), sp = r(40, 48), ew = r(9, 12), eh = r(9, 12);
+        const irisCols = ['#2a1a12', '#1c1412', '#33221a', '#241c1c'], iris = irisCols[Math.floor(R() * irisCols.length)];
+        // light cheek colour only
+        [-1, 1].forEach(sd => { const gr = g.createRadialGradient(cx + sd * (sp + 14), ey + 34, 2, cx + sd * (sp + 14), ey + 34, 24); gr.addColorStop(0, 'rgba(230,120,100,0.12)'); gr.addColorStop(1, 'rgba(230,120,100,0)'); g.fillStyle = gr; g.fillRect(0, 0, 256, 256); });
+        // eye black (a baseball touch) on some players
+        if (R() < 0.45) [-1, 1].forEach(sd => { g.fillStyle = 'rgba(15,12,12,0.78)'; g.beginPath(); g.ellipse(cx + sd * sp, ey + eh + 11, ew + 5, 5, 0, 0, Math.PI * 2); g.fill(); });
+        // eyes: small dark ovals with one highlight (simple, sports-game style)
         [-1, 1].forEach(sd => {
             const x = cx + sd * sp;
-            g.fillStyle = '#fbf6f2'; g.beginPath(); g.ellipse(x, ey, ew, eh, 0, 0, Math.PI * 2); g.fill();
-            const ig = g.createLinearGradient(x, ey - eh, x, ey + eh); ig.addColorStop(0, '#120c0a'); ig.addColorStop(0.45, iris); ig.addColorStop(1, '#a8795a');
-            g.fillStyle = ig; g.beginPath(); g.ellipse(x, ey + 1, ew * 0.82, eh * 0.95, 0, 0, Math.PI * 2); g.fill();
-            g.fillStyle = '#0a0606'; g.beginPath(); g.ellipse(x, ey + 1, ew * 0.4, eh * 0.52, 0, 0, Math.PI * 2); g.fill();
-            g.fillStyle = 'rgba(255,255,255,0.96)'; g.beginPath(); g.ellipse(x + ew * 0.34, ey - eh * 0.38, ew * 0.3, eh * 0.24, 0, 0, Math.PI * 2); g.fill();
-            g.beginPath(); g.ellipse(x - ew * 0.34, ey + eh * 0.4, ew * 0.15, eh * 0.12, 0, 0, Math.PI * 2); g.fill();
-            g.strokeStyle = hair; g.lineWidth = 5; g.lineCap = 'round';
-            g.beginPath(); g.ellipse(x, ey, ew + 2, eh + 2, 0, Math.PI * 1.08, Math.PI * 1.92); g.stroke();   // heavy upper lash line
+            g.fillStyle = '#f3ede6'; g.beginPath(); g.ellipse(x, ey, ew, eh + 1, 0, 0, Math.PI * 2); g.fill();
+            g.fillStyle = '#1a100c'; g.beginPath(); g.ellipse(x + sd * -1, ey, ew * 0.66, eh + 1, 0, 0, Math.PI * 2); g.fill();
+            g.fillStyle = 'rgba(255,255,255,0.95)'; g.beginPath(); g.ellipse(x + ew * 0.2, ey - eh * 0.3, 2.6, 2.6, 0, 0, Math.PI * 2); g.fill();
+            g.strokeStyle = hair; g.lineWidth = 3.5; g.lineCap = 'round';
+            g.beginPath(); g.ellipse(x, ey, ew + 1, eh + 2, 0, Math.PI * 1.05, Math.PI * 1.95); g.stroke();
         });
-        // brows
-        const tilt = r(-0.18, 0.28), bw = r(14, 21), bt = r(3.5, 6), by = ey - eh - r(10, 16);
+        // brows: thick, strong
+        const tilt = r(-0.05, 0.28), bw = r(15, 21), bt = r(5.5, 8.5), by = ey - eh - r(10, 14);
         [-1, 1].forEach(sd => {
             const x = cx + sd * (sp + 1);
             g.strokeStyle = hair; g.lineWidth = bt; g.lineCap = 'round';
             g.beginPath(); g.moveTo(x - bw, by + sd * tilt * bw * -1); g.lineTo(x + bw, by + sd * tilt * bw); g.stroke();
         });
         // nose: a soft shadow, not a lump
-        const ny = ey + r(36, 42);
+        const ny = ey + r(30, 36);
         const ng = g.createRadialGradient(cx, ny, 1, cx, ny, 9); ng.addColorStop(0, 'rgba(150,80,60,0.32)'); ng.addColorStop(1, 'rgba(150,80,60,0)'); g.fillStyle = ng; g.fillRect(cx - 12, ny - 12, 24, 24);
         // mouth
-        const my = ey + r(62, 72), mw = r(9, 16), sm = r(2, 8), open = R() < 0.22;
-        if (open) { g.fillStyle = '#7a2a2a'; g.beginPath(); g.ellipse(cx, my + 2, mw * 0.7, sm + 3, 0, 0, Math.PI); g.fill(); }
-        else { g.strokeStyle = '#8a3636'; g.lineWidth = 3.2; g.lineCap = 'round'; g.beginPath(); g.moveTo(cx - mw, my - 1); g.quadraticCurveTo(cx, my + sm * 1.6, cx + mw, my - 1); g.stroke(); }
+        const my = ey + r(48, 54), mw = r(8, 13), sm = r(-1, 4);
+        if (R() < 0.35) { const sg = g.createRadialGradient(cx, my + 14, 6, cx, my + 14, 50); sg.addColorStop(0, 'rgba(20,16,14,0.22)'); sg.addColorStop(1, 'rgba(20,16,14,0)'); g.fillStyle = sg; g.fillRect(0, my - 16, 256, 70); }
+        g.strokeStyle = '#7a3a34'; g.lineWidth = 3.4; g.lineCap = 'round'; g.beginPath(); g.moveTo(cx - mw, my); g.quadraticCurveTo(cx, my + sm * 1.4, cx + mw, my); g.stroke();
         const t = new THREE.CanvasTexture(c); t.anisotropy = maxAniso;
         return { tex: t, hair, burn: R() < 0.4, ear: r(0.85, 1.2), fw: r(0.95, 1.06), hairHex: parseInt(hair.slice(1), 16) };
     }
