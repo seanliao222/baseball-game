@@ -534,7 +534,7 @@ const Stadium3D = (function () {
             jersey: std(0xffffff), accent: std(0xcccccc), pants: std(0xeeeeee), sock: std(0xcccccc), skin: std(0xe0ac84, { roughness: 0.7 }),
             cap: std(0x222222, { roughness: 0.6 }), shoe: std(0x15151a, { roughness: 0.5 }), glove: std(0x6b3b1a, { roughness: 0.45, envMapIntensity: 0.9 }),
             dark: std(0x101014), gear: std(0x1a2238, { roughness: 0.6 }), bat: std(0xffffff, { roughness: 0.32, envMapIntensity: 1.0 }),
-            hips: std(0xeeeeee), hand: std(0xe0ac84, { roughness: 0.7 }), forearm: std(0xe0ac84, { roughness: 0.65 }), sleeve: std(0xffffff), band: std(0xffffff, { roughness: 0.6 }), hair: std(0x17120e, { roughness: 0.9 }), white: std(0xeee8e0, { roughness: 0.35 }), iris: std(0x2a1a12, { roughness: 0.25 }), lip: std(0x8f5648, { roughness: 0.7 }), sole: std(0xe6e6ea, { roughness: 0.6 })
+            hips: std(0xeeeeee), hand: std(0xe0ac84, { roughness: 0.7 }), forearm: std(0xe0ac84, { roughness: 0.65 }), sleeve: std(0xffffff), band: std(0xffffff, { roughness: 0.6 }), hair: std(0x17120e, { roughness: 0.9 }), white: std(0xeee8e0, { roughness: 0.35 }), iris: std(0x3a2418, { roughness: 0.3 }), lip: std(0x8f5648, { roughness: 0.7 }), sole: std(0xe6e6ea, { roughness: 0.6 })
         };
         const jerseyC = canvasOf(256, 256), jerseyT = new THREE.CanvasTexture(jerseyC);
         jerseyT.wrapS = THREE.RepeatWrapping; jerseyT.offset.x = 0.5; jerseyT.anisotropy = maxAniso; m.jersey.map = jerseyT;
@@ -557,9 +557,10 @@ const Stadium3D = (function () {
         F.nose = blob(m.skin, head, 0.0145, 0.018, 0.018, 0, -0.016, 0.105);               // nose
         F.earL = blob(m.skin, head, 0.022, 0.034, 0.02, 0.104, -0.005, 0); F.earR = blob(m.skin, head, 0.022, 0.034, 0.02, -0.104, -0.005, 0); // ears
         F.jaw = blob(m.skin, head, 0.044, 0.03, 0.04, 0, -0.082, 0.03);                  // jaw
-        F.scL = blob(m.white, head, 0.0175, 0.0105, 0.009, 0.04, 0.018, 0.097); F.scR = blob(m.white, head, 0.0175, 0.0105, 0.009, -0.04, 0.018, 0.097);   // eye whites
-        F.irL = blob(m.iris, head, 0.0085, 0.0095, 0.006, 0.04, 0.018, 0.103); F.irR = blob(m.iris, head, 0.0085, 0.0095, 0.006, -0.04, 0.018, 0.103);     // irises
-        F.lidL = blob(m.dark, head, 0.021, 0.0035, 0.01, 0.04, 0.0285, 0.099); F.lidR = blob(m.dark, head, 0.021, 0.0035, 0.01, -0.04, 0.0285, 0.099);    // upper lid line
+        F.scL = blob(m.white, head, 0.0155, 0.0095, 0.008, 0.04, 0.018, 0.097); F.scR = blob(m.white, head, 0.0155, 0.0095, 0.008, -0.04, 0.018, 0.097);   // eye whites (kept small)
+        F.irL = blob(m.iris, head, 0.0118, 0.0112, 0.006, 0.04, 0.018, 0.103); F.irR = blob(m.iris, head, 0.0118, 0.0112, 0.006, -0.04, 0.018, 0.103);     // large iris, little white showing
+        F.hiL = blob(m.white, head, 0.0036, 0.0036, 0.003, 0.0435, 0.0215, 0.108); F.hiR = blob(m.white, head, 0.0036, 0.0036, 0.003, -0.0365, 0.0215, 0.108);   // catchlight
+        F.lidL = blob(m.dark, head, 0.019, 0.0022, 0.01, 0.04, 0.0285, 0.099); F.lidR = blob(m.dark, head, 0.019, 0.0022, 0.01, -0.04, 0.0285, 0.099);    // thin upper lid line
         F.bL = blob(m.hair, head, 0.027, 0.0065, 0.01, 0.04, 0.047, 0.097); F.bR = blob(m.hair, head, 0.027, 0.0065, 0.01, -0.04, 0.047, 0.097);          // brows
         F.lip = blob(m.lip, head, 0.017, 0.0022, 0.008, 0, -0.058, 0.1);               // lips
         F.burnL = blob(m.hair, head, 0.011, 0.028, 0.024, 0.097, 0.012, 0.03); F.burnR = blob(m.hair, head, 0.011, 0.028, 0.024, -0.097, 0.012, 0.03);    // sideburns
@@ -785,10 +786,11 @@ const Stadium3D = (function () {
         const hairCols = [0x17120e, 0x120e0c, 0x2a1c12, 0x3b2a1a, 0x1d1a1a, 0x0d0b0b];
         p.mats.hair.color.set(hairCols[Math.floor(R() * hairCols.length)]);
         const sp = r(0.036, 0.045), ey = r(0.014, 0.022), es = r(0.92, 1.16);
-        [[F.scL, F.irL, F.lidL, F.bL, 1], [F.scR, F.irR, F.lidR, F.bR, -1]].forEach(([sc, ir, ld, br, sd]) => {
-            sc.position.set(sd * sp, ey, 0.097); sc.scale.set(0.0175 * es, 0.0105 * es, 0.009);
-            ir.position.set(sd * sp, ey, 0.103); ir.scale.set(0.0085 * es, 0.0095 * es, 0.006);
-            ld.position.set(sd * sp, ey + 0.0105 * es + 0.0005, 0.099); ld.scale.set(0.021 * es, 0.0035, 0.01);
+        [[F.scL, F.irL, F.hiL, F.lidL, F.bL, 1], [F.scR, F.irR, F.hiR, F.lidR, F.bR, -1]].forEach(([sc, ir, hi, ld, br, sd]) => {
+            sc.position.set(sd * sp, ey, 0.097); sc.scale.set(0.0155 * es, 0.0095 * es, 0.008);
+            ir.position.set(sd * sp, ey - 0.001, 0.103); ir.scale.set(0.0118 * es, 0.0112 * es, 0.006);
+            hi.position.set(sd * sp + 0.0035, ey + 0.0035, 0.108);
+            ld.position.set(sd * sp, ey + 0.0105 * es + 0.0003, 0.099); ld.scale.set(0.019 * es, 0.0022, 0.01);
             br.position.set(sd * sp, ey + 0.029, 0.097); br.scale.set(r(0.024, 0.03), r(0.005, 0.0085), 0.01);
         });
         const tilt = r(0.08, 0.3); F.bL.rotation.z = tilt; F.bR.rotation.z = -tilt;
