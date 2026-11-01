@@ -534,7 +534,7 @@ const Stadium3D = (function () {
             jersey: std(0xffffff), accent: std(0xcccccc), pants: std(0xeeeeee), sock: std(0xcccccc), skin: std(0xe0ac84, { roughness: 0.7 }),
             cap: std(0x222222, { roughness: 0.6 }), shoe: std(0x15151a, { roughness: 0.5 }), glove: std(0x6b3b1a, { roughness: 0.45, envMapIntensity: 0.9 }),
             dark: std(0x101014), gear: std(0x1a2238, { roughness: 0.6 }), bat: std(0xffffff, { roughness: 0.32, envMapIntensity: 1.0 }),
-            hips: std(0xeeeeee), hand: std(0xe0ac84, { roughness: 0.7 }), forearm: std(0xe0ac84, { roughness: 0.65 }), sleeve: std(0xffffff), band: std(0xffffff, { roughness: 0.6 }), hair: std(0x17120e, { roughness: 0.9 }), white: std(0xeee8e0, { roughness: 0.35 }), iris: std(0x2a1a12, { roughness: 0.25 }), lip: std(0xb8705f, { roughness: 0.55 }), sole: std(0xe6e6ea, { roughness: 0.6 })
+            hips: std(0xeeeeee), hand: std(0xe0ac84, { roughness: 0.7 }), forearm: std(0xe0ac84, { roughness: 0.65 }), sleeve: std(0xffffff), band: std(0xffffff, { roughness: 0.6 }), hair: std(0x17120e, { roughness: 0.9 }), white: std(0xeee8e0, { roughness: 0.35 }), iris: std(0x2a1a12, { roughness: 0.25 }), lip: std(0x8f5648, { roughness: 0.7 }), sole: std(0xe6e6ea, { roughness: 0.6 })
         };
         const jerseyC = canvasOf(256, 256), jerseyT = new THREE.CanvasTexture(jerseyC);
         jerseyT.wrapS = THREE.RepeatWrapping; jerseyT.offset.x = 0.5; jerseyT.anisotropy = maxAniso; m.jersey.map = jerseyT;
@@ -556,12 +556,12 @@ const Stadium3D = (function () {
         const F = {};
         F.nose = blob(m.skin, head, 0.0145, 0.018, 0.018, 0, -0.016, 0.105);               // nose
         F.earL = blob(m.skin, head, 0.022, 0.034, 0.02, 0.104, -0.005, 0); F.earR = blob(m.skin, head, 0.022, 0.034, 0.02, -0.104, -0.005, 0); // ears
-        F.jaw = blob(m.skin, head, 0.055, 0.04, 0.05, 0, -0.085, 0.05);                  // jaw
+        F.jaw = blob(m.skin, head, 0.044, 0.03, 0.04, 0, -0.082, 0.03);                  // jaw
         F.scL = blob(m.white, head, 0.0175, 0.0105, 0.009, 0.04, 0.018, 0.097); F.scR = blob(m.white, head, 0.0175, 0.0105, 0.009, -0.04, 0.018, 0.097);   // eye whites
         F.irL = blob(m.iris, head, 0.0085, 0.0095, 0.006, 0.04, 0.018, 0.103); F.irR = blob(m.iris, head, 0.0085, 0.0095, 0.006, -0.04, 0.018, 0.103);     // irises
         F.lidL = blob(m.dark, head, 0.021, 0.0035, 0.01, 0.04, 0.0285, 0.099); F.lidR = blob(m.dark, head, 0.021, 0.0035, 0.01, -0.04, 0.0285, 0.099);    // upper lid line
         F.bL = blob(m.hair, head, 0.027, 0.0065, 0.01, 0.04, 0.047, 0.097); F.bR = blob(m.hair, head, 0.027, 0.0065, 0.01, -0.04, 0.047, 0.097);          // brows
-        F.lip = blob(m.lip, head, 0.021, 0.0055, 0.011, 0, -0.058, 0.101);               // lips
+        F.lip = blob(m.lip, head, 0.017, 0.0022, 0.008, 0, -0.058, 0.1);               // lips
         F.burnL = blob(m.hair, head, 0.011, 0.028, 0.024, 0.097, 0.012, 0.03); F.burnR = blob(m.hair, head, 0.011, 0.028, 0.024, -0.097, 0.012, 0.03);    // sideburns
         F.hair = blob(m.hair, head, 0.094, 0.07, 0.08, 0, 0.0, -0.04);                // hair under the cap
         // cap / helmet
@@ -678,8 +678,7 @@ const Stadium3D = (function () {
             ball(m.shade, head, 0.02, 0.012, 0.01, sd * 0.058, -0.03, 0.086);       // cheek hollow
         });
         ball(m.shade, head, 0.017, 0.006, 0.012, 0, -0.037, 0.102);                  // under the nose
-        ball(m.shade, head, 0.03, 0.009, 0.012, 0, -0.092, 0.088);                   // under the chin
-        if (p.F) { p.F.burnL.visible = p.F.burnR.visible = true; p.F.hair.scale.set(0.1, 0.075, 0.086); }
+        if (p.F) { p.F.burnL.visible = p.F.burnR.visible = false; p.F.hair.scale.set(0.1, 0.075, 0.086); }
     }
 
     const UNI = {
@@ -794,9 +793,9 @@ const Stadium3D = (function () {
         });
         const tilt = r(0.08, 0.3); F.bL.rotation.z = tilt; F.bR.rotation.z = -tilt;
         const ns = r(0.85, 1.15); F.nose.scale.set(0.0145 * ns, 0.018 * ns, 0.018 * ns);
-        F.lip.scale.set(r(0.015, 0.02), r(0.0035, 0.0055), 0.01); F.lip.position.y = r(-0.062, -0.054);
-        const jw = r(0.93, 1.08); F.jaw.scale.set(0.055 * jw, r(0.038, 0.044), 0.05);
-        F.burnL.visible = F.burnR.visible = R() < 0.45;
+        F.lip.scale.set(r(0.014, 0.019), 0.0022, 0.008); F.lip.position.y = r(-0.06, -0.054);
+        const jw = r(0.93, 1.08); F.jaw.scale.set(0.044 * jw, r(0.028, 0.032), 0.04);
+        F.burnL.visible = F.burnR.visible = false;
         p.faceSeed = seed;
     }
     function setSkin(p, name) {
