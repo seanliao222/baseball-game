@@ -529,6 +529,35 @@ const Stadium3D = (function () {
         m.rotation.x = -Math.PI / 2; m.position.y = 0.016; m.renderOrder = 1; return m;
     }
 
+    // painted almond eye (gradient iris, two catchlights, lash line, faint lid shadow); one shared material per iris colour
+    const eyeMats = {};
+    function eyeMat(irisHex) {
+        if (eyeMats[irisHex]) return eyeMats[irisHex];
+        const c = canvasOf(160, 80), g = c.getContext('2d');
+        const top = (x) => 40 - 30 * Math.sin(Math.PI * Math.min(1, Math.max(0, (x - 12) / 136)));        // upper lid curve
+        const bot = (x) => 40 + 22 * Math.sin(Math.PI * Math.min(1, Math.max(0, (x - 12) / 136)));       // lower lid curve
+        g.beginPath(); g.moveTo(12, 42);
+        for (let x = 12; x <= 148; x += 4) g.lineTo(x, top(x) + 2);
+        for (let x = 148; x >= 12; x -= 4) g.lineTo(x, bot(x));
+        g.closePath(); g.save(); g.clip();
+        g.fillStyle = '#f3eeee'; g.fillRect(0, 0, 160, 80);
+        const ig = g.createLinearGradient(0, 8, 0, 72); ig.addColorStop(0, '#150b10'); ig.addColorStop(0.5, irisHex); ig.addColorStop(1, '#b98fa0');
+        g.fillStyle = ig; g.beginPath(); g.ellipse(82, 40, 28, 34, 0, 0, Math.PI * 2); g.fill();
+        g.fillStyle = '#0e070a'; g.beginPath(); g.ellipse(82, 41, 13, 17, 0, 0, Math.PI * 2); g.fill();
+        g.fillStyle = 'rgba(255,255,255,0.97)'; g.beginPath(); g.ellipse(70, 28, 9, 7, -0.4, 0, Math.PI * 2); g.fill();
+        g.fillStyle = 'rgba(255,255,255,0.8)'; g.beginPath(); g.ellipse(94, 54, 4, 3, 0, 0, Math.PI * 2); g.fill();
+        g.restore();
+        // faint lavender lid shadow above the eye, then the lash line
+        const lg = g.createLinearGradient(0, 0, 0, 22); lg.addColorStop(0, 'rgba(150,110,170,0)'); lg.addColorStop(1, 'rgba(150,110,170,0.3)');
+        g.fillStyle = lg; g.beginPath(); g.moveTo(10, 36); for (let x = 12; x <= 148; x += 4) g.lineTo(x, top(x) - 4); g.lineTo(150, 36); g.closePath(); g.fill();
+        g.strokeStyle = '#120a0e'; g.lineCap = 'round'; g.lineJoin = 'round'; g.lineWidth = 6.5;
+        g.beginPath(); for (let x = 12; x <= 148; x += 4) { const y = top(x) + 1; if (x === 12) g.moveTo(x, y); else g.lineTo(x, y); } g.stroke();
+        g.lineWidth = 4; g.beginPath(); g.moveTo(144, top(144) + 4); g.lineTo(156, top(144) - 4); g.stroke();                    // outer lash flick
+        g.strokeStyle = 'rgba(110,60,60,0.45)'; g.lineWidth = 2; g.beginPath(); for (let x = 20; x <= 140; x += 4) { const y = bot(x) + 1; if (x === 20) g.moveTo(x, y); else g.lineTo(x, y); } g.stroke();
+        const t = new THREE.CanvasTexture(c); t.anisotropy = maxAniso;
+        return eyeMats[irisHex] = new THREE.MeshStandardMaterial({ map: t, transparent: true, roughness: 0.4, metalness: 0, depthWrite: false, side: THREE.DoubleSide, polygonOffset: true, polygonOffsetFactor: -3, polygonOffsetUnits: -3 });
+    }
+
     function makePerson(kind) {
         const m = {
             jersey: std(0xffffff), accent: std(0xcccccc), pants: std(0xeeeeee), sock: std(0xcccccc), skin: std(0xe0ac84, { roughness: 0.7 }),
@@ -557,10 +586,14 @@ const Stadium3D = (function () {
         F.nose = blob(m.skin, head, 0.0145, 0.018, 0.018, 0, -0.016, 0.105);               // nose
         F.earL = blob(m.skin, head, 0.022, 0.034, 0.02, 0.104, -0.005, 0); F.earR = blob(m.skin, head, 0.022, 0.034, 0.02, -0.104, -0.005, 0); // ears
         F.jaw = blob(m.skin, head, 0.044, 0.03, 0.04, 0, -0.082, 0.03);                  // jaw
-        F.scL = blob(m.white, head, 0.0155, 0.0095, 0.008, 0.04, 0.018, 0.097); F.scR = blob(m.white, head, 0.0155, 0.0095, 0.008, -0.04, 0.018, 0.097);   // eye whites (kept small)
-        F.irL = blob(m.iris, head, 0.0118, 0.0112, 0.006, 0.04, 0.018, 0.103); F.irR = blob(m.iris, head, 0.0118, 0.0112, 0.006, -0.04, 0.018, 0.103);     // large iris, little white showing
-        F.hiL = blob(m.white, head, 0.0036, 0.0036, 0.003, 0.0435, 0.0215, 0.108); F.hiR = blob(m.white, head, 0.0036, 0.0036, 0.003, -0.0365, 0.0215, 0.108);   // catchlight
-        F.lidL = blob(m.dark, head, 0.019, 0.0022, 0.01, 0.04, 0.0285, 0.099); F.lidR = blob(m.dark, head, 0.019, 0.0022, 0.01, -0.04, 0.0285, 0.099);    // thin upper lid line
+        F.scL = blob(m.white, head, 0.0155, 0.0078, 0.008, 0.04, 0.018, 0.097); F.scR = blob(m.white, head, 0.0155, 0.0078, 0.008, -0.04, 0.018, 0.097);   // eye whites (flattened)
+        F.irL = blob(m.iris, head, 0.0105, 0.0088, 0.006, 0.04, 0.0165, 0.103); F.irR = blob(m.iris, head, 0.0105, 0.0088, 0.006, -0.04, 0.0165, 0.103);   // iris, half hidden by the lid
+        F.hiL = blob(m.white, head, 0.003, 0.003, 0.003, 0.0425, 0.0185, 0.109); F.hiR = blob(m.white, head, 0.003, 0.003, 0.003, -0.0375, 0.0185, 0.109);   // catchlight
+        F.skL = blob(m.skin, head, 0.0185, 0.0064, 0.009, 0.04, 0.0255, 0.1035); F.skR = blob(m.skin, head, 0.0185, 0.0064, 0.009, -0.04, 0.0255, 0.1035);   // upper eyelid covering the top of the eye
+        F.lidL = blob(m.dark, head, 0.0165, 0.0013, 0.008, 0.04, 0.0195, 0.1105); F.lidR = blob(m.dark, head, 0.0165, 0.0013, 0.008, -0.04, 0.0195, 0.1105);   // soft lid edge
+        F.eyeL = new THREE.Mesh(new THREE.PlaneGeometry(0.056, 0.028), eyeMat('#4a2a3a')); F.eyeR = new THREE.Mesh(new THREE.PlaneGeometry(0.056, 0.028), eyeMat('#4a2a3a'));
+        F.eyeR.scale.x = -1; head.add(F.eyeL); head.add(F.eyeR);
+        [F.scL, F.scR, F.irL, F.irR, F.hiL, F.hiR, F.skL, F.skR, F.lidL, F.lidR].forEach(o => { o.visible = false; });   // the painted eyes replace the blob eyes
         F.bL = blob(m.hair, head, 0.027, 0.0065, 0.01, 0.04, 0.047, 0.097); F.bR = blob(m.hair, head, 0.027, 0.0065, 0.01, -0.04, 0.047, 0.097);          // brows
         F.lip = blob(m.lip, head, 0.017, 0.0022, 0.008, 0, -0.058, 0.1);               // lips
         F.burnL = blob(m.hair, head, 0.011, 0.028, 0.024, 0.097, 0.012, 0.03); F.burnR = blob(m.hair, head, 0.011, 0.028, 0.024, -0.097, 0.012, 0.03);    // sideburns
@@ -785,15 +818,21 @@ const Stadium3D = (function () {
         const R = seeded(hash(String(seed)) + 7), r = (lo, hi) => lo + (hi - lo) * R();
         const hairCols = [0x17120e, 0x120e0c, 0x2a1c12, 0x3b2a1a, 0x1d1a1a, 0x0d0b0b];
         p.mats.hair.color.set(hairCols[Math.floor(R() * hairCols.length)]);
-        const sp = r(0.036, 0.045), ey = r(0.014, 0.022), es = r(0.92, 1.16);
-        [[F.scL, F.irL, F.hiL, F.lidL, F.bL, 1], [F.scR, F.irR, F.hiR, F.lidR, F.bR, -1]].forEach(([sc, ir, hi, ld, br, sd]) => {
-            sc.position.set(sd * sp, ey, 0.097); sc.scale.set(0.0155 * es, 0.0095 * es, 0.008);
-            ir.position.set(sd * sp, ey - 0.001, 0.103); ir.scale.set(0.0118 * es, 0.0112 * es, 0.006);
-            hi.position.set(sd * sp + 0.0035, ey + 0.0035, 0.108);
-            ld.position.set(sd * sp, ey + 0.0105 * es + 0.0003, 0.099); ld.scale.set(0.019 * es, 0.0022, 0.01);
-            br.position.set(sd * sp, ey + 0.029, 0.097); br.scale.set(r(0.024, 0.03), r(0.005, 0.0085), 0.01);
+        const sp = r(0.037, 0.044), ey = r(-0.002, 0.005), es = r(1.08, 1.28);
+        [[F.scL, F.irL, F.hiL, F.lidL, F.skL, F.bL, 1], [F.scR, F.irR, F.hiR, F.lidR, F.skR, F.bR, -1]].forEach(([sc, ir, hi, ld, sk, br, sd]) => {
+            sc.position.set(sd * sp, ey, 0.097); sc.scale.set(0.0155 * es, 0.0078 * es, 0.008);
+            ir.position.set(sd * sp, ey - 0.0015, 0.103); ir.scale.set(0.0105 * es, 0.0088 * es, 0.006);
+            hi.position.set(sd * sp + 0.0025, ey + 0.0005, 0.109);
+            sk.position.set(sd * sp, ey + 0.0075 * es, 0.1035); sk.scale.set(0.0185 * es, 0.0064 * es, 0.009);
+            ld.position.set(sd * sp, ey + 0.0025 * es, 0.1105); ld.scale.set(0.0165 * es, 0.0013, 0.008);
+            br.position.set(sd * sp, ey + 0.031, 0.097); br.scale.set(r(0.024, 0.03), r(0.005, 0.0075), 0.01);
         });
-        const tilt = r(0.08, 0.3); F.bL.rotation.z = tilt; F.bR.rotation.z = -tilt;
+        const irisCols = ['#4a2a3a', '#3b2420', '#2e2a46', '#4a3020', '#5a2e32'], ic = irisCols[Math.floor(R() * irisCols.length)], em = eyeMat(ic);
+        [[F.eyeL, 1], [F.eyeR, -1]].forEach(([e, sd]) => {
+            e.material = em; e.position.set(sd * sp, ey + 0.002, 0.0995); e.rotation.y = sd * 0.34; e.rotation.z = sd * r(0.0, 0.08);
+            e.scale.set(sd * es * 1.0, es, 1);
+        });
+        const tilt = r(0.0, 0.1); F.bL.rotation.z = tilt; F.bR.rotation.z = -tilt;
         const ns = r(0.85, 1.15); F.nose.scale.set(0.0145 * ns, 0.018 * ns, 0.018 * ns);
         F.lip.scale.set(r(0.014, 0.019), 0.0022, 0.008); F.lip.position.y = r(-0.06, -0.054);
         const jw = r(0.93, 1.08); F.jaw.scale.set(0.044 * jw, r(0.028, 0.032), 0.04);
