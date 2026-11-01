@@ -531,7 +531,7 @@ const Stadium3D = (function () {
 
     // painted almond eye (gradient iris, two catchlights, lash line, faint lid shadow); one shared material per iris colour
     // eye look, tunable live (F2 panel in the game): w/h = patch size, sq = squareness (lower = squarer), ir = iris radius, off = iris shift toward the nose, hl = catchlight size, lash = lash thickness
-    const EYE = { w: 0.31, h: 0.17, sq: 0.38, ir: 29, off: 16, hl: 9.5, lash: 5 };
+    const EYE = { w: 0.31, h: 0.17, sq: 0.38, ir: 29, off: 16, hl: 9.5, lash: 5, sp: 0.04, ey: 0, browT: 13, browGap: 0.115, noseS: 1, noseY: -0.02, mouthW: 0.0165, mouthY: -0.057, mouthT: 0.0022, jawW: 1, headW: 1.12, headH: 1.1, skin: 2.3, vary: 0.8 };      // vary = how much each person differs (0 = everyone identical)
     const eyeMats = {};
     function eyeMat(irisHex, mirror) {
         const ek = irisHex + (mirror ? 'm' : '');
@@ -834,39 +834,37 @@ const Stadium3D = (function () {
 
     function setFace(p, seed) {
         const F = p.F; if (!F) return;
-        const R = seeded(hash(String(seed)) + 7), r = (lo, hi) => lo + (hi - lo) * R();
+        const R = seeded(hash(String(seed)) + 7), v = EYE.vary, r = (c, amp) => c + (R() - 0.5) * 2 * amp * v;      // base value +/- a per-person amount
         const hairCols = [0x17120e, 0x120e0c, 0x2a1c12, 0x3b2a1a, 0x1d1a1a, 0x0d0b0b];
         p.mats.hair.color.set(hairCols[Math.floor(R() * hairCols.length)]);
-        const sp = r(0.037, 0.044), ey = r(-0.004, 0.003), es = r(1.0, 1.15);
+        p.head.scale.set(EYE.headW, EYE.headH, EYE.headW);
+        const sp = r(EYE.sp, 0.004), ey = r(EYE.ey, 0.004), es = r(1.0, 0.075);
         [[F.scL, F.irL, F.hiL, F.lidL, F.skL, F.bL, 1], [F.scR, F.irR, F.hiR, F.lidR, F.skR, F.bR, -1]].forEach(([sc, ir, hi, ld, sk, br, sd]) => {
-            sc.position.set(sd * sp, ey, 0.097); sc.scale.set(0.0155 * es, 0.0078 * es, 0.008);
-            ir.position.set(sd * sp, ey - 0.0015, 0.103); ir.scale.set(0.0105 * es, 0.0088 * es, 0.006);
-            hi.position.set(sd * sp + 0.0025, ey + 0.0005, 0.109);
-            sk.position.set(sd * sp, ey + 0.0075 * es, 0.1035); sk.scale.set(0.0185 * es, 0.0064 * es, 0.009);
-            ld.position.set(sd * sp, ey + 0.0025 * es, 0.1105); ld.scale.set(0.0165 * es, 0.0013, 0.008);
-            br.position.set(sd * sp, ey + 0.034, 0.097); br.scale.set(r(0.024, 0.03), r(0.005, 0.0075), 0.01);
+            sc.position.set(sd * sp, ey, 0.097); ir.position.set(sd * sp, ey, 0.103); hi.position.set(sd * sp, ey, 0.109); sk.position.set(sd * sp, ey, 0.1035); ld.position.set(sd * sp, ey, 0.1105); br.position.set(sd * sp, ey, 0.097);
         });
         const irisCols = ['#1e0f1c', '#1a0e1e', '#261416', '#190d18', '#20112a'], ic = irisCols[Math.floor(R() * irisCols.length)];
+        const bt = Math.max(6, Math.round(r(EYE.browT, 3)));
         [[F.eyeL, 1, false], [F.eyeR, -1, true]].forEach(([e, sd, mir]) => {
             e.material = eyeMat(ic, mir);
             const dphi = Math.asin(Math.min(0.9, sp / 0.1026)), th = Math.PI / 2 - ey / 0.12, hw = EYE.w * es, hh = EYE.h * es;
             if (e.geometry) e.geometry.dispose();
             e.geometry = new THREE.SphereGeometry(0.1095, 18, 10, Math.PI / 2 + sd * dphi - hw, hw * 2, th - hh, hh * 2);
-            const bp = sd === 1 ? F.browPL : F.browPR; bp.material = browMat(p.mats.hair.color.getHexString(), Math.round(r(11, 16)), mir);
+            const bp = sd === 1 ? F.browPL : F.browPR; bp.material = browMat(p.mats.hair.color.getHexString(), bt, mir);
             if (bp.geometry) bp.geometry.dispose();
-            bp.geometry = new THREE.SphereGeometry(0.1095, 18, 6, Math.PI / 2 + sd * dphi - hw * 1.02, hw * 2.04, th - hh - 0.115, 0.13);
+            bp.geometry = new THREE.SphereGeometry(0.1095, 18, 6, Math.PI / 2 + sd * dphi - hw * 1.02, hw * 2.04, th - hh - EYE.browGap, 0.13);
         });
-        F.bL.visible = F.bR.visible = false;      // the painted brows replace the blob brows
-        const tilt = r(-0.06, 0.03); F.bL.rotation.z = tilt; F.bR.rotation.z = -tilt;
-        const ns = r(0.85, 1.15); F.nose.scale.set(0.0085 * ns, 0.0095 * ns, 0.009 * ns);
-        F.lip.scale.set(r(0.014, 0.019), 0.0022, 0.008); F.lip.position.y = r(-0.06, -0.054);
-        const jw = r(0.93, 1.08); F.jaw.scale.set(0.044 * jw, r(0.028, 0.032), 0.04);
+        [F.scL, F.scR, F.irL, F.irR, F.hiL, F.hiR, F.lidL, F.lidR, F.skL, F.skR, F.bL, F.bR].forEach(o => { o.visible = false; });      // blob eyes/brows are replaced by the painted ones
+        const ns = r(EYE.noseS, 0.15 * EYE.noseS); F.nose.scale.set(0.0085 * ns, 0.0095 * ns, 0.009 * ns); F.nose.position.y = EYE.noseY; F.nose.visible = EYE.noseS > 0.05;
+        F.lip.scale.set(r(EYE.mouthW, 0.0025), EYE.mouthT, 0.008); F.lip.position.y = r(EYE.mouthY, 0.003);
+        const jw = r(EYE.jawW, 0.07); F.jaw.scale.set(0.044 * jw, r(0.03, 0.002), 0.04);
         F.burnL.visible = F.burnR.visible = false;
         p.faceSeed = seed;
     }
     function setSkin(p, name) {
         const tones = [0xe9ccae, 0xdcb893, 0xc9a07c, 0xb58a66, 0x966b4c];
-        const k = hash(name || '') % tones.length; p.skinKey = k; p.skinColor = tones[k]; p.mats.skin.color.set(tones[k]); p.mats.forearm.color.set(tones[k]); p.mats.hand.color.set(p.gloves ? 0xf4f4f6 : tones[k]);
+        const frac = (hash(name || '') % 1000) / 1000, t = clamp(EYE.skin + (frac - 0.5) * 2 * EYE.vary * 1.6, 0, 4), i0 = Math.floor(t), i1 = Math.min(4, i0 + 1);
+        const col = new THREE.Color(tones[i0]).lerp(new THREE.Color(tones[i1]), t - i0), hex = col.getHex();
+        p.skinKey = Math.round(t * 10); p.skinColor = hex; p.mats.skin.color.set(hex); p.mats.forearm.color.set(hex); p.mats.hand.color.set(p.gloves ? 0xf4f4f6 : hex);
         if (p.faceSeed !== name) setFace(p, name || '');
     }
 
@@ -2010,7 +2008,7 @@ const Stadium3D = (function () {
     api.rebuildEyes = function () {
         Object.keys(eyeMats).forEach(k => delete eyeMats[k]);
         const all = [...actors.fielders, actors.pitcher, actors.catcher, actors.umpire, actors.batter, ...actors.extras];
-        all.forEach(p => { if (p && p.F) setFace(p, p.faceSeed != null ? p.faceSeed : ''); });
+        all.forEach(p => { if (p && p.F) { const sd = p.faceSeed != null ? p.faceSeed : ''; setSkin(p, sd); setFace(p, sd); } });
     };
     api.debugCam = function (pos, look, fov) { S.dbgCam = pos ? { pos: new THREE.Vector3(...pos), look: new THREE.Vector3(...look), fov: fov || 30, shift: 0 } : null; };
     api.pitchPoint = (G, t) => { const o = new THREE.Vector3(); pitchWorld(G, t, o); return [+o.x.toFixed(2), +o.y.toFixed(2), +o.z.toFixed(2)]; };
