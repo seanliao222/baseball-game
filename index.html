@@ -325,7 +325,7 @@
         </div>
     </div>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-    <script src="stadium3d.js?v=20261102y"></script>
+    <script src="stadium3d.js?v=20261102z"></script>
     <script src="https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.js"></script>
     <script>
@@ -3750,7 +3750,8 @@
 
         // ── virtual joystick: tilt = speed of the batting cursor (host / single player move it directly; a guest sends the position to the host like a pointer) ──
         const JOY = { active: false, x: 0, y: 0 };
-        const JOY_FORCE = /[?&]joystick=1/.test(location.search);
+        const JOY_FORCE = /[?&]joystick=1/.test(location.search);                                  // test switch only
+        const JOY_TOUCH = !!(window.matchMedia && window.matchMedia('(pointer: coarse)').matches);      // a finger is the primary pointer: phone / tablet, not a laptop with a touch screen
         function joyStep() {
             if (!JOY.active || !uiBatting() || (MP.active && !MP.isHost)) return false;
             G.curX = clamp(G.curX + JOY.x * 0.04, -1.5, 1.5); G.curY = clamp(G.curY + JOY.y * 0.04, -1.5, 1.5);
@@ -3767,7 +3768,7 @@
             mpSend({ t: 'ptr', x: SZcx + GJ.x * (SZw / 2), y: SZcy + GJ.y * (SZh / 2) });
         }
         function joyShouldShow() {
-            if (!(isMobile || JOY_FORCE) || G.scr !== SCR.GAME || !uiBatting()) return false;
+            if (!(JOY_TOUCH || JOY_FORCE) || G.scr !== SCR.GAME || !uiBatting()) return false;
             return G.phase === PH.WAIT_PITCH || G.phase === PH.BATTING || (MP.active && (G.phase === PH.PITCH_SELECT || G.phase === PH.AIM || G.phase === PH.POWER_GAUGE));
         }
 
