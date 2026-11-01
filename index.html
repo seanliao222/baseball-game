@@ -121,6 +121,25 @@
             display: flex;
         }
 
+        /* virtual joystick for moving the batting cursor (bottom-left); the other left-hand buttons slide right to make room */
+        #joy {
+            position: absolute; pointer-events: auto; touch-action: none; display: none;
+            left: max(18px, env(safe-area-inset-left)); bottom: max(18px, env(safe-area-inset-bottom));
+            width: 132px; height: 132px; border-radius: 50%;
+            background: radial-gradient(circle at 50% 45%, rgba(40, 60, 100, 0.55), rgba(10, 16, 30, 0.6));
+            border: 2px solid rgba(255, 255, 255, 0.4); box-shadow: 0 4px 18px rgba(0, 0, 0, 0.6);
+            -webkit-user-select: none; user-select: none; -webkit-tap-highlight-color: transparent;
+        }
+        #joy.show { display: block; }
+        #joy-knob {
+            position: absolute; left: 50%; top: 50%; width: 56px; height: 56px; margin: -28px 0 0 -28px; border-radius: 50%;
+            background: radial-gradient(circle at 40% 35%, #ffe27a, #d98a00); border: 2px solid rgba(255, 255, 255, 0.85);
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.7); pointer-events: none;
+        }
+        #mobile-overlay.joy-on #change-btn, #mobile-overlay.joy-on #sim-btn, #mobile-overlay.joy-on #steal-btn, #mobile-overlay.joy-on #bunt-btn, #mobile-overlay.joy-on #power-btn {
+            left: calc(max(18px, env(safe-area-inset-left)) + 150px);
+        }
+
         #swing-btn {
             right: max(18px, env(safe-area-inset-right));
             bottom: max(18px, env(safe-area-inset-bottom));
@@ -263,6 +282,7 @@
         <button class="mbtn" id="power-btn">💥<br>強振</button>
         <button class="mbtn" id="swing-btn">⚾<br>打擊!</button>
         <button class="mbtn" id="change-btn">🔄<br>換人</button>
+        <div id="joy"><div id="joy-knob"></div></div>
     </div>
     <div id="mp-overlay">
         <div id="mp-view-menu">
@@ -305,7 +325,7 @@
         </div>
     </div>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-    <script src="stadium3d.js?v=20261102x"></script>
+    <script src="stadium3d.js?v=20261102y"></script>
     <script src="https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.js"></script>
     <script>
@@ -3728,6 +3748,29 @@
             hudText('⏱ ' + clockText(), x + 10, y + 17, 15, 'rgba(255,255,255,0.9)');
         }
 
+        // ── virtual joystick: tilt = speed of the batting cursor (host / single player move it directly; a guest sends the position to the host like a pointer) ──
+        const JOY = { active: false, x: 0, y: 0 };
+        const JOY_FORCE = /[?&]joystick=1/.test(location.search);
+        function joyStep() {
+            if (!JOY.active || !uiBatting() || (MP.active && !MP.isHost)) return false;
+            G.curX = clamp(G.curX + JOY.x * 0.04, -1.5, 1.5); G.curY = clamp(G.curY + JOY.y * 0.04, -1.5, 1.5);
+            G.baseCurX = G.curX; G.baseCurY = G.curY; G.dragStartX = mouseX; G.dragStartY = mouseY;      // a later drag continues from here
+            return true;
+        }
+        const GJ = { on: false, x: 0, y: 0, t: 0 };
+        function joyGuestStep() {
+            const ph = [PH.PITCH_SELECT, PH.AIM, PH.POWER_GAUGE, PH.WAIT_PITCH, PH.BATTING];
+            if (!JOY.active || G.scr !== SCR.GAME || !uiBatting() || !ph.includes(G.phase)) { GJ.on = false; return; }
+            if (!GJ.on) { GJ.x = G.curX || 0; GJ.y = G.curY || 0; GJ.on = true; }
+            GJ.x = clamp(GJ.x + JOY.x * 0.04, -1.5, 1.5); GJ.y = clamp(GJ.y + JOY.y * 0.04, -1.5, 1.5);
+            const now = performance.now(); if (now - GJ.t < 25) return; GJ.t = now;
+            mpSend({ t: 'ptr', x: SZcx + GJ.x * (SZw / 2), y: SZcy + GJ.y * (SZh / 2) });
+        }
+        function joyShouldShow() {
+            if (!(isMobile || JOY_FORCE) || G.scr !== SCR.GAME || !uiBatting()) return false;
+            return G.phase === PH.WAIT_PITCH || G.phase === PH.BATTING || (MP.active && (G.phase === PH.PITCH_SELECT || G.phase === PH.AIM || G.phase === PH.POWER_GAUGE));
+        }
+
         function update() {
             mpSyncInput();
             G.frame++;
@@ -3832,7 +3875,8 @@
                 }
             }
 
-            if (mpBatterWaiting()) { if (MP.isHost && !(isMobile && playerBatting())) { const bx = playerBatting() ? realMX : MP.remoteX, by = playerBatting() ? realMY : MP.remoteY; G.curX = clamp((bx - SZcx) / (SZw / 2), -1.5, 1.5); G.curY = clamp((by - SZcy) / (SZh / 2), -1.5, 1.5); } }
+            if (mpBatterWaiting() && MP.isHost && playerBatting() && JOY.active) joyStep();
+            else             if (mpBatterWaiting()) { if (MP.isHost && !(isMobile && playerBatting())) { const bx = playerBatting() ? realMX : MP.remoteX, by = playerBatting() ? realMY : MP.remoteY; G.curX = clamp((bx - SZcx) / (SZw / 2), -1.5, 1.5); G.curY = clamp((by - SZcy) / (SZh / 2), -1.5, 1.5); } }
             switch (G.phase) {
                 case PH.SUB_MENU:
                     if (G.subType === 'D') { if (isMouseJustPressed) defMenuClick(); break; }
@@ -3905,7 +3949,7 @@
                     break;
                 }
                 case PH.WAIT_PITCH: {
-                    if (isMobile && !mpRemoteTurn()) {
+                    if (joyStep()) { } else if (isMobile && !mpRemoteTurn()) {
                         if (G.isDraggingBat) { const sens = 0.008; G.curX = clamp(G.baseCurX + (mouseX - G.dragStartX) * sens, -1.5, 1.5); G.curY = clamp(G.baseCurY + (mouseY - G.dragStartY) * sens, -1.5, 1.5); }
                     } else {
                         G.curX = clamp((mouseX - SZcx) / (SZw / 2), -1.5, 1.5); G.curY = clamp((mouseY - SZcy) / (SZh / 2), -1.5, 1.5);
@@ -3937,7 +3981,7 @@
                     break;
                 }
                 case PH.BATTING: {
-                    if (isMobile && !mpRemoteTurn()) {
+                    if (joyStep()) { } else if (isMobile && !mpRemoteTurn()) {
                         if (G.isDraggingBat) { const sens = 0.008; G.curX = clamp(G.baseCurX + (mouseX - G.dragStartX) * sens, -1.5, 1.5); G.curY = clamp(G.baseCurY + (mouseY - G.dragStartY) * sens, -1.5, 1.5); }
                     } else { G.curX = clamp((mouseX - SZcx) / (SZw / 2), -1.5, 1.5); G.curY = clamp((mouseY - SZcy) / (SZh / 2), -1.5, 1.5); }
                     // timing cursor is tied to the ball: the SWEET spot (phPos 0.5) is exactly when the ball crosses the plate.
@@ -6084,7 +6128,7 @@
 
         function loop() {
             if (MP.active && !MP.isHost) {
-                render();
+                render(); joyGuestStep();
             } else {
                 update(); render();
                 if (MP.active && MP.isHost) mpBroadcastState();
@@ -6104,9 +6148,28 @@
                     btnS.classList.remove('show'); btnC.classList.add('show'); btnA.classList.add('show'); btnSt.classList.remove('show');
                 } else { btnS.classList.remove('show'); btnC.classList.remove('show'); btnA.classList.remove('show'); btnSt.classList.remove('show'); }
             } else { btnS.classList.remove('show'); btnC.classList.remove('show'); btnA.classList.remove('show'); btnSt.classList.remove('show'); }
+            { const show = joyShouldShow(), jo = document.getElementById('joy'); if (jo) jo.classList.toggle('show', show); document.getElementById('mobile-overlay').classList.toggle('joy-on', show); if (!show) { JOY.active = false; JOY.x = JOY.y = 0; } }
             requestAnimationFrame(loop);
         }
         loop();
+
+        // joystick pointer handling (touch and mouse)
+        (function () {
+            const jo = document.getElementById('joy'), kn = document.getElementById('joy-knob'); if (!jo) return;
+            const MAXR = 50; let pid = null;
+            function upd(e) {
+                const r = jo.getBoundingClientRect(); let dx = e.clientX - (r.left + r.width / 2), dy = e.clientY - (r.top + r.height / 2);
+                const len = Math.hypot(dx, dy), k = len > MAXR ? MAXR / len : 1; dx *= k; dy *= k;
+                kn.style.transform = `translate(${dx}px,${dy}px)`;
+                const m = Math.min(1, Math.hypot(dx, dy) / MAXR), dead = 0.12, mag = m < dead ? 0 : Math.pow((m - dead) / (1 - dead), 1.5);      // dead zone + soft start for fine control
+                const ang = Math.atan2(dy, dx); JOY.x = Math.cos(ang) * mag; JOY.y = Math.sin(ang) * mag; JOY.active = true;
+            }
+            function end() { pid = null; JOY.active = false; JOY.x = JOY.y = 0; kn.style.transform = ''; }
+            jo.addEventListener('pointerdown', e => { e.preventDefault(); pid = e.pointerId; try { jo.setPointerCapture(pid); } catch (x) { } upd(e); });
+            jo.addEventListener('pointermove', e => { if (e.pointerId === pid) { e.preventDefault(); upd(e); } });
+            jo.addEventListener('pointerup', e => { if (e.pointerId === pid) end(); });
+            jo.addEventListener('pointercancel', e => { if (e.pointerId === pid) end(); });
+        })();
 
         // Mobile Events
         document.getElementById('swing-btn').addEventListener('touchstart', e => {
