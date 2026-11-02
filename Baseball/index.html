@@ -183,6 +183,20 @@
             border: 2px solid rgba(255, 160, 120, 0.7);
         }
 
+
+        /* sleek glass round buttons: line icons + small label, one accent colour each */
+        .mbtn { --ac: 120,180,255; gap: 2px; font-size: 11px; letter-spacing: 1px; text-shadow: none; font-weight: 600;
+            background: radial-gradient(circle at 50% 28%, rgba(var(--ac), 0.28), rgba(12, 18, 32, 0.82) 70%) !important;
+            border: 1.5px solid rgba(var(--ac), 0.85) !important;
+            box-shadow: 0 3px 14px rgba(0, 0, 0, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.22), inset 0 0 12px rgba(var(--ac), 0.18) !important;
+            -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px); }
+        .mbtn svg { width: 26px; height: 26px; fill: none; stroke: rgb(var(--ac)); stroke-width: 1.9; stroke-linecap: round; stroke-linejoin: round; filter: drop-shadow(0 0 4px rgba(var(--ac), 0.6)); }
+        .mbtn span { color: #eaf1ff; }
+        #sim-btn { --ac: 120,170,255; } #change-btn { --ac: 90,220,130; } #steal-btn { --ac: 255,185,70; }
+        #bunt-btn { --ac: 190,185,255; } #power-btn { --ac: 255,120,95; }
+        #swing-btn { --ac: 255,170,40; font-size: 15px; background: radial-gradient(circle at 50% 28%, rgba(255, 190, 70, 0.95), #c94a05 75%) !important; border: 2px solid rgba(255, 225, 140, 0.95) !important; box-shadow: 0 4px 20px rgba(0, 0, 0, 0.6), 0 0 18px rgba(255, 130, 20, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.45) !important; }
+        #swing-btn svg { width: 34px; height: 34px; stroke: #fff; filter: none; } #swing-btn span { color: #fff; font-weight: 700; }
+
         #mp-overlay {
             position: fixed;
             inset: 0;
@@ -283,12 +297,12 @@
     <canvas id="c3d"></canvas>
     <canvas id="c"></canvas>
     <div id="mobile-overlay">
-        <button class="mbtn" id="sim-btn">⚡<br>自動</button>
-        <button class="mbtn" id="steal-btn">🏃<br>盜壘</button>
-        <button class="mbtn" id="bunt-btn">🏏<br>觸擊</button>
-        <button class="mbtn" id="power-btn">💥<br>強振</button>
-        <button class="mbtn" id="swing-btn">⚾<br>打擊!</button>
-        <button class="mbtn" id="change-btn">🔄<br>換人</button>
+        <button class="mbtn" id="sim-btn"><svg viewBox="0 0 24 24"><path d="M13 2 5 13.5h6L10 22l9-12h-6.2z"/></svg><span>自動</span></button>
+        <button class="mbtn" id="steal-btn"><svg viewBox="0 0 24 24"><path d="m5 5 7 7-7 7M13 5l7 7-7 7"/></svg><span>盜壘</span></button>
+        <button class="mbtn" id="bunt-btn"><svg viewBox="0 0 24 24"><path d="m3 20 11-11"/><path d="m11.5 6.5 6 6"/><circle cx="19" cy="5" r="2"/></svg><span>觸擊</span></button>
+        <button class="mbtn" id="power-btn"><svg viewBox="0 0 24 24"><path d="M12 2.5v5M12 16.5v5M2.5 12h5M16.5 12h5M5.5 5.5l3.2 3.2M15.3 15.3l3.2 3.2M18.5 5.5l-3.2 3.2M8.7 15.3l-3.2 3.2"/></svg><span>強振</span></button>
+        <button class="mbtn" id="swing-btn"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9.5"/><path d="M6 4.5c3 2.5 3 12.5 0 15M18 4.5c-3 2.5-3 12.5 0 15"/></svg><span>打擊!</span></button>
+        <button class="mbtn" id="change-btn"><svg viewBox="0 0 24 24"><path d="M4 8h14l-3.5-3.5M20 16H6l3.5 3.5"/></svg><span>換人</span></button>
         <div id="joy"><div id="joy-knob"></div></div>
     </div>
     <div id="mp-overlay">
@@ -332,7 +346,7 @@
         </div>
     </div>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-    <script src="stadium3d.js?v=20261103i"></script>
+    <script src="stadium3d.js?v=20261103k"></script>
     <script src="https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.js"></script>
     <script>
@@ -4568,7 +4582,7 @@
         function renderPitchHistory() {
             const log = G.pitchLog; if (!log || !log.length) return;
             if (G.phase === PH.STEAL_MENU || G.phase === PH.SUB_MENU || G.phase === PH.HR_RUN || G.phase === PH.POWER_GAUGE) return;
-            const x0 = portraitGame ? 14 : 248, y0 = portraitGame ? 224 : H - 84, w = 232, h = 70, rows = log.slice(-3);
+            const x0 = portraitGame ? 14 : 248, y0 = portraitGame ? 164 : H - 84, w = 232, h = 70, rows = log.slice(-3);
             hudPanel(x0, y0, w, h, 12, '#6aa8ff');
             // mini zone (x,y in [-1.8,1.8]; the strike zone itself is [-1,1])
             const cx = x0 + 44, cy = y0 + h / 2, u = 29 / 1.45;       // mini zone shows +-1.45 zone half-widths
@@ -4675,26 +4689,24 @@
             hudText('O', x0 + 160, y0 + 83, 13, '#9fb0cc'); hudDots(x0 + 178, y0 + 78, GV.outs, 2, '#ff5a44');
 
             if (portraitGame) {
-                // portrait: slim cards so the field gets the screen (pitcher 40px, batter 58px)
-                { const px = 14, py = 112, pw = W - 28, ph = 40;
-                  hudPanel(px, py, pw, ph, 10, hudTeamColor(pitTeam));
-                  hudText(pitcher.name, px + 12, py + 22, 15, '#fff');
+                // portrait: one compact row, pitcher on the left, batter on the right
+                const gap = 6, cw = (W - 28 - gap) / 2, ry = 112, rh = 44;
+                { const px = 14, py = ry;
+                  hudPanel(px, py, cw, rh, 10, hudTeamColor(pitTeam));
+                  hudText(pitcher.name, px + 12, py + 19, 14, '#fff');
                   const sideIdx = G.half === 0 ? 1 : 0, pc = G.pitchCounts[sideIdx], stm = Math.max(0, 1 - effLoad(sideIdx) / pitcher.stm), tired = stm < 0.4;
-                  hudText(`${handText(pitcher, false)} 防禦率 ${pitcher.era}  K ${pitcher.k}`, px + 100, py + 22, 11, 'rgba(200,215,240,0.85)', 'left', 'normal');
-                  hudText(`${pc} 球${tired ? ' ⚠' : ''}`, px + pw - 12, py + 22, 11, tired ? '#ff7a55' : 'rgba(200,215,240,0.85)', 'right', 'normal');
-                  ctx.fillStyle = 'rgba(255,255,255,0.1)'; drawRoundRect(ctx, px + 12, py + 30, pw - 24, 4, 2); ctx.fill();
-                  ctx.save(); drawRoundRect(ctx, px + 12, py + 30, pw - 24, 4, 2); ctx.clip(); ctx.fillStyle = stm > 0.6 ? '#3de07a' : stm > 0.3 ? '#ffc93a' : '#ff4d3a'; ctx.fillRect(px + 12, py + 30, (pw - 24) * stm, 4); ctx.restore(); }
-                { const cx = 14, cy = 158, cw = W - 28, chh = 58;
-                  hudPanel(cx, cy, cw, chh, 10, hudTeamColor(batTeam));
-                  ctx.fillStyle = hudTeamColor(batTeam); ctx.beginPath(); ctx.arc(cx + 24, cy + 22, 12, 0, Math.PI * 2); ctx.fill();
-                  hudText(String(G.batOrder[G.half] + 1), cx + 24, cy + 27, 14, '#fff', 'center');
-                  const _lp = G.lineupPos && G.lineupPos[G.half] && G.lineupPos[G.half][G.batOrder[G.half]];
-                  hudText(batter.name, cx + 46, cy + 22, 16, '#fff');
-                  hudText(`${_lp ? POS_NAME[_lp] + ' ' : ''}${handText(batter, true) ? handText(batter, true) + ' ' : ''}${batter.avg}  ${batter.hr}轟  ${batter.rbi}打點`, cx + 46, cy + 38, 11, 'rgba(200,215,240,0.85)', 'left', 'normal');
+                  hudText(`${handText(pitcher, false)} ${pitcher.era}`, px + 12, py + 33, 10, 'rgba(200,215,240,0.85)', 'left', 'normal');
+                  hudText(`${pc}球${tired ? ' ⚠' : ''}`, px + cw - 10, py + 19, 10, tired ? '#ff7a55' : 'rgba(200,215,240,0.85)', 'right', 'normal');
+                  ctx.fillStyle = 'rgba(255,255,255,0.1)'; drawRoundRect(ctx, px + 12, py + 37, cw - 22, 3, 1.5); ctx.fill();
+                  ctx.save(); drawRoundRect(ctx, px + 12, py + 37, cw - 22, 3, 1.5); ctx.clip(); ctx.fillStyle = stm > 0.6 ? '#3de07a' : stm > 0.3 ? '#ffc93a' : '#ff4d3a'; ctx.fillRect(px + 12, py + 37, (cw - 22) * stm, 3); ctx.restore(); }
+                { const cx = 14 + cw + gap, cy = ry;
+                  hudPanel(cx, cy, cw, rh, 10, hudTeamColor(batTeam));
+                  ctx.fillStyle = hudTeamColor(batTeam); ctx.beginPath(); ctx.arc(cx + 22, cy + 22, 10, 0, Math.PI * 2); ctx.fill();
+                  hudText(String(G.batOrder[G.half] + 1), cx + 22, cy + 26, 12, '#fff', 'center');
+                  hudText(batter.name, cx + 38, cy + 19, 14, '#fff');
+                  hudText(`${handText(batter, true) ? handText(batter, true) + ' ' : ''}${batter.avg} ${batter.hr}轟`, cx + 38, cy + 34, 10, 'rgba(200,215,240,0.85)', 'left', 'normal');
                   const rating = Math.round((batter.con + batter.pow + batter.spd) / 3);
-                  hudText(rating >= 85 ? '絕好調' : rating >= 72 ? '好調' : '普通', cx + cw - 12, cy + 22, 11, rating >= 85 ? '#ff9a3a' : rating >= 72 ? '#5dff9a' : '#aab', 'right');
-                  { const R = ratingsOf(batter), gc = v => v >= 80 ? '#ff9a3a' : v >= 70 ? '#ffd23a' : v >= 60 ? '#9ee86a' : '#9fb0cc';
-                    [['彈', R.traj, '' + R.traj], ['巧', R.con], ['力', R.pow], ['走', R.spd], ['肩', R.arm], ['守', R.def]].forEach((e, i) => { const x = cx + 14 + i * 66, v = e[1], t = e[2] || gradeOf(v); hudText(e[0], x, cy + 52, 9, '#9fb0cc'); hudText(t, x + 12, cy + 53, 11, e[2] ? '#ffd23a' : gc(v)); }); } }
+                  hudText(rating >= 85 ? '絕好調' : rating >= 72 ? '好調' : '', cx + cw - 10, cy + 19, 10, rating >= 85 ? '#ff9a3a' : '#5dff9a', 'right'); }
                 return;
             }
 
@@ -4738,7 +4750,7 @@
             if (!G.lastPitchKmh || !G.speedGunTimer || G.speedGunTimer <= 0) return;
             G.speedGunTimer--;
             const a = Math.min(1, G.speedGunTimer / 14);
-            const pw = 234, px = W - pw - 14, py = portraitGame ? 158 + 58 + 78 : 140;
+            const pw = 234, px = W - pw - 14, py = portraitGame ? 164 : 140;
             ctx.save(); ctx.globalAlpha = a;
             hudPanel(px, py, pw, 38, 10, '#ffcc33');
             hudText(G.lastPitchName, px + 16, py + 24, 14, 'rgba(210,225,255,0.9)');
