@@ -838,7 +838,7 @@ const Stadium3D = (function () {
         const hairCols = [0x17120e, 0x120e0c, 0x2a1c12, 0x3b2a1a, 0x1d1a1a, 0x0d0b0b];
         p.mats.hair.color.set(hairCols[Math.floor(R() * hairCols.length)]);
         p.head.scale.set(EYE.headW, EYE.headH, EYE.headW);
-        const sp = r(EYE.sp, 0.004), ey = r(EYE.ey, 0.004), es = r(1.0, 0.075);
+        const sp = r(EYE.sp, 0.004), ey = r(EYE.ey, 0.004), es = r(1.0, 0.075) * ((p.mask && p.mask.visible) ? 0.74 : 1);      // eyes behind a catcher's/umpire's mask are smaller
         [[F.scL, F.irL, F.hiL, F.lidL, F.skL, F.bL, 1], [F.scR, F.irR, F.hiR, F.lidR, F.skR, F.bR, -1]].forEach(([sc, ir, hi, ld, sk, br, sd]) => {
             sc.position.set(sd * sp, ey, 0.097); ir.position.set(sd * sp, ey, 0.103); hi.position.set(sd * sp, ey, 0.109); sk.position.set(sd * sp, ey, 0.1035); ld.position.set(sd * sp, ey, 0.1105); br.position.set(sd * sp, ey, 0.097);
         });
