@@ -194,6 +194,20 @@
         .mbtn span { color: #eaf1ff; }
         #sim-btn { --ac: 120,170,255; } #change-btn { --ac: 90,220,130; } #steal-btn { --ac: 255,185,70; }
         #bunt-btn { --ac: 190,185,255; } #power-btn { --ac: 255,120,95; }
+        /* tactics buttons: smaller so they do not cover the field */
+        #sim-btn, #change-btn, #steal-btn, #bunt-btn, #power-btn { width: 54px; height: 54px; font-size: 10px; letter-spacing: 0; gap: 0; }
+        #sim-btn svg, #change-btn svg, #steal-btn svg, #bunt-btn svg, #power-btn svg { width: 21px; height: 21px; }
+        #sim-btn, #steal-btn { bottom: calc(max(18px, env(safe-area-inset-bottom)) + 64px); }
+        #bunt-btn { bottom: calc(max(18px, env(safe-area-inset-bottom)) + 128px); }
+        #power-btn { bottom: calc(max(18px, env(safe-area-inset-bottom)) + 192px); }
+        body.portrait #mobile-overlay #change-btn { left: 18px; bottom: 156px; }
+        body.portrait #mobile-overlay #sim-btn, body.portrait #mobile-overlay #steal-btn { left: 80px; bottom: 156px; }
+        body.portrait #mobile-overlay #bunt-btn { left: 142px; bottom: 156px; }
+        body.portrait #mobile-overlay #power-btn { left: 204px; bottom: 156px; }
+        /* one small 戰術 button; the five tactic buttons only appear (and then fold away again) when it is tapped */
+        #tac-btn { --ac: 200,214,238; width: 46px; height: 46px; font-size: 10px; letter-spacing: 0; gap: 0; right: 34px; bottom: calc(max(18px, env(safe-area-inset-bottom)) + 118px); }
+        #tac-btn svg { width: 19px; height: 19px; }
+        #tac-btn.open { --ac: 255,255,255; } #tac-btn.armed { --ac: 255,190,70; }
         #swing-btn { --ac: 255,170,40; font-size: 15px; background: radial-gradient(circle at 50% 28%, rgba(255, 190, 70, 0.95), #c94a05 75%) !important; border: 2px solid rgba(255, 225, 140, 0.95) !important; box-shadow: 0 4px 20px rgba(0, 0, 0, 0.6), 0 0 18px rgba(255, 130, 20, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.45) !important; }
         #swing-btn svg { width: 34px; height: 34px; stroke: #fff; filter: none; } #swing-btn span { color: #fff; font-weight: 700; }
 
@@ -302,6 +316,7 @@
         <button class="mbtn" id="bunt-btn"><svg viewBox="0 0 24 24"><path d="m3 20 11-11"/><path d="m11.5 6.5 6 6"/><circle cx="19" cy="5" r="2"/></svg><span>觸擊</span></button>
         <button class="mbtn" id="power-btn"><svg viewBox="0 0 24 24"><path d="M12 2.5v5M12 16.5v5M2.5 12h5M16.5 12h5M5.5 5.5l3.2 3.2M15.3 15.3l3.2 3.2M18.5 5.5l-3.2 3.2M8.7 15.3l-3.2 3.2"/></svg><span>強振</span></button>
         <button class="mbtn" id="swing-btn"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9.5"/><path d="M6 4.5c3 2.5 3 12.5 0 15M18 4.5c-3 2.5-3 12.5 0 15"/></svg><span>打擊!</span></button>
+        <button class="mbtn" id="tac-btn"><svg viewBox="0 0 24 24"><path d="M4 7h10M18 7h2M4 17h2M10 17h10"/><circle cx="16" cy="7" r="2"/><circle cx="8" cy="17" r="2"/></svg><span>戰術</span></button>
         <button class="mbtn" id="change-btn"><svg viewBox="0 0 24 24"><path d="M4 8h14l-3.5-3.5M20 16H6l3.5 3.5"/></svg><span>換人</span></button>
         <div id="joy"><div id="joy-knob"></div></div>
     </div>
@@ -346,7 +361,7 @@
         </div>
     </div>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-    <script src="stadium3d.js?v=20261103v"></script>
+    <script src="stadium3d.js?v=20261104a"></script>
     <script src="https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.js"></script>
     <script>
@@ -413,6 +428,7 @@
         const PITCH_FLIGHT = { 0: { late: 1.0, hump: 0 }, 1: { late: 1.7, hump: 0 }, 2: { late: 2.3, hump: 0 }, 3: { late: 2.1, hump: 0 }, 4: { late: 2.6, hump: 0.45 }, 5: { late: 2.3, hump: 0.16 }, 6: { late: 3.0, hump: 0.12 }, 7: { late: 2.5, hump: 0 }, 8: { late: 1.8, hump: 0 }, 9: { late: 2.6, hump: 0 }, 10: { late: 2.9, hump: 0.35 } };
         const BREAK_SCALE = 0.8;
         function breakPx(po) { const pd = PITCH_DICT[po.id]; return { cx: pd.bx * po.lv * BREAK_SCALE, cy: pd.by * po.lv * BREAK_SCALE }; }
+        const TAC = { open: false };       // touch tactics tray (換人 / 自動 / 盜壘 / 觸擊 / 強振) folded behind one button
         const isMobile = ('ontouchstart' in window || navigator.maxTouchPoints > 0);
         const ROSTERS = {
             'BRO': {
@@ -3503,8 +3519,9 @@
                 if (G.hitKind === 'pop' && !G.nicePlay && outsBefore < 2 && G.runners[0] && G.runners[1]) text = '內野高飛球，打者自動出局';          // infield fly rule: runners hold
                 SFX.out();
                 let runs = 0, dp = false;
-                // ground ball with a runner on 1st and fewer than 2 out: turn two (45%)
-                if (G.outKind === 'ground' && G.runners[0] && outsBefore < 2 && Math.random() < 0.45) {
+                // ground ball with a runner on 1st and fewer than 2 out: very likely a double play (~80%; better defence helps, a fast batter beats it out more often)
+                const dpChance = G.hitKind === 'bunt' ? 0.12 : clamp(0.80 + (fieldDef() - 65) / 300 - ((getBatter().spd || 60) - 60) / 400, 0.55, 0.92);
+                if (G.outKind === 'ground' && G.runners[0] && outsBefore < 2 && Math.random() < dpChance) {
                     dp = true; G.dpPlay = true; G.runners[0] = false; G.outs++; text = '雙殺打！'; col = '#FF4444'; if (G.outs >= 3) endHalf = true;
                     if (G.runners[1] && G.outs < 3 && Math.random() < 0.7) { G.runners[1] = false; G.runners[2] = G.runners[2] || true; }
                 }
@@ -4007,7 +4024,7 @@
                         const stx = W - 130, sty = H - 100;
                         if (!DUP() && canSteal() && mouseX >= stx && mouseX <= stx + 120 && mouseY >= sty && mouseY <= sty + 38) { attemptSteal(); break; }
                     }
-                    if (mouseY < H - 80 || !playerBatting()) { const _n = performance.now(), _dt = G._wpLast ? clamp((_n - G._wpLast) / 16.667, 0.25, 2) : 1; G._wpLast = _n; G.phaseTimer -= _dt; } else G._wpLast = 0;      // counted in real time, so a 120 Hz screen doesn't halve the wait
+                    if (mouseY < H - 80 || !playerBatting() || isMobile) { const _n = performance.now(), _dt = G._wpLast ? clamp((_n - G._wpLast) / 16.667, 0.25, 2) : 1; G._wpLast = _n; G.phaseTimer -= _dt; } else G._wpLast = 0;      // counted in real time, so a 120 Hz screen doesn't halve the wait
                     if (G.phaseTimer <= 0) {
                         G.pitchChoice = rndI(0, getPitcher().pitches.length - 1);
                         G.aimX = rnd(-0.82, 0.82); G.aimY = rnd(-0.82, 0.82); G._actualAimX = G.aimX; G._actualAimY = G.aimY;
@@ -5697,7 +5714,7 @@
                 if (!DUP()) { if (canBunt() || (!MP.active && playerBatting() && G.bunt)) { const br = buntBtnRect(), on = !!G.bunt; drawGlossyPill(br.x, br.y, br.w, br.h, inR(br), on ? '✓ 觸擊中 (B)' : '🏏 觸擊 (B)', on ? '#116622' : '#444455', on ? '#22aa44' : '#6a6a88', inR(br) ? '#FFD700' : '#FFF'); } }
                 if (!DUP()) { if (canBunt() || (!MP.active && playerBatting() && G.power)) { const pr = powerBtnRect(), on = !!G.power; drawGlossyPill(pr.x, pr.y, pr.w, pr.h, inR(pr), on ? '✓ 強振中 (V)' : '💥 強振 (V)', on ? '#882211' : '#444455', on ? '#dd5533' : '#6a6a88', inR(pr) ? '#FFD700' : '#FFF'); } }
                 if (!DUP()) { if (canSteal()) { const stx = W - 130, sty = H - 100; const stHover = mouseX >= stx && mouseX <= stx + 120 && mouseY >= sty && mouseY <= sty + 38; drawGlossyPill(stx, sty, 120, 38, stHover, '🏃 盜壘', '#883300', '#CC5500', stHover ? '#FFD700' : '#FFF'); } }
-                if (mouseY >= H - 80) txt('－ 投球暫停中 (思考戰術) －', W / 2, H - 20, 16, '#00FFFF', 'center', '', false);
+                if (mouseY >= H - 80 && !isMobile) txt('－ 投球暫停中 (思考戰術) －', W / 2, H - 20, 16, '#00FFFF', 'center', '', false);
             }
 
             if (G.phase === PH.POWER_GAUGE && uiPitching()) {
@@ -5731,7 +5748,7 @@
             }
 
             if (G.phase === PH.BATTING && uiBatting()) {
-                const tbW = 380, tbH = 28, tbX = W / 2 - tbW / 2, tbY = 476;
+                const PT = portraitGame, tbW = PT ? 300 : 380, tbH = PT ? 14 : 28, tbX = W / 2 - tbW / 2, tbY = PT ? Math.round(SZcy + SZh / 2 + 14) : 476;      // portrait: a slim bar right under the zone, clear of the ball and the batter
                 ctx.fillStyle = 'rgba(0,0,0,0.65)'; drawRoundRect(ctx, tbX - 4, tbY - 4, tbW + 8, tbH + 8, tbH / 2 + 4); ctx.fill();
                 ctx.strokeStyle = 'rgba(100,130,180,0.4)'; ctx.lineWidth = 1; drawRoundRect(ctx, tbX - 4, tbY - 4, tbW + 8, tbH + 8, tbH / 2 + 4); ctx.stroke();
                 ctx.save(); ctx.beginPath(); drawRoundRect(ctx, tbX, tbY, tbW, tbH, tbH / 2); ctx.clip();
@@ -5741,11 +5758,11 @@
                 ctx.fillStyle = swG; ctx.fillRect(tbX + tbW * 0.38, tbY, tbW * 0.24, tbH);
                 ctx.strokeStyle = 'rgba(255,255,255,0.15)'; ctx.lineWidth = 1;
                 [0.22, 0.38, 0.62, 0.78].forEach(f => { ctx.beginPath(); ctx.moveTo(tbX + tbW * f, tbY); ctx.lineTo(tbX + tbW * f, tbY + tbH); ctx.stroke(); }); ctx.restore();
-                ctx.font = 'bold 9px Arial'; ctx.textAlign = 'center'; ctx.fillStyle = 'rgba(255,220,80,0.9)'; ctx.fillText('SWEET', tbX + tbW * 0.5, tbY + tbH + 12);
-                ctx.fillStyle = 'rgba(255,150,60,0.7)'; ctx.fillText('GOOD', tbX + tbW * 0.3, tbY + tbH + 12); ctx.fillText('GOOD', tbX + tbW * 0.7, tbY + tbH + 12);
+                if (!PT) { ctx.font = 'bold 9px Arial'; ctx.textAlign = 'center'; ctx.fillStyle = 'rgba(255,220,80,0.9)'; ctx.fillText('SWEET', tbX + tbW * 0.5, tbY + tbH + 12);
+                ctx.fillStyle = 'rgba(255,150,60,0.7)'; ctx.fillText('GOOD', tbX + tbW * 0.3, tbY + tbH + 12); ctx.fillText('GOOD', tbX + tbW * 0.7, tbY + tbH + 12); }
                 if (!G.phDone) {
-                    const cursorX = tbX + G.phPos * tbW; ctx.save(); ctx.shadowColor = '#fff'; ctx.shadowBlur = 12; ctx.fillStyle = '#fff'; ctx.fillRect(cursorX - 3, tbY - 6, 6, tbH + 12); ctx.shadowBlur = 0; ctx.restore();
-                    ctx.font = 'bold 11px Arial'; ctx.textAlign = 'center'; ctx.fillStyle = 'rgba(255,255,255,0.7)'; ctx.fillText('タイミング  TIMING', W / 2, tbY - 10);
+                    const cursorX = tbX + G.phPos * tbW; ctx.save(); ctx.shadowColor = '#fff'; ctx.shadowBlur = 12; ctx.fillStyle = '#fff'; ctx.fillRect(cursorX - 3, tbY - 5, 6, tbH + 10); ctx.shadowBlur = 0; ctx.restore();
+                    if (!PT) { ctx.font = 'bold 11px Arial'; ctx.textAlign = 'center'; ctx.fillStyle = 'rgba(255,255,255,0.7)'; ctx.fillText('タイミング  TIMING', W / 2, tbY - 10); }
                 }
             }
         }
@@ -6223,7 +6240,14 @@
                     btnS.classList.remove('show'); btnC.classList.add('show'); btnA.classList.add('show'); btnSt.classList.remove('show');
                 } else { btnS.classList.remove('show'); btnC.classList.remove('show'); btnA.classList.remove('show'); btnSt.classList.remove('show'); }
             } else { btnS.classList.remove('show'); btnC.classList.remove('show'); btnA.classList.remove('show'); btnSt.classList.remove('show'); }
-            if (G.scr !== SCR.GAME || !canBunt()) { btnBu.classList.remove('show'); btnPw.classList.remove('show'); }      // not while a substitution menu (or anything else) covers the field
+            if (G.scr !== SCR.GAME || !canBunt()) { btnBu.classList.remove('show'); btnPw.classList.remove('show'); }
+            {   // tactics fold: the five buttons are hidden behind one small toggle
+                const tacs = [btnC, btnA, btnSt, btnBu, btnPw], tb = document.getElementById('tac-btn'), any = tacs.some(b => b.classList.contains('show'));
+                if (!any) TAC.open = false;
+                if (!TAC.open) tacs.forEach(b => b.classList.remove('show'));
+                tb.classList.toggle('show', any); tb.classList.toggle('open', TAC.open); tb.classList.toggle('armed', !!(G.bunt || G.power));
+                tb.querySelector('span').textContent = TAC.open ? '收起' : G.bunt ? '觸擊中' : G.power ? '強振中' : '戰術';
+            }      // not while a substitution menu (or anything else) covers the field
             { const show = joyShouldShow(), jo = document.getElementById('joy'); if (jo) jo.classList.toggle('show', show); document.getElementById('mobile-overlay').classList.toggle('joy-on', show); if (!show) { JOY.active = false; JOY.x = JOY.y = 0; } }
             requestAnimationFrame(loop);
         }
@@ -6284,6 +6308,9 @@
         });
         document.getElementById('bunt-btn').addEventListener('touchstart', e => { e.preventDefault(); toggleBunt(); }, { passive: false });
         document.getElementById('power-btn').addEventListener('touchstart', e => { e.preventDefault(); togglePower(); }, { passive: false });
+        { const tb = document.getElementById('tac-btn'), tg = e => { e.preventDefault(); TAC.open = !TAC.open; };
+          tb.addEventListener('touchstart', tg, { passive: false }); tb.addEventListener('mousedown', tg);
+          ['sim-btn', 'change-btn', 'steal-btn', 'bunt-btn', 'power-btn'].forEach(id => { const e = document.getElementById(id), cl = () => { setTimeout(() => { TAC.open = false; }, 0); }; e.addEventListener('touchstart', cl, { passive: true }); e.addEventListener('mousedown', cl); }); }
         document.getElementById('steal-btn').addEventListener('touchstart', e => {
             e.preventDefault(); attemptSteal();
         }, { passive: false });
