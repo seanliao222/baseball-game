@@ -346,7 +346,7 @@
         </div>
     </div>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-    <script src="stadium3d.js?v=20261103u"></script>
+    <script src="stadium3d.js?v=20261103v"></script>
     <script src="https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.js"></script>
     <script>
@@ -2890,15 +2890,15 @@
         }
         // lineup board geometry: two 320px boards side by side (landscape) or stacked full-width boards (portrait)
         function lnGeo(sd) {
-            if (portraitGame) { const oy = 64 + sd * 388; return { x: 14, oy, bw: W - 28, rp: 32, y0: oy + 68, pY: oy + 362, bh: 378 }; }
-            return { x: W / 2 - 340 + sd * 360, oy: 70, bw: 320, rp: 35, y0: 160, pY: 500, bh: 480 };
+            if (portraitGame) { const bh = Math.floor((H - 64 - 56 - 8) / 2), oy = 64 + sd * (bh + 8), y0 = oy + 62, pY = oy + bh - 16; return { x: 14, oy, bw: W - 28, rp: Math.min(32, (pY - 30 - y0) / 8), y0, pY, bh, hdr: 38 }; }
+            return { x: W / 2 - 340 + sd * 360, oy: 70, bw: 320, rp: 35, y0: 160, pY: 500, bh: 480, hdr: 50 };
         }
         function lnLayout() {
             return [0, 1].map(sd => {
                 const g = lnGeo(sd), x = g.x;
                 return {
                     x, sd,
-                    rows: Array.from({ length: 9 }, (_, i) => { const y = g.y0 + i * g.rp; return { i, y, row: { x: x + 8, y: y - 23, w: g.bw - 16, h: 32 }, chip: { x: x + 38, y: y - 20, w: 50, h: 26 }, btn: { x: x + g.bw - 36, y: y - 20, w: 28, h: 26 } }; }),
+                    rows: Array.from({ length: 9 }, (_, i) => { const y = g.y0 + i * g.rp, ch = Math.min(26, g.rp - 3); return { i, y, row: { x: x + 8, y: y - 23, w: g.bw - 16, h: Math.min(32, g.rp - 1) }, chip: { x: x + 38, y: y - 20, w: 50, h: ch }, btn: { x: x + g.bw - 36, y: y - 20, w: 28, h: ch } }; }),
                     pBtn: { x: x + g.bw - 36, y: g.pY - 20, w: 28, h: 26 }
                 };
             });
@@ -4917,23 +4917,23 @@
             function drawTeamBoard(sd, team, sideLineups, pitcherIdx, label) {
                 const g = lnGeo(sd), x = g.x, bw = g.bw;
                 drawRetroPanel(x, g.oy, bw, g.bh, 'rgba(10, 20, 35, 0.85)', team.c1);
-                ctx.fillStyle = team.c1; ctx.fillRect(x + 2, g.oy + 2, bw - 4, 50);
-                txt(team.abbr, x + bw / 2, g.oy + 35, 26, '#FFF'); txt(label, x + 40, g.oy + 30, 14, '#FFD700', 'left');
+                ctx.fillStyle = team.c1; ctx.fillRect(x + 2, g.oy + 2, bw - 4, g.hdr);
+                txt(team.abbr, x + bw / 2, g.oy + g.hdr / 2 + 15, 26, '#FFF'); txt(label, x + 40, g.oy + g.hdr / 2 + 10, 14, '#FFD700', 'left');
 
                 for (let i = 0; i < 9; i++) {
                     const b = team.roster.batters[sideLineups[i]]; const y = g.y0 + i * g.rp;
                     const sel = G.lnSel && G.lnSel.sd === sd && G.lnSel.i === i ? G.lnSel.kind : null, canEdit = !MP.active;
-                    if (sel === 'ord') { ctx.fillStyle = 'rgba(255,215,0,0.18)'; ctx.fillRect(x + 8, y - 23, bw - 16, 32); }
+                    if (sel === 'ord') { ctx.fillStyle = 'rgba(255,215,0,0.18)'; ctx.fillRect(x + 8, y - 23, bw - 16, Math.min(32, g.rp - 1)); }
                     ctx.font = 'bold 16px Arial'; ctx.textAlign = 'left'; ctx.fillStyle = '#88AAFF'; ctx.fillText(`${i + 1}.`, x + 14, y);
                     const pos = (G.lineupPos && G.lineupPos[sd][i]) || '';
-                    ctx.fillStyle = sel === 'pos' ? '#FFD700' : '#1c4f6e'; drawRoundRect(ctx, x + 38, y - 20, 50, 26, 6); ctx.fill();
+                    ctx.fillStyle = sel === 'pos' ? '#FFD700' : '#1c4f6e'; drawRoundRect(ctx, x + 38, y - 20, 50, Math.min(26, g.rp - 3), 6); ctx.fill();
                     ctx.font = 'bold 14px "PingFang TC", "Microsoft JhengHei", Arial'; ctx.textAlign = 'center'; ctx.fillStyle = sel === 'pos' ? '#222' : '#BFE9FF'; ctx.fillText(POS_NAME[pos] || pos, x + 63, y - 2);
                     ctx.font = 'bold 17px "PingFang TC", "Microsoft JhengHei", Arial'; ctx.textAlign = 'left'; ctx.fillStyle = '#FFF'; ctx.fillText(b.name, x + 96, y);
                     ctx.font = '13px Arial'; ctx.textAlign = 'right'; ctx.fillStyle = '#AAAAAA'; ctx.fillText(`${b.avg}`, x + bw - 42, y);
-                    if (canEdit) { ctx.fillStyle = '#2a5a2a'; drawRoundRect(ctx, x + bw - 36, y - 20, 28, 26, 6); ctx.fill(); ctx.font = 'bold 15px Arial'; ctx.textAlign = 'center'; ctx.fillStyle = '#9dff9d'; ctx.fillText('⇄', x + bw - 22, y - 1); }
+                    if (canEdit) { ctx.fillStyle = '#2a5a2a'; drawRoundRect(ctx, x + bw - 36, y - 20, 28, Math.min(26, g.rp - 3), 6); ctx.fill(); ctx.font = 'bold 15px Arial'; ctx.textAlign = 'center'; ctx.fillStyle = '#9dff9d'; ctx.fillText('⇄', x + bw - 22, y - 1); }
                 }
                 const pLineY = g.pY;
-                ctx.strokeStyle = 'rgba(255,255,255,0.2)'; ctx.beginPath(); ctx.moveTo(x + 20, pLineY - 30); ctx.lineTo(x + bw - 20, pLineY - 30); ctx.stroke();
+                ctx.strokeStyle = 'rgba(255,255,255,0.2)'; ctx.beginPath(); ctx.moveTo(x + 20, pLineY - (portraitGame ? 22 : 30)); ctx.lineTo(x + bw - 20, pLineY - (portraitGame ? 22 : 30)); ctx.stroke();
                 const p = team.roster.pitchers[pitcherIdx];
                 ctx.font = 'bold 16px Arial'; ctx.textAlign = 'left'; ctx.fillStyle = '#FF88AA'; ctx.fillText('P.', x + 30, pLineY);
                 ctx.font = 'bold 18px "PingFang TC", "Microsoft JhengHei", Arial'; ctx.fillStyle = '#FFF'; ctx.fillText(p.name, x + 60, pLineY);
@@ -5796,7 +5796,7 @@
                 let s = `${st.h}-${st.ab}`; if (st.bb > 0) s += ` BB${st.bb > 1 ? st.bb : ''}`; if (st.hr > 0) s += ` HR`;
                 if (st.rbi > 0) s += ` ${st.rbi}打點`; if (st.k > 0) s += ` K${st.k > 1 ? st.k : ''}`; return s;
             }
-            const PT = portraitGame, colW = PT ? W - 28 : 368, colH = PT ? 352 : 440, padX = 16, rowH = PT ? 28 : 32; const leftX = PT ? 14 : W / 2 - colW - 6, rightX = PT ? 14 : W / 2 + 6;
+            const PT = portraitGame, colW = PT ? W - 28 : 368, colH = PT ? Math.floor((H - 75 - 10 - 52) / 2) : 440, padX = 16, rowH = PT ? Math.min(28, (Math.floor((H - 75 - 10 - 52) / 2) - 85) / 9) : 32; const leftX = PT ? 14 : W / 2 - colW - 6, rightX = PT ? 14 : W / 2 + 6;
             function drawTeamPanel(panelX, team, sideIdx, oy) {
                 const pbg = ctx.createLinearGradient(panelX, oy, panelX, oy + colH);
                 pbg.addColorStop(0, team.c1 + '22'); pbg.addColorStop(1, 'rgba(2,10,20,0.92)');
@@ -5945,7 +5945,7 @@
             txt(a.length ? `${a.length}場　${w}勝 ${l}敗 ${d}和　勝率 ${(w + l ? w / (w + l) : 0).toFixed(3).replace(/^0/, '')}　得${rs}失${ra}　${sk === 'W' ? streak + '連勝' : sk === 'L' ? streak + '連敗' : ''}` : '還沒有比賽紀錄，打完一場就會記在這裡', W / 2, 78, 16, '#bcd');
             const rows = a.slice((G.histPage || 0) * 10, (G.histPage || 0) * 10 + 10);
             rows.forEach((g, i) => {
-                const PT = portraitGame, rh = PT ? 54 : 38, y = 100 + i * (PT ? 58 : 42), col = g.res === 'W' ? '#44ff88' : g.res === 'L' ? '#ff6666' : '#aaa';
+                const PT = portraitGame, rh = PT ? 50 : 38, y = 100 + i * (PT ? 54 : 42), col = g.res === 'W' ? '#44ff88' : g.res === 'L' ? '#ff6666' : '#aaa';
                 ctx.fillStyle = 'rgba(20,35,55,0.75)'; drawRoundRect(ctx, PT ? 14 : 30, y, PT ? W - 28 : W - 60, rh, 7); ctx.fill();
                 const dt = new Date(g.t); ctx.font = '11px Arial'; ctx.textAlign = 'left'; ctx.fillStyle = '#789'; ctx.fillText(`${dt.getMonth() + 1}/${dt.getDate()} ${String(dt.getHours()).padStart(2, '0')}:${String(dt.getMinutes()).padStart(2, '0')}`, 40, y + 15);
                 ctx.fillStyle = '#789'; ctx.fillText(`${['簡單', '普通', '困難'][g.diff] || ''}${g.mp ? ' 連線' : ''}`, 40, y + 30);
