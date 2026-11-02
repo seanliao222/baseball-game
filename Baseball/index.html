@@ -346,7 +346,7 @@
         </div>
     </div>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-    <script src="stadium3d.js?v=20261103r"></script>
+    <script src="stadium3d.js?v=20261103t"></script>
     <script src="https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.js"></script>
     <script>
@@ -2327,7 +2327,7 @@
             G = {
                 scr: SCR.TITLE, selStep: 0, cursor: 0, awayIdx: 0, homeIdx: 1,
                 inning: 1, half: 0, outs: 0, balls: 0, strikes: 0,
-                score: [0, 0], maxInn: 9, runners: [false, false, false], innScores: [[], []],
+                score: [0, 0], maxInn: 9, runners: [false, false, false], innScores: [[], []], errs: [0, 0],
                 playerSide: 1, difficulty: 1,
                 batOrder: [0, 0],
                 lineups: [[0, 1, 2, 3, 4, 5, 6, 7, 8], [0, 1, 2, 3, 4, 5, 6, 7, 8]],
@@ -3496,7 +3496,7 @@
                 SFX.ball();
                 if (type === 'BB') { st.bb++; st.rbi += rbi; }
                 else if (type === 'HBP') { text = '觸身球！打者上壘'; sub = 'HIT BY PITCH'; if (st.hbp !== undefined) st.hbp++; }
-                else { text = '野手失誤，打者上壘'; sub = 'ERROR'; col = '#FFAA44'; st.ab++; G.resDelayNext = playDelay('OUT'); }
+                else { text = '野手失誤，打者上壘'; sub = 'ERROR'; col = '#FFAA44'; st.ab++; G.errs[1 - bat]++; G.resDelayNext = playDelay('OUT'); }
             } else if (type === 'OUT') {
                 const outsBefore = G.outs;
                 G.outs++; const KT = { ground: '滾地球', fly: '飛球', pop: '內野小飛球', line: '平飛球' }[G.hitKind] || ''; text = G.nicePlay ? 'NICE PLAY！' : KT + '出局！'; sub = 'OUT'; col = G.nicePlay ? '#FFD700' : '#FF6644'; if (G.outs >= 3) endHalf = true;
@@ -5847,20 +5847,20 @@
 
             // Box score table
             const innings = Math.max(G.innScores[0].length, G.innScores[1].length, G.maxInn || 9);
-            const colW = Math.min(36, Math.floor((W - 180) / Math.max(innings, 9)));
-            const tX = W / 2 - (colW * innings + 100) / 2;
+            const colW = Math.min(36, Math.floor((W - 210) / Math.max(innings, 9)));
+            const tX = W / 2 - (colW * innings + 198) / 2;
             const tY = 128;
             const rowH = 28;
 
             // Header row
-            const tW = 90 + innings * colW + 36, hdrH = 22;
+            const tW = 90 + innings * colW + 108, hdrH = 22;
             ctx.fillStyle = 'rgba(40,60,100,0.8)'; ctx.fillRect(tX, tY, tW, hdrH);
             ctx.strokeStyle = 'rgba(120,160,220,0.35)'; ctx.lineWidth = 1; ctx.strokeRect(tX, tY, tW, hdrH);
             ctx.font = 'bold 12px Arial'; ctx.textAlign = 'center'; ctx.fillStyle = 'rgba(200,215,255,0.9)';
             for (let i = 0; i < innings; i++) {
                 ctx.fillText(i + 1, tX + 90 + i * colW + colW / 2, tY + 15);
             }
-            ctx.fillText('R', tX + 90 + innings * colW + 18, tY + 15);
+            ['R', 'H', 'E'].forEach((l, k) => ctx.fillText(l, tX + 90 + innings * colW + 18 + k * 36, tY + 15));
 
             [aw, hw].forEach((team, si) => {
                 const rowY = tY + hdrH + rowH * (si + 1) - 9;
@@ -5893,12 +5893,15 @@
                 ctx.font = 'bold 15px Arial';
                 ctx.fillStyle = '#FFFFFF';
                 ctx.fillText(G.score[si], tX + 90 + innings * colW + 18, rowY + 2);
+                ctx.font = '15px Arial'; ctx.fillStyle = '#cfe0ff';
+                ctx.fillText(G.batStats[si].reduce((a, b) => a + b.h, 0), tX + 90 + innings * colW + 54, rowY + 2);
+                ctx.fillText((G.errs || [0, 0])[si], tX + 90 + innings * colW + 90, rowY + 2);
             });
 
             // Divider line between innings and total
             const divX = tX + 90 + innings * colW;
             ctx.strokeStyle = 'rgba(180,200,255,0.25)'; ctx.lineWidth = 1;
-            ctx.beginPath(); ctx.moveTo(divX, tY); ctx.lineTo(divX, tY + hdrH + rowH * 2); ctx.stroke();
+            ctx.beginPath(); ctx.moveTo(divX, tY); ctx.lineTo(divX, tY + hdrH + rowH * 2); ctx.moveTo(divX + 36, tY); ctx.lineTo(divX + 36, tY + hdrH + rowH * 2); ctx.stroke();
 
             // game record
             const sm = gameSummary();

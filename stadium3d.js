@@ -966,7 +966,7 @@ const Stadium3D = (function () {
         // ball
         const bm = new THREE.MeshStandardMaterial({ map: ballTexture(), roughness: 0.55, emissive: 0x333330, emissiveIntensity: 0.55 });
         ball = new THREE.Mesh(geo.ball, bm); ball.scale.setScalar(0.045); ball.castShadow = true; ball.visible = false; scene.add(ball);
-        hitBall = new THREE.Mesh(geo.ball, bm); hitBall.scale.setScalar(0.06); hitBall.castShadow = true; hitBall.visible = false; scene.add(hitBall);
+        hitBall = new THREE.Mesh(geo.ball, bm); hitBall.scale.setScalar(0.04); hitBall.castShadow = true; hitBall.visible = false; scene.add(hitBall);
         for (let i = 0; i < 8; i++) {
             const t = new THREE.Mesh(geo.ball, new THREE.MeshBasicMaterial({ color: 0xfff6d8, transparent: true, opacity: 0.2, depthWrite: false }));
             t.visible = false; scene.add(t); trail.push(t);
@@ -1438,7 +1438,7 @@ const Stadium3D = (function () {
         flightPos(fl, G.frame, hitBall.position);
         hitBall.visible = true;
         hitBall.rotation.x += 0.4; hitBall.rotation.z += 0.2;
-        hitBall.scale.setScalar(0.06 * clamp(hitBall.position.distanceTo(camera.position) / 11, 1, 4.5));      // keep it readable when the camera is far away
+        hitBall.scale.setScalar(0.04 * clamp(hitBall.position.distanceTo(camera.position) / 14, 1, 2.8));      // keep it readable when the camera is far away
         // catch: ball sticks to the fielder's glove
         if (((fl.catch && fl.pickT === undefined) ? t >= fl.dur - 1 : (fl.pickT !== undefined && t >= fl.pickT)) && fl.fielder) {
             const st = updateLegs(G, fl, t), f = (st && st.holder) || fl.fielder;
@@ -1455,7 +1455,7 @@ const Stadium3D = (function () {
         // trail
         for (let i = 0; i < trail.length; i++) {
             const tf = G.frame - (i + 1) * 1.6; if (tf < fl.t0 || !air || fl.kind === 'grounder' && false) { trail[i].visible = false; continue; }
-            flightPos(fl, tf, trail[i].position); trail[i].visible = true; trail[i].scale.setScalar(0.07 * (1 - i * 0.09)); trail[i].material.opacity = 0.28 * (1 - i / trail.length);
+            flightPos(fl, tf, trail[i].position); trail[i].visible = true; trail[i].scale.setScalar(0.045 * (1 - i * 0.09)); trail[i].material.opacity = 0.28 * (1 - i / trail.length);
         }
         if (S.flashT !== undefined) { S.flashT += dt; flashSprite.material.opacity = clamp(1 - S.flashT * 5, 0, 1); flashSprite.scale.setScalar(1.2 + S.flashT * 6); }
         if (fl.type === 'HR' && t === Math.round(fl.dur * 0.7)) { /* placeholder for hooks */ }
