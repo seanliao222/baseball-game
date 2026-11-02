@@ -20,7 +20,7 @@
             justify-content: center;
             align-items: center;
             min-height: 100vh;
-            min-height: -webkit-fill-available;
+            min-height: 100dvh;
             font-family: "PingFang TC", "Microsoft JhengHei", "Noto Sans TC", Arial, sans-serif;
             overflow: hidden;
             user-select: none;
@@ -346,7 +346,7 @@
         </div>
     </div>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-    <script src="stadium3d.js?v=20261103k"></script>
+    <script src="stadium3d.js?v=20261103m"></script>
     <script src="https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.js"></script>
     <script>
@@ -364,6 +364,7 @@
         function resize() {
             const portrait = window.innerHeight > window.innerWidth * 1.05;          // portrait phone
             document.body.classList.toggle('portrait', portrait);
+            document.body.style.minHeight = window.innerHeight + 'px';      // 100vh is taller than the visible area on phones (address bar), which pushed the centred canvas down and cut off its bottom
             if (portrait && portraitGame) { W = PORTRAIT_GAME_W; H = Math.max(700, Math.round(W * window.innerHeight / window.innerWidth)); }
             else if (portrait) { W = PORTRAIT_W; H = 600; }
             else { W = 800; H = 600; }
@@ -3820,7 +3821,7 @@
                 if (isMouseJustPressed) {
                     const bx = W / 2 - 140, by = H * 0.84 - 26, bw = 280, bh = 52;
                     if (mouseX >= bx && mouseX <= bx + bw && mouseY >= by && mouseY <= by + bh) { mpOpenMenu(); clearInput(); return; }
-                    if (mouseX >= W / 2 - 100 && mouseX <= W / 2 + 100 && mouseY >= 544 && mouseY <= 580) { G.scr = SCR.HISTORY; G.histPage = 0; G.histClear = 0; clearInput(); return; }
+                    if (mouseX >= W / 2 - 100 && mouseX <= W / 2 + 100 && mouseY >= HIST_Y() && mouseY <= HIST_Y() + 36) { G.scr = SCR.HISTORY; G.histPage = 0; G.histClear = 0; clearInput(); return; }
                 }
                 if (actionTrigger()) { G.scr = SCR.SELECT; G.selStep = 0; G.cursor = 0; } clearInput(); return;
             }
@@ -4051,7 +4052,7 @@
         // ==========================================
 
         function render() {
-            { const wantPG = (G.scr === SCR.GAME || G.scr === SCR.HALF_END) && window.innerHeight > window.innerWidth * 1.05; if (wantPG !== portraitGame) { portraitGame = wantPG; resize(); } }
+            { const wantPG = (G.scr === SCR.GAME || G.scr === SCR.HALF_END || G.scr === SCR.TITLE) && window.innerHeight > window.innerWidth * 1.05; if (wantPG !== portraitGame) { portraitGame = wantPG; resize(); } }
             ctx.setTransform(uiScale, 0, 0, uiScale, 0, 0);
             ctx.clearRect(0, 0, W, H);
             MUSIC.tick(G.scr === SCR.GAME ? batTeamInfo() : null, !!(G.runners && (G.runners[0] || G.runners[1] || G.runners[2])));
@@ -4347,6 +4348,7 @@
         // RENDER SCREENS
         // ==========================================
 
+        const HIST_Y = () => H > 700 ? Math.round(H * 0.84) + 44 : 544;      // history button: under the 2-player button (taller portrait screen) or at the bottom of the 4:3 screen
         function renderTitle() {
             const live3D = S3D.ok && S3D.visible;
             const bg = ctx.createRadialGradient(W / 2, H * 0.42, 20, W / 2, H * 0.42, live3D ? W * 0.5 : W);
@@ -4385,6 +4387,7 @@
             ctx.fillStyle = subGrad; ctx.fillText('CPBL × MLB EDITION', W / 2, H * 0.495);
             ctx.restore();
 
+            if (portraitGame) { ctx.font = 'bold 15px "PingFang TC", "Microsoft JhengHei", Arial'; ctx.fillStyle = 'rgba(255,220,120,0.95)'; ctx.fillText('📱 橫放手機，體驗最佳', W / 2, H - 24); }
             ctx.font = '13px Arial'; ctx.textAlign = 'center'; ctx.fillStyle = 'rgba(150,190,255,0.5)';
             ctx.fillText('2026 SEASON  •  WBC & CPBL & MLB ROSTERS', W / 2, H * 0.575);
 
@@ -4403,7 +4406,7 @@
             ctx.fillStyle = 'rgba(20,40,70,0.6)'; drawRoundRect(ctx, -140, -26, 280, 52, 26); ctx.fill();
             txt('📱 雙人連線對戰', 0, 7, 18, '#88ddff');
             ctx.restore();
-            { const hov = mouseX >= W / 2 - 100 && mouseX <= W / 2 + 100 && mouseY >= 544 && mouseY <= 580; ctx.fillStyle = hov ? 'rgba(60,90,130,0.8)' : 'rgba(20,40,70,0.6)'; drawRoundRect(ctx, W / 2 - 100, 544, 200, 36, 18); ctx.fill(); ctx.strokeStyle = 'rgba(255,255,255,0.4)'; ctx.lineWidth = 1.5; drawRoundRect(ctx, W / 2 - 100, 544, 200, 36, 18); ctx.stroke(); txt('📊 歷史戰績', W / 2, 568, 16, '#ffd98a'); }
+            { const hov = mouseX >= W / 2 - 100 && mouseX <= W / 2 + 100 && mouseY >= HIST_Y() && mouseY <= HIST_Y() + 36; ctx.fillStyle = hov ? 'rgba(60,90,130,0.8)' : 'rgba(20,40,70,0.6)'; drawRoundRect(ctx, W / 2 - 100, HIST_Y(), 200, 36, 18); ctx.fill(); ctx.strokeStyle = 'rgba(255,255,255,0.4)'; ctx.lineWidth = 1.5; drawRoundRect(ctx, W / 2 - 100, HIST_Y(), 200, 36, 18); ctx.stroke(); txt('📊 歷史戰績', W / 2, HIST_Y() + 24, 16, '#ffd98a'); }
         }
 
         function renderSelect() {
