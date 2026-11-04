@@ -37,10 +37,24 @@ const Stadium3D = (function () {
     function seeded(seed) { let s = seed | 0; return () => { s = (s * 1664525 + 1013904223) | 0; return ((s >>> 0) % 100000) / 100000; }; }
     function lum(hex) { const c = new THREE.Color(hex); return 0.299 * c.r + 0.587 * c.g + 0.114 * c.b; }
 
-    // wall radius from home plate at angle th (rad, 0 = dead centre)
-    const wallR = th => { const a = Math.abs(th); return a >= Math.PI / 4 ? 100 : 100 + 22 * Math.cos(2 * th); };
-    // outer-bowl radius (stands curve in beyond the foul poles)
-    const bowlR = th => { const a = Math.abs(th), w = wallR(th); return a <= Math.PI / 4 ? w : lerp(100, 58, clamp((a - Math.PI / 4) / (Math.PI * 0.36), 0, 1)); };
+    // ── the current ballpark (parks.js) ──
+    // wallR: distance from home plate to the wall at angle th (rad, 0 = dead centre); wallH: wall height there; bowlR: outer radius of the stands (they curve in beyond the foul poles)
+    const DEG = Math.PI / 180;
+    let PARK = null, FENCE = [];
+    function setProfile(p) {
+        PARK = p; FENCE = p.fence.concat(p.fenceExtra || []).map(([d, r]) => [d * DEG, r, 0]).sort((a, b) => a[0] - b[0]);
+        for (let i = 1; i < FENCE.length - 1; i++) FENCE[i][2] = (FENCE[i + 1][1] - FENCE[i - 1][1]) / (FENCE[i + 1][0] - FENCE[i - 1][0]);      // cubic Hermite tangents, flat at the foul lines
+    }
+    const wallR = th => {
+        const n = FENCE.length; if (th <= FENCE[0][0]) return FENCE[0][1]; if (th >= FENCE[n - 1][0]) return FENCE[n - 1][1];
+        let i = 0; while (th > FENCE[i + 1][0]) i++;
+        const a = FENCE[i], b = FENCE[i + 1], h = b[0] - a[0], t = (th - a[0]) / h, t2 = t * t, t3 = t2 * t;
+        return (2 * t3 - 3 * t2 + 1) * a[1] + (t3 - 2 * t2 + t) * a[2] * h + (3 * t2 - 2 * t3) * b[1] + (t3 - t2) * b[2] * h;
+    };
+    const wallH = th => { let h = PARK.wh; const d = th / DEG; for (const s of (PARK.whSeg || [])) if (d >= s[0] && d <= s[1]) h = s[2]; return h; };
+    const lineR = th => FENCE[th < 0 ? 0 : FENCE.length - 1][1];
+    const bowlR = th => { const a = Math.abs(th); return a <= Math.PI / 4 ? wallR(th) : lerp(lineR(th), 58, clamp((a - Math.PI / 4) / (Math.PI * 0.36), 0, 1)); };
+    setProfile(PARKS.get(PARKS.DEFAULT));
 
     // ───────────────────────── renderer / scene ─────────────────────────
     let renderer, scene, camera, zoneCam, pitchZoneCam, canvas3d, maxAniso = 4;
@@ -87,15 +101,17 @@ const Stadium3D = (function () {
 
     // ───────────────────────── field textures ─────────────────────────
     function buildFieldTexture() {
-        const S = 2048, X0 = -130, Z0 = -200, SPAN = 260, m = S / SPAN;
+        const S = 2048, X0 = -130, Z0 = -200, SPAN = 260, m = S / SPAN, P = PARK, turf = P.turf === 'turf', black = P.dirt === 'black';
         const c = canvasOf(S, S), g = c.getContext('2d');
         const X = x => (x - X0) * m, Z = z => (z - Z0) * m;
         const R = seeded(11);
-        g.fillStyle = '#26702f'; g.fillRect(0, 0, S, S);
+        const dirtA = black ? '#4e4036' : '#a47248', dirtB = black ? '#46392f' : '#996a42', dirtC = black ? '#4a3c32' : '#a77649', warn = black ? '#6b5a48' : '#8b6a45';
+        const g1 = turf ? '#2c7a35' : '#26702f', gA = turf ? '#2b7733' : '#256c2d', gB = turf ? '#2e7d38' : '#2d7c37';
+        g.fillStyle = g1; g.fillRect(0, 0, S, S);
 
         const stripes = () => {
             for (let i = 0, z = Z0; z < 60; z += 5.2, i++) {
-                g.fillStyle = i % 2 ? '#256c2d' : '#2d7c37';
+                g.fillStyle = i % 2 ? gA : gB;
                 g.fillRect(0, Z(z), S, 5.2 * m + 1);
             }
         };
@@ -107,13 +123,17 @@ const Stadium3D = (function () {
         };
         stripes();
         grain(90000, ['rgba(20,70,25,0.16)', 'rgba(120,190,100,0.10)', 'rgba(10,40,15,0.12)'], 2);
+        if (turf) {                                                       // artificial turf: seams and a lighter nap instead of mown stripes
+            g.strokeStyle = 'rgba(10,50,15,0.10)'; g.lineWidth = 1;
+            for (let z = Z0; z < 60; z += 1.8) { g.beginPath(); g.moveTo(0, Z(z)); g.lineTo(S, Z(z)); g.stroke(); }
+        }
 
         // warning track along the wall
         g.save();
-        g.lineWidth = 5.2 * m; g.strokeStyle = '#8b6a45'; g.lineCap = 'butt';
+        g.lineWidth = 5.2 * m; g.strokeStyle = warn; g.lineCap = 'butt';
         g.beginPath();
         for (let i = 0, N = 160; i <= N; i++) {
-            const th = lerp(-Math.PI * 0.5, Math.PI * 0.5, i / N), r = (th > -Math.PI / 4 - 1e-6 && th < Math.PI / 4 + 1e-6 ? wallR(th) : 100) - 2.6;
+            const th = lerp(-Math.PI * 0.5, Math.PI * 0.5, i / N), r = (th > -Math.PI / 4 - 1e-6 && th < Math.PI / 4 + 1e-6 ? wallR(th) : lineR(th)) - 2.6;
             const x = r * Math.sin(th), z = -r * Math.cos(th);
             i ? g.lineTo(X(x), Z(z)) : g.moveTo(X(x), Z(z));
         }
@@ -121,11 +141,11 @@ const Stadium3D = (function () {
 
         // infield skin
         const skin = g.createRadialGradient(X(0), Z(MOUND_Z), 3 * m, X(0), Z(MOUND_Z), 29 * m);
-        skin.addColorStop(0, '#a47248'); skin.addColorStop(1, '#996a42');
+        skin.addColorStop(0, dirtA); skin.addColorStop(1, dirtB);
         g.fillStyle = skin; g.beginPath(); g.arc(X(0), Z(MOUND_Z), 28.6 * m, 0, Math.PI * 2); g.fill();
 
-        // infield grass (diamond, scaled in around its centre)
-        const cz = -BASE, sc = 0.82;
+        // infield grass (diamond, scaled in around its centre); Koshien's infield is nearly all dirt
+        const cz = -BASE, sc = P.ifGrass === false ? 0.5 : 0.82;
         const gp = [[0, 0], [BASE, -BASE], [0, -2 * BASE], [-BASE, -BASE]].map(([x, z]) => [x * sc, cz + (z - cz) * sc]);
         g.save();
         g.beginPath(); gp.forEach(([x, z], i) => i ? g.lineTo(X(x), Z(z)) : g.moveTo(X(x), Z(z))); g.closePath(); g.clip();
@@ -133,7 +153,7 @@ const Stadium3D = (function () {
         grain(30000, ['rgba(20,70,25,0.16)', 'rgba(120,190,100,0.10)'], 2);
         g.restore();
         // mound + base cut-outs
-        g.fillStyle = '#a77649';
+        g.fillStyle = dirtC;
         g.beginPath(); g.arc(X(0), Z(MOUND_Z), 3.1 * m, 0, Math.PI * 2); g.fill();
         BASES.slice(1).forEach(([x, z]) => { g.beginPath(); g.arc(X(x), Z(z), 2.5 * m, 0, Math.PI * 2); g.fill(); });
         g.beginPath(); g.arc(X(0), Z(0), 4.4 * m, 0, Math.PI * 2); g.fill();
@@ -141,22 +161,22 @@ const Stadium3D = (function () {
         // dirt grain (clipped to the skin circle)
         g.save(); g.beginPath(); g.arc(X(0), Z(MOUND_Z), 28.6 * m, 0, Math.PI * 2); g.clip();
         for (let i = 0; i < 60000; i++) {
-            g.fillStyle = R() < 0.5 ? 'rgba(90,55,25,0.14)' : 'rgba(225,185,130,0.12)';
+            g.fillStyle = R() < 0.5 ? (black ? 'rgba(20,14,10,0.16)' : 'rgba(90,55,25,0.14)') : (black ? 'rgba(130,110,90,0.10)' : 'rgba(225,185,130,0.12)');
             g.fillRect(R() * S, R() * S, 2, 2);
         }
         g.restore();
         // raked arcs near the grass line
-        g.strokeStyle = 'rgba(70,40,15,0.10)'; g.lineWidth = 1.2;
+        g.strokeStyle = black ? 'rgba(20,12,8,0.14)' : 'rgba(70,40,15,0.10)'; g.lineWidth = 1.2;
         for (let k = 0; k < 14; k++) { g.beginPath(); g.arc(X(0), Z(MOUND_Z), (26 - k * 0.6) * m, Math.PI * 0.05, Math.PI * 0.95, true); g.stroke(); }
         return c;
     }
 
     function buildPlateDirtTexture() {
-        const S = 1536, c = canvasOf(S, S), g = c.getContext('2d'), R = seeded(5), m = S / 14;
+        const S = 1536, c = canvasOf(S, S), g = c.getContext('2d'), R = seeded(5), m = S / 14, black = PARK.dirt === 'black';
         const X = x => (x + 7) * m, Z = z => (z + 7) * m;
-        g.fillStyle = '#a2704a'; g.fillRect(0, 0, S, S);
+        g.fillStyle = black ? '#4c3e34' : '#a2704a'; g.fillRect(0, 0, S, S);
         for (let i = 0; i < 150000; i++) {
-            g.fillStyle = R() < 0.5 ? 'rgba(90,55,25,0.18)' : 'rgba(230,190,135,0.16)';
+            g.fillStyle = R() < 0.5 ? (black ? 'rgba(20,14,10,0.2)' : 'rgba(90,55,25,0.18)') : (black ? 'rgba(130,110,90,0.12)' : 'rgba(230,190,135,0.16)');
             g.fillRect(R() * S, R() * S, 2.5, 2.5);
         }
         // trampled batter's boxes + catcher's area
@@ -174,19 +194,38 @@ const Stadium3D = (function () {
         return c;
     }
 
-    function buildWallTexture() {
-        const c = canvasOf(1024, 128), g = c.getContext('2d');
-        g.fillStyle = '#0f3a24'; g.fillRect(0, 0, 1024, 128);
-        const brands = ['SLUGGER', 'FASTBALL', 'HOME RUN', 'PLAY BALL', 'CLASSIC', 'ACE', 'GRAND SLAM', 'LEAGUE'];
-        const cols = [['#c8102e', '#fff'], ['#0b3d91', '#fff'], ['#f2c500', '#111'], ['#ffffff', '#0b3d91'], ['#111', '#f2c500'], ['#00843d', '#fff']];
-        for (let i = 0; i < 8; i++) {
-            const [bg, fg] = cols[i % cols.length];
-            g.fillStyle = bg; g.fillRect(i * 128 + 4, 30, 120, 74);
-            g.fillStyle = fg; g.font = 'bold 20px Arial'; g.textAlign = 'center'; g.textBaseline = 'middle';
-            g.fillText(brands[i], i * 128 + 64, 67);
+    function buildWallTexture(style, col) {
+        style = style || PARK.wall; col = col || PARK.wallCol;
+        const c = canvasOf(1024, 128), g = c.getContext('2d'), R = seeded(31);
+        g.fillStyle = col; g.fillRect(0, 0, 1024, 128);
+        if (style === 'ads') {
+            const brands = ['SLUGGER', 'FASTBALL', 'HOME RUN', 'PLAY BALL', 'CLASSIC', 'ACE', 'GRAND SLAM', 'LEAGUE'];
+            const cols = [['#c8102e', '#fff'], ['#0b3d91', '#fff'], ['#f2c500', '#111'], ['#ffffff', '#0b3d91'], ['#111', '#f2c500'], ['#00843d', '#fff']];
+            for (let i = 0; i < 8; i++) {
+                const [bg, fg] = cols[i % cols.length];
+                g.fillStyle = bg; g.fillRect(i * 128 + 4, 30, 120, 74);
+                g.fillStyle = fg; g.font = 'bold 20px Arial'; g.textAlign = 'center'; g.textBaseline = 'middle';
+                g.fillText(brands[i], i * 128 + 64, 67);
+            }
+            g.fillStyle = '#f5d000'; g.fillRect(0, 0, 1024, 16);      // top-of-wall line
+            g.fillStyle = 'rgba(0,0,0,0.25)'; g.fillRect(0, 108, 1024, 20);
+        } else if (style === 'ivy') {                                  // brick with a thick mat of leaves
+            g.fillStyle = '#7a3b2a'; g.fillRect(0, 0, 1024, 128);
+            for (let i = 0; i < 9000; i++) { g.fillStyle = ['#2f6a2a', '#3f8a35', '#1f5222', '#58a040'][(R() * 4) | 0]; g.beginPath(); g.ellipse(R() * 1024, R() * 128, 3 + R() * 4, 2 + R() * 3, R() * 3, 0, Math.PI * 2); g.fill(); }
+            g.fillStyle = 'rgba(0,0,0,0.22)'; g.fillRect(0, 112, 1024, 16);
+        } else if (style === 'monster') {                              // tall dark-green panel wall with seams and a hand-posted scoreboard strip
+            g.fillStyle = 'rgba(255,255,255,0.10)'; for (let x = 0; x < 1024; x += 64) g.fillRect(x, 0, 2, 128);
+            g.fillStyle = 'rgba(0,0,0,0.18)'; for (let y = 0; y < 128; y += 32) g.fillRect(0, y, 1024, 2);
+            g.fillStyle = 'rgba(255,255,255,0.8)'; g.fillRect(0, 0, 1024, 6);
+            g.fillStyle = '#10241a'; g.fillRect(380, 40, 190, 52); g.fillStyle = '#e8e2c8'; g.font = 'bold 22px Arial'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('0 0 0 0 0 0 0 0 0', 475, 66);
+        } else if (style === 'brick') {
+            g.fillStyle = '#7a3b2a'; g.fillRect(0, 0, 1024, 128);
+            g.fillStyle = 'rgba(0,0,0,0.18)'; for (let y = 0; y < 128; y += 8) { g.fillRect(0, y, 1024, 1); for (let x = (y / 8 % 2) * 12; x < 1024; x += 24) g.fillRect(x, y, 1, 8); }
+        } else {                                                       // plain padded wall
+            g.fillStyle = 'rgba(255,255,255,0.08)'; for (let x = 0; x < 1024; x += 96) g.fillRect(x, 0, 2, 128);
+            g.fillStyle = 'rgba(255,255,255,0.85)'; g.fillRect(0, 0, 1024, 8);
+            g.fillStyle = 'rgba(0,0,0,0.25)'; g.fillRect(0, 108, 1024, 20);
         }
-        g.fillStyle = '#f5d000'; g.fillRect(0, 0, 1024, 16);      // top-of-wall line
-        g.fillStyle = 'rgba(0,0,0,0.25)'; g.fillRect(0, 108, 1024, 20);
         return c;
     }
 
@@ -206,20 +245,49 @@ const Stadium3D = (function () {
         return c;
     }
 
-    function buildSkyTexture() {
+    function buildSkyTexture(kind) {
         const c = canvasOf(1024, 512), g = c.getContext('2d'), R = seeded(21);
         const gr = g.createLinearGradient(0, 0, 0, 512);
-        gr.addColorStop(0, '#2f78d2'); gr.addColorStop(0.45, '#5a9fe6'); gr.addColorStop(0.8, '#a6d0f3'); gr.addColorStop(1, '#d9ecfa');
+        const stops = {
+            day: [[0, '#2f78d2'], [0.45, '#5a9fe6'], [0.8, '#a6d0f3'], [1, '#d9ecfa']],
+            dusk: [[0, '#1d2f66'], [0.4, '#6a5a9a'], [0.72, '#e07a4a'], [1, '#f6c07a']],
+            night: [[0, '#04070f'], [0.55, '#0a1328'], [1, '#18264a']],
+            indoor: [[0, '#1d222c'], [0.6, '#2a303c'], [1, '#3a414f']]
+        }[kind] || [];
+        stops.forEach(([t, col]) => gr.addColorStop(t, col));
         g.fillStyle = gr; g.fillRect(0, 0, 1024, 512);
+        if (kind === 'night') { for (let i = 0; i < 260; i++) { g.fillStyle = 'rgba(255,255,255,' + (0.25 + R() * 0.6) + ')'; g.fillRect(R() * 1024, R() * 380, 1.4, 1.4); } return c; }
+        if (kind === 'indoor') return c;
+        const puff = kind === 'dusk' ? 'rgba(255,200,170,0.4)' : 'rgba(255,255,255,0.55)';
         for (let i = 0; i < 26; i++) {           // soft cumulus puffs
             const cx = R() * 1024, cy = 90 + R() * 300, n = 6 + (R() * 8 | 0);
             for (let k = 0; k < n; k++) {
                 const x = cx + (R() - 0.5) * 150, y = cy + (R() - 0.5) * 26, r = 26 + R() * 44;
                 const rg = g.createRadialGradient(x, y, 0, x, y, r);
-                rg.addColorStop(0, 'rgba(255,255,255,0.55)'); rg.addColorStop(1, 'rgba(255,255,255,0)');
+                rg.addColorStop(0, puff); rg.addColorStop(1, 'rgba(255,255,255,0)');
                 g.fillStyle = rg; g.fillRect(x - r, y - r, r * 2, r * 2);
             }
         }
+        return c;
+    }
+
+    // far-off scenery ring behind the stands: a skyline, hills, mountains... drawn bottom-up on a 2048x256 strip (1 px ~ 1 m round, 1.6 px per metre up)
+    function buildBackdropTexture(kind, time, seed) {
+        const W_ = 2048, H_ = 256, c = canvasOf(W_, H_), g = c.getContext('2d'), R = seeded(seed * 7 + 3), night = time === 'night', dusk = time === 'dusk';
+        const far = night ? '#0c1426' : dusk ? '#6b5a78' : '#9fb4cb', near = night ? '#070b16' : dusk ? '#4a3d5a' : '#7e93ad', snow = night ? '#8896b8' : '#f2f6fb', hill = night ? '#08120d' : dusk ? '#3a4a3a' : '#5f8a62', hillFar = night ? '#0a1624' : dusk ? '#5a5a6a' : '#86a9b8';
+        const wrapRect = (x, y, w, h) => { g.fillRect(x, y, w, h); if (x + w > W_) g.fillRect(x - W_, y, w, h); };
+        const windows = (x, y, w, h) => { if (!night) return; g.fillStyle = 'rgba(255,214,120,0.8)'; for (let yy = y + 6; yy < y + h - 4; yy += 7) for (let xx = x + 3; xx < x + w - 3; xx += 6) if (R() < 0.45) wrapRect(xx, yy, 2.5, 3.5); };
+        const city = (col, hMin, hMax, wMin, wMax, win) => { g.fillStyle = col; for (let x = 0; x < W_;) { const w = wMin + R() * (wMax - wMin), h = hMin + R() * (hMax - hMin); wrapRect(x, H_ - h, w, h); if (win) windows(x, H_ - h, w, h); if (R() < 0.12) { g.fillStyle = col; wrapRect(x + w * 0.4, H_ - h - 18, w * 0.2, 18); } x += w + R() * 6; } };
+        const ridge = (col, base, amp, f1, f2, ph) => { g.fillStyle = col; g.beginPath(); g.moveTo(0, H_); for (let x = 0; x <= W_; x += 8) { const t = x / W_ * Math.PI * 2; g.lineTo(x, H_ - base - amp * (0.55 * Math.sin(t * f1 + ph) + 0.3 * Math.sin(t * f2 + ph * 2) + 0.15 * Math.sin(t * 17 + ph))); } g.lineTo(W_, H_); g.closePath(); g.fill(); };
+        if (kind === 'city' || kind === 'bay') { const low = kind === 'bay'; city(far, low ? 40 : 70, low ? 80 : 190, 22, 50, true); city(near, low ? 22 : 40, low ? 50 : 120, 26, 60, true); }
+        else if (kind === 'hills') { ridge(hillFar, 70, 55, 3, 7, 1); ridge(hill, 40, 40, 5, 11, 2); }
+        else if (kind === 'palms') { ridge(hillFar, 80, 60, 2, 5, 0.5); ridge(hill, 45, 45, 4, 9, 1.7); }
+        else if (kind === 'mountains') {
+            g.fillStyle = hillFar; g.beginPath(); g.moveTo(0, H_); for (let x = 0; x <= W_; x += 16) g.lineTo(x, H_ - 80 - 110 * Math.abs(Math.sin(x / W_ * Math.PI * 7 + 0.3)) * (0.7 + 0.3 * Math.sin(x / 90))); g.lineTo(W_, H_); g.fill();
+            g.fillStyle = snow; g.beginPath(); for (let x = 0; x <= W_; x += 16) { const y = H_ - 80 - 110 * Math.abs(Math.sin(x / W_ * Math.PI * 7 + 0.3)) * (0.7 + 0.3 * Math.sin(x / 90)); if (y < H_ - 150) { g.moveTo(x - 14, y + 26); g.lineTo(x, y); g.lineTo(x + 14, y + 26); } } g.fill();
+            ridge(near, 40, 40, 4, 9, 2.2);
+        }
+        if (kind !== 'none') { const hz = g.createLinearGradient(0, H_ - 120, 0, H_); hz.addColorStop(0, 'rgba(0,0,0,0)'); hz.addColorStop(1, night ? 'rgba(10,18,36,0.9)' : dusk ? 'rgba(240,170,120,0.75)' : 'rgba(205,225,240,0.85)'); g.fillStyle = hz; g.fillRect(0, H_ - 120, W_, 120); }
         return c;
     }
 
@@ -252,42 +320,55 @@ const Stadium3D = (function () {
         return mesh;
     }
 
-    function buildStadium() {
-        const skyCanvas = buildSkyTexture();
+    // sky, light and fog for each time of day (a dome is always "indoor")
+    const TIMES = {
+        day: { fog: 0xb9d6ee, fogD: 0.0017, hemi: [0xcfe2ff, 0x6f7f4c, 0.4], sun: [0xfff2dc, 1.15], pos: [-38, 72, 40], shade: 1, glow: 0 },
+        dusk: { fog: 0xd9a37a, fogD: 0.0019, hemi: [0xf2c8a0, 0x5a4c3a, 0.36], sun: [0xffc58a, 1.0], pos: [-70, 38, 30], shade: 0.8, glow: 0.45 },
+        night: { fog: 0x0b1226, fogD: 0.0021, hemi: [0x6f86c0, 0x1c2a22, 0.34], sun: [0xe8efff, 1.05], pos: [-30, 80, 30], shade: 0.58, glow: 1 },
+        indoor: { fog: 0x2a2f3a, fogD: 0.0008, hemi: [0xdfe6f2, 0x56604a, 0.55], sun: [0xfff6e6, 0.95], pos: [-20, 80, 24], shade: 0.8, glow: 0 }
+    };
+    let stadiumGroup = null, CUR = { id: '', team: '', time: '' };
+
+    function buildStadium(team) {
+        const P = PARK, kind = P.roof === 'dome' ? 'indoor' : (CUR.time || 'day'), L = TIMES[kind], dome = P.roof === 'dome';
+        flags.length = 0; flagKey = ''; scoreboardKey = '';
+        stadiumGroup = new THREE.Group(); scene.add(stadiumGroup);
+        const add = o => { stadiumGroup.add(o); return o; };
+        const shade = new THREE.Color(L.shade, L.shade, L.shade);
+        const bmat = (color, o) => new THREE.MeshBasicMaterial(Object.assign({ color: new THREE.Color(color).multiply(shade), side: THREE.DoubleSide }, o || {}));
+        const skyCanvas = buildSkyTexture(kind);
         scene.background = texOf(skyCanvas);
         try {
             const eq = new THREE.CanvasTexture(skyCanvas); eq.mapping = THREE.EquirectangularReflectionMapping;
-            const pm = new THREE.PMREMGenerator(renderer); scene.environment = pm.fromEquirectangular(eq).texture; pm.dispose();
+            const pm = new THREE.PMREMGenerator(renderer); scene.environment = pm.fromEquirectangular(eq).texture; pm.dispose(); eq.dispose();
         } catch (e) { console.warn('env map skipped', e); }
-        scene.fog = new THREE.FogExp2(0xb9d6ee, 0.0017);
+        scene.fog = new THREE.FogExp2(L.fog, L.fogD);
 
-        scene.add(new THREE.HemisphereLight(0xcfe2ff, 0x6f7f4c, 0.4));
-        sun.position.set(-38, 72, 40);
+        add(new THREE.HemisphereLight(L.hemi[0], L.hemi[1], L.hemi[2]));
+        sun.color.set(L.sun[0]); sun.intensity = L.sun[1]; sun.position.set(...L.pos);
         sun.castShadow = true;
-        sun.shadow.mapSize.set(2048, 2048);
+        sun.shadow.mapSize.set(sun.shadow.mapSize.x, sun.shadow.mapSize.y);
         const sc = sun.shadow.camera; sc.left = -34; sc.right = 34; sc.top = 34; sc.bottom = -34; sc.near = 10; sc.far = 140;
         sun.shadow.bias = -0.0006;
         sun.target.position.set(0, 0, -16);
-        scene.add(sun, sun.target);
+        add(sun); add(sun.target);
 
         // ground
         const fieldTex = texOf(buildFieldTexture());
         const ground = new THREE.Mesh(new THREE.PlaneGeometry(260, 260), new THREE.MeshStandardMaterial({ map: fieldTex, roughness: 1 }));
         ground.rotation.x = -Math.PI / 2; ground.position.set(0, 0, -70); ground.receiveShadow = true; ground.material.envMapIntensity = 0.08;
-        scene.add(ground);
+        add(ground);
 
         const skirt = new THREE.Mesh(new THREE.PlaneGeometry(700, 700), new THREE.MeshStandardMaterial({ color: 0x1f5a28, roughness: 1 }));
-        skirt.rotation.x = -Math.PI / 2; skirt.position.set(0, -0.04, 0); scene.add(skirt);
+        skirt.rotation.x = -Math.PI / 2; skirt.position.set(0, -0.04, 0); add(skirt);
         const plate = new THREE.Mesh(new THREE.PlaneGeometry(14, 14), new THREE.MeshStandardMaterial({ map: texOf(buildPlateDirtTexture()), transparent: true, roughness: 1, polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -1 }));
         plate.rotation.x = -Math.PI / 2; plate.position.set(0, 0.004, 0); plate.receiveShadow = true; plate.material.envMapIntensity = 0.08;
-        scene.add(plate);
+        add(plate);
 
         // chalk
         const chalk = new THREE.MeshStandardMaterial({ color: 0xf4f4f0, roughness: 0.9, emissive: 0x555550, emissiveIntensity: 0.6 });
-        const line = (w, l, x, z, ry) => { const m = new THREE.Mesh(new THREE.BoxGeometry(w, 0.012, l), chalk); m.position.set(x, 0.012, z); m.rotation.y = ry || 0; m.receiveShadow = true; scene.add(m); return m; };
-        const FL = 112;
-        line(0.12, FL, FL / 2 * Math.SQRT1_2, -FL / 2 * Math.SQRT1_2, Math.PI / 4);
-        line(0.12, FL, -FL / 2 * Math.SQRT1_2, -FL / 2 * Math.SQRT1_2, -Math.PI / 4);
+        const line = (w, l, x, z, ry) => { const m = new THREE.Mesh(new THREE.BoxGeometry(w, 0.012, l), chalk); m.position.set(x, 0.012, z); m.rotation.y = ry || 0; m.receiveShadow = true; add(m); return m; };
+        [-1, 1].forEach(s => { const FL = lineR(s); line(0.12, FL, s * FL / 2 * Math.SQRT1_2, -FL / 2 * Math.SQRT1_2, s * Math.PI / 4); });      // foul lines run out to the wall
         [-1, 1].forEach(s => {                         // batter's boxes
             const x0 = s * 0.366, x1 = s * (0.366 + 1.22);
             line(0.06, 1.83, x0, 0, 0); line(0.06, 1.83, x1, 0, 0);
@@ -298,46 +379,48 @@ const Stadium3D = (function () {
         const sh = new THREE.Shape(); sh.moveTo(-0.216, 0.216); sh.lineTo(0.216, 0.216); sh.lineTo(0.216, 0); sh.lineTo(0, -0.216); sh.lineTo(-0.216, 0);
         const pg = new THREE.ShapeGeometry(sh); pg.rotateX(-Math.PI / 2);
         const hp = new THREE.Mesh(pg, new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.6, emissive: 0x666666, emissiveIntensity: 0.6 }));
-        hp.position.y = 0.02; hp.receiveShadow = true; scene.add(hp);
+        hp.position.y = 0.02; hp.receiveShadow = true; add(hp);
 
         // bases
         BASES.slice(1).forEach(([x, z]) => {
             const b = new THREE.Mesh(new THREE.BoxGeometry(0.38, 0.1, 0.38), new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.6, emissive: 0x555555, emissiveIntensity: 0.5 }));
-            b.position.set(x * 0.97, 0.05, z * 0.97 + (z === -BASE ? 0 : 0)); b.rotation.y = Math.PI / 4; b.castShadow = true; b.receiveShadow = true; scene.add(b);
+            b.position.set(x * 0.97, 0.05, z * 0.97); b.rotation.y = Math.PI / 4; b.castShadow = true; b.receiveShadow = true; add(b);
         });
 
         // mound + rubber
-        const mound = new THREE.Mesh(new THREE.CylinderGeometry(2.6, 4.2, 0.26, 40), new THREE.MeshStandardMaterial({ color: 0xa6764a, roughness: 1 }));
-        mound.position.set(0, 0.13, MOUND_Z); mound.receiveShadow = true; mound.material.envMapIntensity = 0.08; mound.castShadow = false; scene.add(mound);
+        const mound = new THREE.Mesh(new THREE.CylinderGeometry(2.6, 4.2, 0.26, 40), new THREE.MeshStandardMaterial({ color: P.dirt === 'black' ? 0x57483c : 0xa6764a, roughness: 1 }));
+        mound.position.set(0, 0.13, MOUND_Z); mound.receiveShadow = true; mound.material.envMapIntensity = 0.08; mound.castShadow = false; add(mound);
         const rubber = new THREE.Mesh(new THREE.BoxGeometry(0.61, 0.04, 0.15), chalk);
-        rubber.position.set(0, 0.28, MOUND_Z); scene.add(rubber);
+        rubber.position.set(0, 0.28, MOUND_Z); add(rubber);
 
-        // outfield wall
+        // outfield wall (height and look follow the park: the Green Monster, Wrigley's ivy, Oracle's tall right-field wall ...)
         const wallTex = texOf(buildWallTexture(), { wrap: true });
         const wallRows = [], N = 360;
         for (let i = 0; i <= N; i++) {
             const th = lerp(-Math.PI, Math.PI, i / N), r = bowlR(th);
             const x = r * Math.sin(th), z = -r * Math.cos(th);
-            wallRows.push([[x, 0, z], [x, 3.0, z]]);
+            wallRows.push([[x, 0, z], [x, wallH(th), z]]);
         }
         const wall = stripMesh(wallRows.filter((r, i) => Math.abs(lerp(-Math.PI, Math.PI, i / N)) < Math.PI * 0.64), 1 / 64, 1 / 3.0, new THREE.MeshStandardMaterial({ map: wallTex, roughness: 0.7, side: THREE.DoubleSide, emissive: 0x112211, emissiveIntensity: 0.15 }));
-        scene.add(wall);
+        add(wall);
 
         // batter's eye (dark green panel behind CF)
         const eye = new THREE.Mesh(new THREE.PlaneGeometry(34, 7), new THREE.MeshStandardMaterial({ color: 0x0b2316, roughness: 1 }));
-        eye.position.set(0, 6.5, -wallR(0) - 1.0); scene.add(eye);
+        eye.position.set(0, Math.max(6.5, wallH(0) + 3.5), -wallR(0) - 1.0); add(eye);
 
         // foul poles
         [-1, 1].forEach(s => {
-            const th = s * Math.PI / 4, r = 100;
+            const th = s * Math.PI / 4, r = lineR(th);
             const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.1, 22, 8), new THREE.MeshStandardMaterial({ color: 0xffd800, emissive: 0x806c00, emissiveIntensity: 0.7 }));
-            pole.position.set(r * Math.sin(th), 11, -r * Math.cos(th)); scene.add(pole);
+            pole.position.set(r * Math.sin(th), 11, -r * Math.cos(th)); add(pole);
         });
 
-        // stands: lower deck, concourse wall, upper deck, roof lip
-        const crowdA = texOf(buildCrowdTexture(3, ['#c8102e', '#e0e0e0']), { wrap: true });
-        const crowdB = texOf(buildCrowdTexture(9, ['#0b3d91', '#d8d8d8']), { wrap: true });
-        const mkCrowdMat = t => new THREE.MeshBasicMaterial({ map: t, side: THREE.DoubleSide, color: 0xe4e8f2 });
+        // stands: lower deck, concourse wall, upper deck, roof lip (small parks have one deck, mid-size ones a short upper deck)
+        const tier = P.cap >= 34000 ? 'big' : P.cap >= 22000 ? 'mid' : 'small';
+        const c1 = team && team.c1 ? team.c1 : '#c8102e', c2raw = team && team.c2 ? team.c2 : '#0b3d91', c2 = c2raw.toLowerCase() === '#ffffff' ? '#0b3d91' : c2raw;
+        const crowdA = texOf(buildCrowdTexture(3, [c1, '#e0e0e0']), { wrap: true });
+        const crowdB = texOf(buildCrowdTexture(9, [c2, '#d8d8d8']), { wrap: true });
+        const mkCrowdMat = t => new THREE.MeshBasicMaterial({ map: t, side: THREE.DoubleSide, color: new THREE.Color(0xe4e8f2).multiply(shade) });
         const arc = (fnIn, yIn, fnOut, yOut, th0, th1, mat, su, sv) => {
             const rows = [], n = 360;
             for (let i = 0; i <= n; i++) {
@@ -345,76 +428,119 @@ const Stadium3D = (function () {
                 const ri = fnIn(th), ro = fnOut(th);
                 rows.push([[ri * s, yIn, ri * c], [ro * s, yOut, ro * c]]);
             }
-            const m = stripMesh(rows, su, sv, mat); scene.add(m); return m;
+            const m = stripMesh(rows, su, sv, mat); add(m); return m;
         };
-        const T0 = -Math.PI, T1 = Math.PI;
-        arc(th => bowlR(th) + 3, 3.2, th => bowlR(th) + 26, 10.5, T0, T1, mkCrowdMat(crowdA), 1 / 40, 1 / 20);
-        arc(th => bowlR(th) + 26, 10.5, th => bowlR(th) + 29, 10.5, T0, T1, new THREE.MeshBasicMaterial({ color: 0x8a93a6, side: THREE.DoubleSide }), 1, 1);
-        arc(th => bowlR(th) + 29, 10.5, th => bowlR(th) + 31, 15, T0, T1, new THREE.MeshBasicMaterial({ color: 0x9aa3b6, side: THREE.DoubleSide }), 1, 1);
-        arc(th => bowlR(th) + 31, 15, th => bowlR(th) + 58, 28, T0, T1, mkCrowdMat(crowdB), 1 / 40, 1 / 26);
-        arc(th => bowlR(th) + 58, 28, th => bowlR(th) + 58, 32, T0, T1, new THREE.MeshBasicMaterial({ color: 0x6c7488, side: THREE.DoubleSide }), 1, 1);
-        arc(th => bowlR(th) + 58, 32, th => bowlR(th) + 24, 32, T0, T1, new THREE.MeshBasicMaterial({ color: 0x5a6174, side: THREE.DoubleSide }), 1, 1);
-        arc(th => bowlR(th) + 3, 3.2, th => bowlR(th) + 3, 0, T0, T1, new THREE.MeshBasicMaterial({ color: 0x7b869c, side: THREE.DoubleSide }), 1, 1);
+        const T0 = -Math.PI, T1 = Math.PI, grey = c => bmat(c);
+        const layout = {
+            big: { parts: [[3, 3.2, 26, 10.5, 'A'], [26, 10.5, 29, 10.5, 0x8a93a6], [29, 10.5, 31, 15, 0x9aa3b6], [31, 15, 58, 28, 'B'], [58, 28, 58, 32, 0x6c7488], [58, 32, 24, 32, 0x5a6174], [3, 3.2, 3, 0, 0x7b869c]], rim: 32, depth: 58, boardY: 18.4, boardR: 14 },
+            mid: { parts: [[3, 3.2, 24, 9, 'A'], [24, 9, 27, 9, 0x8a93a6], [27, 9, 29, 12.5, 0x9aa3b6], [29, 12.5, 48, 22, 'B'], [48, 22, 48, 25, 0x6c7488], [48, 25, 24, 25, 0x5a6174], [3, 3.2, 3, 0, 0x7b869c]], rim: 25, depth: 48, boardY: 14, boardR: 12 },
+            small: { parts: [[3, 3.2, 22, 8.5, 'A'], [22, 8.5, 22, 11, 0x6c7488], [3, 3.2, 3, 0, 0x7b869c]], rim: 11, depth: 22, boardY: 10, boardR: 8 }
+        }[tier];
+        layout.parts.forEach(([ri, yi, ro, yo, k]) => arc(th => bowlR(th) + ri, yi, th => bowlR(th) + ro, yo, T0, T1, k === 'A' ? mkCrowdMat(crowdA) : k === 'B' ? mkCrowdMat(crowdB) : grey(k), k === 'A' || k === 'B' ? 1 / 40 : 1, k === 'A' ? 1 / 20 : k === 'B' ? 1 / 26 : 1));
+        const rimY = layout.rim, depth = layout.depth;
+
+        // roofs
+        const roofMat = bmat(P.roofCol || '#d7dadf');
+        if (dome) {
+            let rx = 0; for (let i = 0; i <= 90; i++) { const th = lerp(0, Math.PI, i / 90); rx = Math.max(rx, (bowlR(th) + depth + 4) * Math.abs(Math.sin(th))); }
+            const front = wallR(0) + depth + 4, back = 58 + depth + 4, rz = (front + back) / 2, z0 = (back - front) / 2, hgt = rimY * 0.9 + 14;
+            const rc = canvasOf(1024, 512), rg = rc.getContext('2d'); rg.fillStyle = P.roofCol || '#d7dadf'; rg.fillRect(0, 0, 1024, 512);
+            rg.strokeStyle = 'rgba(0,0,0,0.18)'; rg.lineWidth = 2; for (let x = 0; x < 1024; x += 32) { rg.beginPath(); rg.moveTo(x, 0); rg.lineTo(x, 512); rg.stroke(); } for (let y = 0; y < 512; y += 64) { rg.beginPath(); rg.moveTo(0, y); rg.lineTo(1024, y); rg.stroke(); }
+            rg.fillStyle = 'rgba(255,250,225,0.95)'; for (let y = 150; y < 512; y += 64) for (let x = 16; x < 1024; x += 32) { rg.beginPath(); rg.arc(x, y + 3, 4, 0, Math.PI * 2); rg.fill(); }
+            const rt = texOf(rc, { wrap: true, rx: 1, ry: 1 });
+            const roof = new THREE.Mesh(new THREE.SphereGeometry(1, 64, 20, 0, Math.PI * 2, 0, Math.PI / 2), new THREE.MeshBasicMaterial({ map: rt, side: THREE.BackSide, color: new THREE.Color(1, 1, 1).multiply(shade) }));
+            roof.scale.set(rx, hgt, rz); roof.position.set(0, rimY - 2, z0); add(roof);
+        } else if (P.roof === 'canopy') {          // Koshien's "silver umbrella" over the infield stands; Belluna's roof over the whole bowl
+            const sil = bmat(P.roofCol || '#c9ced6'), spans = P.roofFull ? [[T0, T1]] : [[T0, -Math.PI * 0.62], [Math.PI * 0.62, T1]];
+            spans.forEach(([a0, a1]) => { arc(th => bowlR(th) + 10, rimY + 1, th => bowlR(th) + depth + 2, rimY + 9, a0, a1, sil, 1, 1); arc(th => bowlR(th) + 10, rimY + 1, th => bowlR(th) + 10, rimY - 1.2, a0, a1, bmat(0x9aa0aa), 1, 1); });
+        } else if (P.roof === 'retract') {         // the roof parked open: two big panels folded above the outfield stands
+            [-1, 1].forEach(s => { const pn = new THREE.Mesh(new THREE.BoxGeometry(62, 2.6, 96), roofMat); pn.position.set(s * (wallR(s * 0.7) * 0.72 + 38), rimY + 12, -52); pn.rotation.z = -s * 0.05; add(pn); });
+        }
+
+        // far-off scenery (open parks): skyline, hills, mountains ...
+        if (!dome && P.back && P.back !== 'none') {
+            const bt = new THREE.CanvasTexture(buildBackdropTexture(P.back, kind === 'night' ? 'night' : kind === 'dusk' ? 'dusk' : 'day', hash(P.id) % 97)); bt.wrapS = THREE.RepeatWrapping; bt.anisotropy = maxAniso;
+            const ring = new THREE.Mesh(new THREE.CylinderGeometry(310, 310, 160, 72, 1, true), new THREE.MeshBasicMaterial({ map: bt, side: THREE.BackSide, transparent: true, fog: false, depthWrite: false }));
+            ring.position.y = 80; ring.renderOrder = -1; add(ring);
+            if (P.back === 'palms') {                 // palms along the rim of the outfield stands
+                const frond = new THREE.MeshStandardMaterial({ color: 0x2f6b2c, side: THREE.DoubleSide, roughness: 0.9 }), trunk = new THREE.MeshStandardMaterial({ color: 0x6b5a46, roughness: 1 });
+                for (let i = 0; i < 22; i++) {
+                    const th = lerp(-1.1, 1.1, i / 21) + ((i * 37) % 5) * 0.012, r = bowlR(th) + depth + 3, g = new THREE.Group(), hh = 12 + (i * 53 % 7);
+                    const tr = new THREE.Mesh(new THREE.CylinderGeometry(0.35, 0.55, hh, 6), trunk); tr.position.y = hh / 2; g.add(tr);
+                    for (let k = 0; k < 8; k++) { const f = new THREE.Mesh(new THREE.PlaneGeometry(1.6, 7.5), frond); f.position.set(Math.cos(k * 0.785) * 2.6, hh + 0.4, Math.sin(k * 0.785) * 2.6); f.rotation.set(1.2, -k * 0.785 + Math.PI / 2, 0); g.add(f); }
+                    g.position.set(r * Math.sin(th), rimY, -r * Math.cos(th)); add(g);
+                }
+            }
+        }
+        if (P.deco.includes('warehouse')) {          // Camden Yards: the old brick warehouse behind right field
+            const wc = canvasOf(512, 256), wg = wc.getContext('2d'); wg.fillStyle = '#8a4a36'; wg.fillRect(0, 0, 512, 256); wg.fillStyle = 'rgba(25,15,10,0.65)'; for (let y = 16; y < 240; y += 34) for (let x = 10; x < 500; x += 20) wg.fillRect(x, y, 10, 22);
+            const wh = new THREE.Mesh(new THREE.BoxGeometry(72, 21, 14), bmat(0xffffff, { map: new THREE.CanvasTexture(wc), side: THREE.FrontSide }));
+            const th = 0.42, r = wallR(th) + 14; wh.position.set(r * Math.sin(th), 10.5, -r * Math.cos(th)); wh.rotation.y = -th; add(wh);
+        }
 
         // close-in ad boards + front-row crowd behind home plate: this is what the long-lens pitcher camera sees
         {
-            const adT = texOf(buildWallTexture(), { wrap: true, rx: 1.3, ry: 1 });
+            const adT = texOf(buildWallTexture('ads', P.wallCol), { wrap: true, rx: 1.3, ry: 1 });
             const ad = new THREE.Mesh(new THREE.PlaneGeometry(84, 3.4), new THREE.MeshStandardMaterial({ map: adT, roughness: 0.7, emissive: 0x161616, emissiveIntensity: 0.6 }));
-            ad.position.set(0, 1.7, 30); ad.rotation.y = Math.PI; scene.add(ad);
-            const cT = texOf(buildCrowdTexture(17, ['#c8102e', '#0b3d91', '#e0e0e0']), { wrap: true, rx: 4, ry: 0.9 });
-            const crowd = new THREE.Mesh(new THREE.PlaneGeometry(84, 9), new THREE.MeshBasicMaterial({ map: cT, color: 0xd4d8e6 }));
-            crowd.position.set(0, 7.9, 31.5); crowd.rotation.set(-0.25, Math.PI, 0); scene.add(crowd);
+            ad.position.set(0, 1.7, 30); ad.rotation.y = Math.PI; add(ad);
+            const cT = texOf(buildCrowdTexture(17, [c1, c2, '#e0e0e0']), { wrap: true, rx: 4, ry: 0.9 });
+            const crowd = new THREE.Mesh(new THREE.PlaneGeometry(84, 9), new THREE.MeshBasicMaterial({ map: cT, color: new THREE.Color(0xd4d8e6).multiply(shade) }));
+            crowd.position.set(0, 7.9, 31.5); crowd.rotation.set(-0.25, Math.PI, 0); add(crowd);
             const rail = new THREE.Mesh(new THREE.BoxGeometry(84, 0.35, 0.5), new THREE.MeshStandardMaterial({ color: 0x16203a }));
-            rail.position.set(0, 3.5, 30.1); scene.add(rail);
+            rail.position.set(0, 3.5, 30.1); add(rail);
         }
 
         // scoreboard
         const sb = canvasOf(1024, 400); scoreboardCtx = sb.getContext('2d'); scoreboardTex = texOf(sb);
-        const board = new THREE.Mesh(new THREE.PlaneGeometry(36, 14), new THREE.MeshBasicMaterial({ map: scoreboardTex }));
-        board.position.set(0, 18.4, -bowlR(0) - 14); scene.add(board);
+        const board = new THREE.Mesh(new THREE.PlaneGeometry(36, 14), new THREE.MeshBasicMaterial({ map: scoreboardTex, color: new THREE.Color(1, 1, 1).lerp(shade, 0.4) }));
+        board.position.set(0, layout.boardY, -bowlR(0) - layout.boardR); add(board);
         drawScoreboard(null);
+        if (tier === 'small') [-15, 15].forEach(x => { const post = new THREE.Mesh(new THREE.BoxGeometry(0.8, layout.boardY, 0.8), bmat(0x444a58)); post.position.set(x, layout.boardY / 2 - 3, board.position.z); add(post); });
         // live "pitcher's-eye view of the batter" shown on the video board (rendered to a texture every other frame)
+        if (vidRT) vidRT.dispose();
         vidRT = new THREE.WebGLRenderTarget(384, 288, { minFilter: THREE.LinearFilter, magFilter: THREE.LinearFilter });
         vidCam = new THREE.PerspectiveCamera(6.8, 384 / 288, 0.5, 90);
         videoPlane = new THREE.Mesh(new THREE.PlaneGeometry(14.5, 10.9), new THREE.MeshBasicMaterial({ map: vidRT.texture }));
-        videoPlane.position.set(board.position.x + 10.17, board.position.y + 1.5, board.position.z + 0.06); scene.add(videoPlane);
+        videoPlane.position.set(board.position.x + 10.17, board.position.y + 1.5, board.position.z + 0.06); add(videoPlane);
 
-        // light towers
-        const glow = glowTexture();
-        const panelC = canvasOf(128, 96), pg2 = panelC.getContext('2d');
-        pg2.fillStyle = '#222'; pg2.fillRect(0, 0, 128, 96);
-        for (let y = 6; y < 96; y += 14) for (let x = 6; x < 128; x += 14) { pg2.fillStyle = '#fffbe8'; pg2.beginPath(); pg2.arc(x + 4, y + 4, 5, 0, Math.PI * 2); pg2.fill(); }
-        const panelTex = new THREE.CanvasTexture(panelC);
-        [[-70, -70], [70, -70], [-118, -10], [118, -10], [-40, -148], [40, -148]].forEach(([x, z]) => {
-            const gr = new THREE.Group();
-            const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.7, 1.1, 62, 8), new THREE.MeshBasicMaterial({ color: 0x181c26 }));
-            pole.position.y = 31; gr.add(pole);
-            const panel = new THREE.Mesh(new THREE.PlaneGeometry(14, 10), new THREE.MeshBasicMaterial({ map: panelTex, side: THREE.DoubleSide }));
-            panel.position.y = 66; panel.lookAt(0, 66, 0); gr.add(panel);
-            const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: glow, blending: THREE.AdditiveBlending, depthWrite: false, fog: false, opacity: 0.8 }));
-            sp.scale.set(46, 46, 1); sp.position.y = 66;   // (glow only matters for night games)
-            gr.position.set(x, 0, z); scene.add(gr);
-            panel.rotation.set(0, Math.atan2(-x, -z) + Math.PI, 0);
-        });
+        // light towers (a dome has its lamps in the roof)
+        if (!dome) {
+            const glow = glowTexture();
+            const panelC = canvasOf(128, 96), pg2 = panelC.getContext('2d');
+            pg2.fillStyle = '#222'; pg2.fillRect(0, 0, 128, 96);
+            for (let y = 6; y < 96; y += 14) for (let x = 6; x < 128; x += 14) { pg2.fillStyle = '#fffbe8'; pg2.beginPath(); pg2.arc(x + 4, y + 4, 5, 0, Math.PI * 2); pg2.fill(); }
+            const panelTex = new THREE.CanvasTexture(panelC);
+            [[-70, -70], [70, -70], [-118, -10], [118, -10], [-40, -148], [40, -148]].forEach(([x, z]) => {
+                const gr = new THREE.Group();
+                const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.7, 1.1, 62, 8), new THREE.MeshBasicMaterial({ color: 0x181c26 }));
+                pole.position.y = 31; gr.add(pole);
+                const panel = new THREE.Mesh(new THREE.PlaneGeometry(14, 10), new THREE.MeshBasicMaterial({ map: panelTex, side: THREE.DoubleSide }));
+                panel.position.y = 66; panel.lookAt(0, 66, 0); gr.add(panel);
+                const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: glow, blending: THREE.AdditiveBlending, depthWrite: false, fog: false, opacity: 0.2 + 0.7 * L.glow }));
+                sp.scale.set(46 + 26 * L.glow, 46 + 26 * L.glow, 1); sp.position.y = 66;
+                gr.position.set(x, 0, z); add(gr);
+                panel.rotation.set(0, Math.atan2(-x, -z) + Math.PI, 0);
+            });
+        }
 
         // flags along the top of the upper deck
         const fc = canvasOf(256, 140), flagTex = texOf(fc);
         flagCv = fc; flagTexRef = flagTex; setFlagTeam(null);
-        [[-42, 0.9], [0, 1.1], [42, 0.9]].forEach(([fx, sc2]) => {
-            const th = Math.atan2(fx, 150), r = bowlR(th) + 56;
+        if (!dome) [[-42, 0.9], [0, 1.1], [42, 0.9]].forEach(([fx, sc2]) => {
+            const th = Math.atan2(fx, 150), r = bowlR(th) + depth - 2;
             const x = r * Math.sin(th), z = -r * Math.cos(th);
             const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.16, 26, 8), new THREE.MeshStandardMaterial({ color: 0xe8e8ee, roughness: 0.4 }));
-            pole.position.set(x, 32 + 13, z); scene.add(pole);
+            pole.position.set(x, rimY + 13, z); add(pole);
             const g2 = new THREE.PlaneGeometry(11 * sc2, 6.2 * sc2, 12, 4); g2.translate(5.5 * sc2, 0, 0);
-            const flag = new THREE.Mesh(g2, new THREE.MeshBasicMaterial({ map: flagTex, side: THREE.DoubleSide }));
-            flag.position.set(x, 32 + 22, z); flag.userData.base = g2.attributes.position.array.slice(); flags.push(flag); scene.add(flag);
+            const flag = new THREE.Mesh(g2, new THREE.MeshBasicMaterial({ map: flagTex, side: THREE.DoubleSide, color: new THREE.Color(1, 1, 1).multiply(shade) }));
+            flag.position.set(x, rimY + 22, z); flag.userData.base = g2.attributes.position.array.slice(); flags.push(flag); add(flag);
         });
 
         // camera-flash sparkles in the crowd
         const n = 260, p = new Float32Array(n * 3), ph = new Float32Array(n), sz = new Float32Array(n);
         for (let i = 0; i < n; i++) {
             const th = rnd(-Math.PI * 0.55, Math.PI * 0.55), u = Math.random();
-            const r = bowlR(th) + lerp(6, 26, u), y = lerp(4, 11, u);
+            const r = bowlR(th) + lerp(6, depth - 32, u) , y = lerp(4, rimY * 0.34, u);
             p[i * 3] = r * Math.sin(th); p[i * 3 + 1] = y; p[i * 3 + 2] = -r * Math.cos(th);
             ph[i] = rnd(0, 100); sz[i] = rnd(1.5, 3.5);
         }
@@ -428,7 +554,21 @@ const Stadium3D = (function () {
             fragmentShader: 'varying float vA; void main(){ float d = length(gl_PointCoord-0.5); float a = smoothstep(0.5,0.0,d)*vA; if(a<0.01) discard; gl_FragColor = vec4(1.0,0.97,0.85,a); }',
             transparent: true, depthWrite: false, blending: THREE.AdditiveBlending
         }));
-        scene.add(flashPts);
+        add(flashPts);
+    }
+
+    // throw the old ballpark away (geometry, materials, textures) before another one is built
+    function teardownStadium() {
+        if (!stadiumGroup) return;
+        stadiumGroup.remove(sun); stadiumGroup.remove(sun.target);
+        stadiumGroup.traverse(o => {
+            if (o.geometry) o.geometry.dispose();
+            const ms = o.material ? (Array.isArray(o.material) ? o.material : [o.material]) : [];
+            ms.forEach(m => { ['map', 'emissiveMap', 'alphaMap'].forEach(k => { if (m[k] && m[k] !== (vidRT && vidRT.texture)) m[k].dispose(); }); m.dispose(); });
+        });
+        scene.remove(stadiumGroup); stadiumGroup = null;
+        if (scene.background && scene.background.dispose) scene.background.dispose();
+        if (scene.environment && scene.environment.dispose) scene.environment.dispose();
     }
 
     function drawScoreboard(G, info) {
@@ -1284,6 +1424,7 @@ const Stadium3D = (function () {
             const ch = pick || best;
             if (ch) { th = ch.th2; dist = ch.d2; dir.set(Math.sin(th), 0, -Math.cos(th)); if (!hit) pickWho = ch.who; }
         }
+        if (roll && type !== 'HR' && type !== 'FOUL') rollDist = Math.min(rollDist, Math.max(0, wallR(th) - 2 - dist));      // a ball that rolls to the wall stops there, however near the wall is
         const end = start.clone().addScaledVector(dir, dist); end.y = 0;
         const landing = end.clone();
         const fl = { t0: G.frame, type, kind, start, dir, dist, apex, dur, roll, rollDist, end, landing, catch: type === 'OUT', fielder: null, arrive: 0, spin: rnd(0.3, 0.9) };
@@ -1978,12 +2119,23 @@ const Stadium3D = (function () {
             camera = new THREE.PerspectiveCamera(30, 4 / 3, 0.2, 700);
             zoneCam = new THREE.PerspectiveCamera(30, 4 / 3, 0.2, 700);
             pitchZoneCam = new THREE.PerspectiveCamera(5, 4 / 3, 0.2, 700);
-            buildStadium(); buildActors();
+            CUR = { id: PARK.id, team: '', time: 'day' }; buildStadium(null); buildActors();
             api.ok = true;
             api.debug = { scene, camera, renderer, S, actors };
         } catch (e) { console.error('Stadium3D init failed', e); api.ok = false; }
         return api.ok;
     };
+    // pick the ballpark: rebuilt only when the park, the home team's colours or the time of day change
+    api.setPark = function (id, team, time) {
+        if (!api.ok) return;
+        const p = PARKS.get(id), tk = time === 'night' ? 'night' : 'day', tm = team ? team.lg + ':' + team.name : '';
+        if (CUR.id === p.id && CUR.team === tm && CUR.time === tk) return;
+        CUR = { id: p.id, team: tm, time: tk };
+        teardownStadium(); setProfile(p); buildStadium(team);
+        S.flight = null;
+    };
+    api.parkId = () => CUR.id;
+    api.wallDist = th => wallR(th);
     // test hook: sample many batted balls and report how often the landing logic fails to honour hit / out
     api._ball = () => ({ v: hitBall.visible, x: +hitBall.position.x.toFixed(1), y: +hitBall.position.y.toFixed(1), z: +hitBall.position.z.toFixed(1) });
     api._probe = function (n, defv) {

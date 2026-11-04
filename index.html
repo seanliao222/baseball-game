@@ -361,7 +361,8 @@
         </div>
     </div>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-    <script src="stadium3d.js?v=20261104a"></script>
+    <script src="parks.js?v=20261104b"></script>
+    <script src="stadium3d.js?v=20261104b"></script>
     <script src="https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.js"></script>
     <script>
@@ -371,6 +372,15 @@
         const PORTRAIT_W = 620;
 
         const S3D = Stadium3D;
+        // ballpark choice: 'auto' = the home team's own park (parks.js); remembered in this browser
+        const PARK_SEL = { id: 'auto', time: 'day' };
+        try { const j = JSON.parse(localStorage.getItem('bb_park') || 'null'); if (j && (j.id === 'auto' || PARKS.all[j.id])) { PARK_SEL.id = j.id; PARK_SEL.time = j.time === 'night' ? 'night' : 'day'; } } catch (e) { }
+        function savePark() { try { localStorage.setItem('bb_park', JSON.stringify(PARK_SEL)); } catch (e) { } }
+        function curParkId() { return (!MP.active && PARK_SEL.id !== 'auto') ? PARK_SEL.id : PARKS.homeOf(TEAMS[G.homeIdx]); }
+        function curPark() { return PARKS.get(curParkId()); }
+        const parkPF = () => curPark().pf;            // home-run park factor of the ballpark in use
+        const ROOF_LABEL = { open: '露天', dome: '全罩式巨蛋', retract: '開閉式屋頂', canopy: '部分屋頂' };
+        const PARKUI = { open: false, tab: 1 };
         const c3d = document.getElementById('c3d');
         let uiScale = 1;
         let portraitGame = false;       // portrait phone AND in a match: the game fills the whole screen (3D view full-height, HUD re-laid out); menus keep the 4:3 block at the top
@@ -2639,13 +2649,39 @@
                 });
                 return o;
             }
+            // A local mp3 is decoded once and looped as a Web Audio buffer: an <audio loop> hiccups at the seam (decoder padding + re-seek), a buffer loop does not.
+            const LOCAL_TRACKS = new Set(['Brothers', 'Lions', 'Monkeys', 'Guardians', 'Dragons', 'Hawks', 'Dodgers', 'Yankees', 'Chinese_Taipei', 'Japan', 'South_Korea', 'Australia', 'USA', 'Dominican_Rep', 'Puerto_Rico', 'Mexico', 'Italy']);      // music/<key>.mp3, see music/README.md
+            const bufCache = {}; let webOK = true;
             function fileStart(team, key) {
-                if (fileState[key] !== 'yes' && YT_TRACKS[key]) return ytStart(team, YT_TRACKS[key], key);
-                if (fileState[key] === 'no') return ytStart(team, DEFAULT_TRACK, key);
+                if (!LOCAL_TRACKS.has(key) || fileState[key] === 'no') return ytStart(team, YT_TRACKS[key] || DEFAULT_TRACK, key);      // no original tune for this one: the YouTube track (or the default chorus)
+                if (!webOK || !ensureCtx() || !window.fetch) return fileStartEl(team, key);
+                const g = actx.createGain(); g.gain.value = 0; g.connect(actx.destination);
+                const o = {
+                    type: 'file', key, gain: g, src: null, dead: false,
+                    el: { get paused() { return actx.state !== 'running'; }, set volume(v) { g.gain.value = v; }, play() { if (actx.state === 'suspended') actx.resume().catch(() => { }); return Promise.resolve(); } },      // the bits of <audio> the rest of this module touches
+                    stop() { o.dead = true; try { if (o.src) o.src.stop(); } catch (e) { } try { g.disconnect(); } catch (e) { } }
+                };
+                const begin = buf => {
+                    if (o.dead) return;
+                    const sn = actx.createBufferSource(); sn.buffer = buf; sn.loop = true; sn.connect(g); sn.start(); o.src = sn; fileState[key] = 'yes';
+                };
+                if (bufCache[key]) begin(bufCache[key]);
+                else fetch('music/' + key + '.mp3').then(r => { if (!r.ok) throw new Error(r.status); return r.arrayBuffer(); })
+                    .then(ab => new Promise((ok, no) => { const p = actx.decodeAudioData(ab, ok, no); if (p && p.catch) p.catch(no); }))
+                    .then(buf => { const ks = Object.keys(bufCache); if (ks.length >= 2) delete bufCache[ks[0]]; bufCache[key] = buf; begin(buf); })
+                    .catch(err => {
+                        if (o.dead) return;
+                        const missing = err && String(err.message) === '404';
+                        if (missing) fileState[key] = 'no'; else webOK = false;       // 404: no such file; anything else (file://, decode trouble): use the plain <audio> element instead
+                        if (cur === o) { o.stop(); cur = missing ? ytStart(team, YT_TRACKS[key] || DEFAULT_TRACK, key) : fileStartEl(team, key); }
+                    });
+                return o;
+            }
+            function fileStartEl(team, key) {
                 const el = new Audio('music/' + key + '.mp3'); el.loop = true; el.volume = 0;
                 const o = { type: 'file', key, el, stop() { el.pause(); el.src = ''; } };
                 el.addEventListener('canplay', () => { fileState[key] = 'yes'; }, { once: true });
-                el.addEventListener('error', () => { fileState[key] = 'no'; if (cur === o) { o.stop(); cur = ytStart(team, DEFAULT_TRACK, key); } }, { once: true });
+                el.addEventListener('error', () => { fileState[key] = 'no'; if (cur === o) { o.stop(); cur = ytStart(team, YT_TRACKS[key] || DEFAULT_TRACK, key); } }, { once: true });
                 el.play().catch(() => { });
                 return o;
             }
@@ -3065,6 +3101,7 @@
         function batTeamInfo() { return TEAMS[G.half === 0 ? G.awayIdx : G.homeIdx]; }
         function pitTeamInfo() { return TEAMS[G.half === 0 ? G.homeIdx : G.awayIdx]; }
         function getBatter() { return batTeamInfo().roster.batters[G.lineups[G.half][G.batOrder[G.half]]]; }
+        function shownBatter() { if (G.phase !== PH.RESULT) G.resBatter = null; return G.resBatter || getBatter(); }
         // ── 實況-style ability values, estimated from each batter's season line ──
         // 彈道 (1-4) from isolated power / homers, 選球 from OBP minus AVG; 肩力 and 守備 have no stat in the data, so they come from the position's demands plus speed / power
         const POS_ARM = { C: 74, RF: 76, CF: 70, LF: 60, '3B': 72, SS: 70, '2B': 56, '1B': 46, DH: 40, TWP: 80 };
@@ -3293,14 +3330,14 @@
 
             let type;
             if (quality > 0.78) {
-                const hrChance = (batter.pow - 50) / 80 + (G.power ? 0.16 + (batter.pow - 50) / 300 : 0);
+                const hrChance = ((batter.pow - 50) / 80 + (G.power ? 0.16 + (batter.pow - 50) / 300 : 0)) * parkPF();      // the ballpark counts: Coors Field carries, Oracle Park does not
                 if (Math.random() < hrChance) type = 'HR';
                 else if (Math.random() < [0.14, 0.28, 0.36][G.difficulty]) type = 'OUT';      // even a well-struck ball is sometimes hit right at a fielder
                 else if (Math.random() < clamp(0.03 + (batter.spd - 45) / 220, 0.03, 0.2)) type = '3B';      // a ball in the gap, legged out by a fast runner
                 else type = Math.random() < (G.power ? 0.78 : 0.5) ? '2B' : '1B';
             } else if (quality > 0.55) {
                 type = Math.random() < [0.78, 0.62, 0.52][G.difficulty] ? '1B' : 'OUT';
-                if (G.power && type === '1B') { const r2 = Math.random(); if (r2 < 0.12 + (batter.pow - 50) / 300) type = 'HR'; else if (r2 < 0.42) type = '2B'; }      // a solid power swing carries
+                if (G.power && type === '1B') { const r2 = Math.random(); if (r2 < (0.12 + (batter.pow - 50) / 300) * parkPF()) type = 'HR'; else if (r2 < 0.42) type = '2B'; }      // a solid power swing carries
             } else if (quality > 0.32) {
                 type = Math.random() < 0.42 ? '1B' : 'OUT';
             } else if (quality > 0.2) {
@@ -3539,6 +3576,7 @@
                 if (runs) { G.score[bat] += runs; G.scoreFlash[bat] = 35; st.rbi += runs; col = '#FFD24A'; }
                 if (!(runs && G.outKind === 'fly')) st.ab++;
             } else if (type === 'K') {
+                G.resBatter = getBatter();      // the lineup moves on at once, but the man who just struck out stays at the plate (and keeps his batting side) while the call is shown
                 G.outs++; text = '三振出局！'; sub = 'STRIKEOUT'; col = '#FF4444'; if (G.outs >= 3) endHalf = true;
                 SFX.out();
                 st.ab++; st.k++;
@@ -3619,7 +3657,7 @@
             const pow = batter.pow / 100;
             const kProb = clamp(0.28 * ctrl - 0.08 * con, 0.06, 0.45);
             const bbProb = clamp(0.12 - 0.09 * ctrl, 0.02, 0.14);
-            const hrProb = clamp(0.06 * pow - 0.02 * vel, 0.01, 0.14);
+            const hrProb = clamp((0.06 * pow - 0.02 * vel) * parkPF(), 0.01, 0.16);
             const hitProb = clamp(0.22 * con - 0.06 * vel, 0.05, 0.28);
             const r = Math.random();
             if (r < kProb) return 'K';
@@ -3870,11 +3908,14 @@
                                 else if (G.cursor !== G.awayIdx) { G.homeIdx = G.cursor; G.selStep = 2; }
                             }
                         });
+                    } else if (G.selStep === 2 && PARKUI.open) {
+                        parkPickerClick();
                     } else if (G.selStep === 2) {
+                        if (mouseX >= W / 2 - 190 && mouseX <= W / 2 + 190 && mouseY >= 392 && mouseY <= 438) { PARKUI.open = true; PARKUI.tab = PARK_SEL.id === 'auto' ? 1 : ({ TW: 1, JP: 2, US: 3 })[PARKS.get(PARK_SEL.id).region]; clearInput(); return; }
                         [3, 5, 7, 9].forEach((n, i) => { const bx = W / 2 - 215 + i * 110, by = 292; if (mouseX >= bx && mouseX <= bx + 100 && mouseY >= by && mouseY <= by + 44) G.maxInn = n; });
                         const diffs = ['簡單', '普通', '困難'];
                         diffs.forEach((_, di) => {
-                            const bx = W / 2 - 195 + di * 135, by = 400;
+                            const bx = W / 2 - 195 + di * 135, by = 462;
                             if (mouseX >= bx && mouseX <= bx + 120 && mouseY >= by && mouseY <= by + 70) {
                                 G.difficulty = di;
                                 G.inning = 1; G.half = 0; G.outs = 0; G.balls = 0; G.strikes = 0; G.score = [0, 0]; G.batOrder = [0, 0];
@@ -4076,6 +4117,7 @@
             ctx.setTransform(uiScale, 0, 0, uiScale, 0, 0);
             ctx.clearRect(0, 0, W, H);
             MUSIC.tick(G.scr === SCR.GAME ? batTeamInfo() : null, !!(G.runners && (G.runners[0] || G.runners[1] || G.runners[2])));
+            if (S3D.ok && (G.scr === SCR.LINEUP || G.scr === SCR.GAME)) S3D.setPark(curParkId(), TEAMS[G.homeIdx], PARK_SEL.time);
             const want3D = S3D.ok && (G.scr === SCR.GAME || G.scr === SCR.TITLE);
             if (want3D !== S3D.visible) { S3D.show(want3D); canvas.style.boxShadow = want3D ? 'none' : ''; }
             if (want3D && G.scr === SCR.TITLE) S3D.renderTitle();
@@ -4429,6 +4471,59 @@
             { const hov = mouseX >= W / 2 - 100 && mouseX <= W / 2 + 100 && mouseY >= HIST_Y() && mouseY <= HIST_Y() + 36; ctx.fillStyle = hov ? 'rgba(60,90,130,0.8)' : 'rgba(20,40,70,0.6)'; drawRoundRect(ctx, W / 2 - 100, HIST_Y(), 200, 36, 18); ctx.fill(); ctx.strokeStyle = 'rgba(255,255,255,0.4)'; ctx.lineWidth = 1.5; drawRoundRect(ctx, W / 2 - 100, HIST_Y(), 200, 36, 18); ctx.stroke(); txt('📊 歷史戰績', W / 2, HIST_Y() + 24, 16, '#ffd98a'); }
         }
 
+        // ── ballpark picker: tabs (home / Taiwan / Japan / USA), a grid of parks, day or night ──
+        function parkUILayout() {
+            const tabs = [['auto', '主場'], ['TW', '台灣'], ['JP', '日本'], ['US', '美國']], tabW = Math.min(110, (W - 24 - 18) / 4);
+            const ids = PARKUI.tab >= 1 ? PARKS.inGroup(tabs[PARKUI.tab][0]) : [], gap = 6, cw = Math.floor((W - 24 - gap * 2) / 3), ch = 34;
+            const by = H - 46;
+            return {
+                tabs: tabs.map(([k, label], i) => ({ k, label, x: 12 + i * (tabW + 6), y: 58, w: tabW, h: 34 })),
+                cells: ids.map((id, i) => ({ id, x: 12 + (i % 3) * (cw + gap), y: 102 + Math.floor(i / 3) * (ch + 4), w: cw, h: ch })),
+                day: { x: 100, y: by, w: 96, h: 34 }, night: { x: 202, y: by, w: 96, h: 34 }, close: { x: W - 12 - 90, y: by, w: 90, h: 34 }, info: { x: 12, y: H - 110, w: W - 24, h: 56 }
+            };
+        }
+        const inBox = r => mouseX >= r.x && mouseX <= r.x + r.w && mouseY >= r.y && mouseY <= r.y + r.h;
+        function parkPickerClick() {
+            const L = parkUILayout();
+            if (inBox(L.close)) { PARKUI.open = false; return; }
+            if (inBox(L.day)) { PARK_SEL.time = 'day'; savePark(); return; }
+            if (inBox(L.night)) { PARK_SEL.time = 'night'; savePark(); return; }
+            L.tabs.forEach((t, i) => { if (inBox(t)) { if (i === 0) { PARK_SEL.id = 'auto'; savePark(); PARKUI.open = false; } else PARKUI.tab = i; } });
+            L.cells.forEach(c => { if (inBox(c)) { PARK_SEL.id = c.id; savePark(); PARKUI.open = false; } });
+        }
+        function renderParkPicker() {
+            const L = parkUILayout(), hw = TEAMS[G.homeIdx];
+            ctx.fillStyle = '#030a14'; ctx.fillRect(0, 0, W, H);
+            txt('選擇球場', W / 2, 40, 26, '#ffeeaa');
+            L.tabs.forEach((t, i) => {
+                const on = i === PARKUI.tab, auto = i === 0 && PARK_SEL.id === 'auto', hv = inBox(t);
+                ctx.fillStyle = on ? 'rgba(255,200,60,0.9)' : auto ? 'rgba(60,170,110,0.9)' : hv ? 'rgba(90,120,170,0.9)' : 'rgba(25,45,75,0.9)'; drawRoundRect(ctx, t.x, t.y, t.w, t.h, 8); ctx.fill();
+                txt(t.label, t.x + t.w / 2, t.y + 23, 15, on ? '#222' : '#fff', 'center', '', false);
+            });
+            let hover = null;
+            L.cells.forEach(c => {
+                const p = PARKS.get(c.id), hv = inBox(c), on = PARK_SEL.id === c.id; if (hv) hover = p;
+                ctx.fillStyle = on ? 'rgba(255,200,60,0.92)' : hv ? 'rgba(80,120,180,0.95)' : 'rgba(22,40,68,0.95)'; drawRoundRect(ctx, c.x, c.y, c.w, c.h, 7); ctx.fill();
+                ctx.strokeStyle = on ? '#fff' : 'rgba(130,160,210,0.45)'; ctx.lineWidth = on ? 2 : 1; drawRoundRect(ctx, c.x, c.y, c.w, c.h, 7); ctx.stroke();
+                txt(p.zh.replace(/（.*）/, ''), c.x + c.w / 2, c.y + 15, c.w < 130 ? 11 : 13, on ? '#222' : '#fff', 'center', '', false);
+                txt(`${Math.round(p.fence[0][1])} / ${Math.round(p.fence[2][1])} m${p.roof === 'dome' ? '　巨蛋' : ''}`, c.x + c.w / 2, c.y + 28, 9, on ? '#443' : 'rgba(190,210,245,0.7)', 'center', '', false);
+            });
+            const sel = hover || (PARK_SEL.id !== 'auto' ? PARKS.get(PARK_SEL.id) : PARKS.get(PARKS.homeOf(hw)));
+            ctx.fillStyle = 'rgba(25,45,75,0.9)'; drawRoundRect(ctx, L.info.x, L.info.y, L.info.w, L.info.h, 8); ctx.fill();
+            const dim = `左右 ${sel.fence[0][1]}/${sel.fence[4][1]} m・中外野 ${sel.fence[2][1]} m・牆高 ${sel.wh} m・${ROOF_LABEL[sel.roof]}・${sel.turf === 'turf' ? '人工草' : '天然草'}・全壘打係數 ×${sel.pf.toFixed(2)}`;
+            txt(`${sel.zh}　${sel.en}`, L.info.x + L.info.w / 2, L.info.y + 18, 14, '#fff', 'center', '', false);
+            txt(dim, L.info.x + L.info.w / 2, L.info.y + 35, 10.5, '#bcd4ff', 'center', '', false);
+            if (sel.note) txt(sel.note, L.info.x + L.info.w / 2, L.info.y + 50, 10.5, 'rgba(190,210,245,0.7)', 'center', '', false);
+            const dome = sel.roof === 'dome';
+            [['day', '☀ 白天'], ['night', '🌙 夜間']].forEach(([k, label]) => {
+                const r = L[k], on = PARK_SEL.time === k && !(dome && k === 'night');
+                ctx.fillStyle = on ? 'rgba(255,200,60,0.9)' : inBox(r) ? 'rgba(90,120,170,0.9)' : 'rgba(25,45,75,0.9)'; drawRoundRect(ctx, r.x, r.y, r.w, r.h, 8); ctx.fill();
+                txt(label, r.x + r.w / 2, r.y + 23, 14, on ? '#222' : '#fff', 'center', '', false);
+            });
+            ctx.fillStyle = inBox(L.close) ? 'rgba(170,60,60,0.95)' : 'rgba(110,35,35,0.95)'; drawRoundRect(ctx, L.close.x, L.close.y, L.close.w, L.close.h, 8); ctx.fill();
+            txt('完成', L.close.x + L.close.w / 2, L.close.y + 23, 14, '#fff', 'center', '', false);
+        }
+
         function renderSelect() {
             const bg = ctx.createLinearGradient(0, 0, 0, H);
             bg.addColorStop(0, '#07141f'); bg.addColorStop(1, '#030c12');
@@ -4464,7 +4559,7 @@
                     { label: '困難', sub: 'HARD', col: '#ff5533', dk: '#551111' }
                 ];
                 diffs.forEach((d, di) => {
-                    const bx = W / 2 - 195 + di * 135, by = 400, bw = 120, bh = 70;
+                    const bx = W / 2 - 195 + di * 135, by = 462, bw = 120, bh = 70;
                     const hover = mouseX >= bx && mouseX <= bx + bw && mouseY >= by && mouseY <= by + bh;
                     const bg2 = ctx.createLinearGradient(bx, by, bx, by + bh);
                     bg2.addColorStop(0, hover ? d.col + 'cc' : d.dk + 'cc'); bg2.addColorStop(1, d.dk + '88');
@@ -4473,7 +4568,15 @@
                     txt(d.label, bx + bw / 2, by + 38, 24, hover ? '#fff' : d.col);
                     ctx.font = '10px Arial'; ctx.textAlign = 'center'; ctx.fillStyle = 'rgba(255,255,255,0.5)'; ctx.fillText(d.sub, bx + bw / 2, by + 58);
                 });
+                {   // ballpark row
+                    const hv = mouseX >= W / 2 - 190 && mouseX <= W / 2 + 190 && mouseY >= 392 && mouseY <= 438, auto = PARK_SEL.id === 'auto', pk = auto ? PARKS.get(PARKS.homeOf(hw)) : PARKS.get(PARK_SEL.id);
+                    ctx.fillStyle = hv ? 'rgba(70,110,170,0.9)' : 'rgba(25,45,75,0.9)'; drawRoundRect(ctx, W / 2 - 190, 392, 380, 46, 10); ctx.fill();
+                    ctx.strokeStyle = hv ? '#fff' : 'rgba(150,180,230,0.6)'; ctx.lineWidth = hv ? 2 : 1.2; drawRoundRect(ctx, W / 2 - 190, 392, 380, 46, 10); ctx.stroke();
+                    txt('🏟 球場　' + pk.zh + (auto ? '（主場）' : ''), W / 2, 413, 17, '#fff', 'center', '', false);
+                    txt(`${pk.city}・左右 ${Math.round(pk.fence[0][1])} m・中外野 ${Math.round(pk.fence[2][1])} m・${ROOF_LABEL[pk.roof]}${PARK_SEL.time === 'night' && pk.roof !== 'dome' ? '・夜間' : ''}　▾ 點選更換`, W / 2, 431, 11, 'rgba(190,210,245,0.75)', 'center', '', false);
+                }
                 txt('你將扮演主隊（後攻）進行打擊', W / 2, H - 28, 13, 'rgba(160,190,255,0.55)', 'center', '', false);
+                if (PARKUI.open) renderParkPicker();
                 return;
             }
 
@@ -4569,7 +4672,7 @@
         function stage3DInfo() {
             const aw = TEAMS[G.awayIdx], hw = TEAMS[G.homeIdx];
             return {
-                PH, batTeam: batTeamInfo(), pitTeam: pitTeamInfo(), batter: getBatter(), pitcher: getPitcher(), batSide: batSideOf(getBatter(), getPitcher()), bunt: !!G.bunt && G.batSwingFrame < 0 && G.hitEffectFrame < 0, buntT: G.buntFrame ? G.frame - G.buntFrame : -1,
+                PH, batTeam: batTeamInfo(), pitTeam: pitTeamInfo(), batter: shownBatter(), pitcher: getPitcher(), batSide: batSideOf(shownBatter(), getPitcher()), bunt: !!G.bunt && G.batSwingFrame < 0 && G.hitEffectFrame < 0, buntT: G.buntFrame ? G.frame - G.buntFrame : -1,
                 humanPitching: MP.active || !playerBatting(), humanBatting: MP.active || playerBatting(),
                 defByPos: fieldDefByPos(), pitchView: uiPitching(),                 // single player: you pitch -> view from behind the mound
                 ballProgress: G.ballActive ? ballProgress() : 0, ballR: BALL_R,
@@ -5203,7 +5306,7 @@
         }
 
         function drawPawapuroBatter() {
-            const batter = getBatter(); const team = batTeamInfo();
+            const batter = shownBatter(); const team = batTeamInfo();
             const isLeft = batSideOf(batter, getPitcher()) === 'L';
             const bx = W / 2 + (isLeft ? 90 : -90); const by = 500;
             const swingTime = G.frame - G.batSwingFrame;
@@ -5667,6 +5770,7 @@
                 ctx.fillStyle = 'rgba(180,200,220,0.6)'; ctx.fillText('−', badgeX + 55, H / 2 + 12);
                 ctx.fillStyle = G.half === 0 ? '#FFD700' : '#fff'; ctx.fillText(G.score[1], badgeX + 82, H / 2 + 12);
                 ctx.font = '9px Arial'; ctx.fillStyle = 'rgba(160,190,230,0.55)'; ctx.fillText('SCORE', badgeX + 55, H / 2 + 30);
+                { const pk = curPark(); txt(`📍 ${pk.zh}（${pk.city}）  左右 ${Math.round(pk.fence[0][1])} m・中外野 ${Math.round(pk.fence[2][1])} m・${ROOF_LABEL[pk.roof]}`, W / 2 - slideX, H / 2 + 80, portraitGame ? 13 : 15, '#cfe3ff', 'center', '', false); }
 
                 ctx.restore();
                 return;

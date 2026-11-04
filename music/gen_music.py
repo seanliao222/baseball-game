@@ -1,6 +1,6 @@
 """Original stadium-anthem generator (rock/brass chant style). Usage: python3 gen_music.py OUTDIR [team ...]
 Needs numpy, scipy and ffmpeg. Every tune is composed procedurally from the seed below: no existing song is used."""
-import numpy as np, random, subprocess, sys, wave, os
+import json, numpy as np, random, subprocess, sys, wave, os
 from scipy.signal import fftconvolve, lfilter
 SR = 32000
 OUT = sys.argv[1]
@@ -108,11 +108,15 @@ def render(name, bpm, tonic, minor, seed):
         if bi % 8 == 0: put(buf, crash(), t0)
         if bi % 8 == 7:                                                          # tom fill into the next section
             for k, f in enumerate((190, 160, 130, 100)): put(buf, tom(f), t0 + 3 * beat + k * beat / 4)
-    buf = buf[:int(BARS * bar * SR)]
-    tail = reverb(np.concatenate([buf, np.zeros(SR)]))[:len(buf) + SR]
-    buf = tail[:len(buf)].copy(); buf[:SR] += tail[len(buf):len(buf) + SR][:SR] * 0       # keep the loop length exact
+    L = int(BARS * bar * SR)
+    over = buf[L:].copy(); buf = buf[:L].copy(); buf[:len(over)] += over[:L]              # notes still ringing at the end carry on over the start: no cut at the loop point
+    ext = np.concatenate([buf, buf, buf]); ext = reverb(ext); buf = ext[L:2 * L].copy()    # reverb on a tiled copy, so its tail wraps round instead of being cut
     buf = np.tanh(1.4 * buf / np.abs(buf).max()); buf *= 0.9 / np.abs(buf).max()
     wav = os.path.join(OUT, name + '.wav'); w = wave.open(wav, 'wb'); w.setnchannels(1); w.setsampwidth(2); w.setframerate(SR); w.writeframes((buf * 32767).astype(np.int16).tobytes()); w.close()
-    subprocess.run(['ffmpeg', '-y', '-loglevel', 'error', '-i', wav, '-codec:a', 'libmp3lame', '-b:a', '128k', '-af', 'loudnorm=I=-16:TP=-1.5', os.path.join(OUT, name + '.mp3')], check=True); os.remove(wav)
+    mp3 = os.path.join(OUT, name + '.mp3'); tgt = 'loudnorm=I=-16:TP=-1.5:LRA=11'
+    r = subprocess.run(['ffmpeg', '-hide_banner', '-i', wav, '-af', tgt + ':print_format=json', '-f', 'null', '-'], capture_output=True, text=True)
+    m = json.loads(r.stderr[r.stderr.rindex('{'):r.stderr.rindex('}') + 1])                 # pass 1: measure
+    flt = f"{tgt}:measured_I={m['input_i']}:measured_TP={m['input_tp']}:measured_LRA={m['input_lra']}:measured_thresh={m['input_thresh']}:offset={m['target_offset']}:linear=true"
+    subprocess.run(['ffmpeg', '-y', '-loglevel', 'error', '-i', wav, '-af', flt, '-codec:a', 'libmp3lame', '-b:a', '128k', mp3], check=True); os.remove(wav)      # pass 2: one fixed gain for the whole loop (no fade-in at the start)
     print(name, round(BARS * bar, 1), 's')
 for t in TEAMS: render(*t)
