@@ -207,6 +207,7 @@
         /* one small 戰術 button; the five tactic buttons only appear (and then fold away again) when it is tapped */
         #tac-btn { --ac: 200,214,238; width: 46px; height: 46px; font-size: 10px; letter-spacing: 0; gap: 0; right: 34px; bottom: calc(max(18px, env(safe-area-inset-bottom)) + 118px); }
         #tac-btn svg { width: 19px; height: 19px; }
+        body.portrait #tac-btn.pitch { right: auto; left: 18px; bottom: calc(max(18px, env(safe-area-inset-bottom)) + 6px); }      /* while pitching, the right-hand side holds the pitch wheel */
         #tac-btn.open { --ac: 255,255,255; } #tac-btn.armed { --ac: 255,190,70; }
         #swing-btn { --ac: 255,170,40; font-size: 15px; background: radial-gradient(circle at 50% 28%, rgba(255, 190, 70, 0.95), #c94a05 75%) !important; border: 2px solid rgba(255, 225, 140, 0.95) !important; box-shadow: 0 4px 20px rgba(0, 0, 0, 0.6), 0 0 18px rgba(255, 130, 20, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.45) !important; }
         #swing-btn svg { width: 34px; height: 34px; stroke: #fff; filter: none; } #swing-btn span { color: #fff; font-weight: 700; }
@@ -2967,6 +2968,22 @@
             const pw = portraitGame ? W - 16 : cols === 2 ? 700 : 400, ph = Math.max(220, 110 + per * 40 + 60), px = W / 2 - pw / 2, py = H / 2 - ph / 2, cw = (pw - 40 - (cols - 1) * 12) / cols;
             return { list, pw, ph, px, py, items: list.map((idx, k) => ({ idx, x: px + 20 + Math.floor(k / per) * (cw + 12), y: py + 66 + (k % per) * 40, w: cw, h: 34 })), cancel: { x: px + pw / 2 - 70, y: py + ph - 48, w: 140, h: 34 } };
         }
+        // back button (bottom-right) on the inning/difficulty and lineup screens, plus Esc
+        const backRect = () => ({ x: W - 102, y: H - 44, w: 92, h: 34 });
+        const backVisible = () => !MP.active && !PARKUI.open && !G.lnPick && ((G.scr === SCR.SELECT && G.selStep >= 1) || G.scr === SCR.LINEUP);
+        function goBack() {
+            if (G.scr === SCR.LINEUP) { G.scr = SCR.SELECT; G.selStep = 2; G.lnSel = null; G.lnPick = null; return; }
+            if (PARKUI.open) { PARKUI.open = false; return; }
+            if (G.selStep === 2) { G.selStep = 1; G.cursor = G.homeIdx; }
+            else if (G.selStep === 1) { G.selStep = 0; G.cursor = G.awayIdx; }
+            else G.scr = SCR.TITLE;
+        }
+        function drawBackBtn() {
+            const r = backRect(), hov = inR(r);
+            ctx.save(); ctx.fillStyle = hov ? 'rgba(40,60,90,0.95)' : 'rgba(14,20,34,0.88)'; drawRoundRect(ctx, r.x, r.y, r.w, r.h, 12); ctx.fill();
+            ctx.strokeStyle = 'rgba(255,255,255,0.35)'; ctx.lineWidth = 1.5; drawRoundRect(ctx, r.x, r.y, r.w, r.h, 12); ctx.stroke();
+            ctx.font = 'bold 15px "PingFang TC","Microsoft JhengHei",Arial'; ctx.textAlign = 'center'; ctx.fillStyle = '#ffd23a'; ctx.fillText('← 返回', r.x + r.w / 2, r.y + 23); ctx.restore();
+        }
         const inR = (r) => mouseX >= r.x && mouseX <= r.x + r.w && mouseY >= r.y && mouseY <= r.y + r.h;
         function lineupClick() {
             // returns true when the click was used for editing the lineup
@@ -3904,6 +3921,8 @@
             }
 
             if (G.scr === SCR.SELECT) {
+                if (J('Escape')) { goBack(); clearInput(); return; }
+                if (isMouseJustPressed && backVisible() && inR(backRect())) { goBack(); clearInput(); return; }
                 if (isMouseJustPressed) {
                     if (G.selStep <= 1) {
                         selTabLayout().forEach((r, ti) => { if (mouseX >= r.x && mouseX <= r.x + r.w && mouseY >= r.y && mouseY <= r.y + r.h) G.selTab = ti; });
@@ -3946,6 +3965,7 @@
             if (G.scr === SCR.LINEUP) {
                 G.introTimer++;
                 ensureLineupPos();
+                if (!MP.active && (J('Escape') || (isMouseJustPressed && backVisible() && inR(backRect())))) { goBack(); clearInput(); return; }
                 const startKey = J('KeyZ') || J('Space'), editing = isMouseJustPressed && lineupClick();
                 if (!editing && (startKey || isMouseJustPressed || (MP.active && G.introTimer > 300))) {
                     G.scr = SCR.GAME; G.phase = PH.INNING_START; G.phaseTimer = 60;
@@ -4000,7 +4020,8 @@
                                     G.pitchers[sideIdx] = rIdx; G.pitchCounts[sideIdx] = G.pcBy[sideIdx][rIdx] || 0; G.usedPitchers[sideIdx][rIdx] = true;
                                     G.pApp[sideIdx] = { runs0: G.score[1 - sideIdx], hits: 0, bf: 0 };
                                 }
-                                else { let curOrder = G.batOrder[sideIdx]; G.lineups[sideIdx][curOrder] = rIdx; G.usedBatters[sideIdx][rIdx] = true; G.batStats[sideIdx][curOrder].hist = []; }
+                                else { let curOrder = G.batOrder[sideIdx]; G.lineups[sideIdx][curOrder] = rIdx; G.usedBatters[sideIdx][rIdx] = true; }       // the slot keeps its stats and today's at-bats: the substitute inherits them
+
                                 G.phase = G.prevPhase; break;
                             }
                         }
@@ -4129,8 +4150,8 @@
             if (want3D !== S3D.visible) { S3D.show(want3D); canvas.style.boxShadow = want3D ? 'none' : ''; }
             if (want3D && G.scr === SCR.TITLE) S3D.renderTitle();
             if (G.scr === SCR.TITLE) renderTitle();
-            else if (G.scr === SCR.SELECT) renderSelect();
-            else if (G.scr === SCR.LINEUP) renderLineup();
+            else if (G.scr === SCR.SELECT) { renderSelect(); if (backVisible()) drawBackBtn(); }
+            else if (G.scr === SCR.LINEUP) { renderLineup(); if (backVisible()) drawBackBtn(); }
             else if (G.scr === SCR.GAME) renderGame();
             else if (G.scr === SCR.OVER) renderOver();
             else if (G.scr === SCR.HALF_END) renderHalfEnd();
@@ -5642,10 +5663,10 @@
 
         function renderBatCursor() {
             const batter = getBatter(); const cx = SZcx + G.curX * (SZw / 2), cy = SZcy + G.curY * (SZh / 2);
-            const diffMult = [1.3, 0.7, 0.5][G.difficulty];
+            const diffMult = [0.95, 0.7, 0.5][G.difficulty];      // drawn size only: easy used to be 1.3, which filled the whole strike zone
             const bs = contactScale(batter), rx = 40 * bs * diffMult, ry = 24 * bs * diffMult;      // the contact box grows with 巧打
             if (G.power) {                                 // power swing: the bat is a small circle
-                const rr = Math.min(rx, ry) * 0.78 * (G.difficulty === 0 ? 0.5 : 1);      // easy mode's circle is the biggest (diffMult 1.3), so halve it there
+                const rr = Math.min(rx, ry) * 0.78 * (G.difficulty === 0 ? 0.68 : 1);      // keeps easy mode's power circle the same size as before the box was shrunk
                 ctx.fillStyle = 'rgba(255, 90, 40, 0.2)'; ctx.beginPath(); ctx.arc(cx, cy, rr, 0, Math.PI * 2); ctx.fill();
                 ctx.strokeStyle = 'rgba(255,120,60,0.98)'; ctx.lineWidth = 3; ctx.stroke();
                 ctx.fillStyle = '#FFFFFF'; ctx.beginPath(); ctx.arc(cx, cy, 3, 0, Math.PI * 2); ctx.fill();
@@ -6356,7 +6377,7 @@
                 const tacs = [btnC, btnA, btnSt, btnBu, btnPw], tb = document.getElementById('tac-btn'), any = tacs.some(b => b.classList.contains('show'));
                 if (!any) TAC.open = false;
                 if (!TAC.open) tacs.forEach(b => b.classList.remove('show'));
-                tb.classList.toggle('show', any); tb.classList.toggle('open', TAC.open); tb.classList.toggle('armed', !!(G.bunt || G.power));
+                tb.classList.toggle('show', any); tb.classList.toggle('open', TAC.open); tb.classList.toggle('pitch', !playerBatting()); tb.classList.toggle('armed', !!(G.bunt || G.power));
                 tb.querySelector('span').textContent = TAC.open ? '收起' : G.bunt ? '觸擊中' : G.power ? '強振中' : '戰術';
             }      // not while a substitution menu (or anything else) covers the field
             { const show = joyShouldShow(), jo = document.getElementById('joy'); if (jo) jo.classList.toggle('show', show); document.getElementById('mobile-overlay').classList.toggle('joy-on', show); if (!show) { JOY.active = false; JOY.x = JOY.y = 0; } }
