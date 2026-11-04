@@ -1265,6 +1265,7 @@ const Stadium3D = (function () {
         p.root.position.z = MOUND_Z + 0.1 + rootZ;
         if (lefty) P = mirrorPose(P);
         applyPose(p, P);
+        { const gi = (info.pitcher && info.pitcher.girth) || 1; p.hips.scale.set(gi, 1, gi * 1.1); }      // heavier pitchers: wider hips, belly and shoulders
         // glove on the non-throwing hand
         { const tgtHand = lefty ? p.armR.hand : p.armL.hand; if (p.gloveG.parent !== tgtHand) { tgtHand.add(p.gloveG); p.gloveG.scale.x = lefty ? -1 : 1; } }
         p.root.updateMatrixWorld(true);
