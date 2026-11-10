@@ -2355,7 +2355,7 @@
                 scr: SCR.TITLE, selStep: 0, cursor: 0, awayIdx: 0, homeIdx: 1,
                 inning: 1, half: 0, outs: 0, balls: 0, strikes: 0,
                 score: [0, 0], maxInn: 9, runners: [false, false, false], innScores: [[], []], errs: [0, 0],
-                playerSide: 1, difficulty: 1,
+                playerSide: 1, difficulty: 1, subMode: 'H', runSel: null, _rs: null, _rsOut: null,
                 batOrder: [0, 0],
                 lineups: [[0, 1, 2, 3, 4, 5, 6, 7, 8], [0, 1, 2, 3, 4, 5, 6, 7, 8]],
                 pitchers: [0, 0],
@@ -3106,7 +3106,7 @@
             const n = G.pickoffs = (G.pickoffs || 0) + 1;
             G._continueAtBat = true;
             if (Math.random() < [0.09, 0.07, 0.05][k]) {
-                G.runners[k] = false; G.outs++; SFX.out();
+                G._rsOut = [k]; G.runners[k] = false; G.outs++; SFX.out();
                 showRes(`牽制成功！${BASE_NAME[k]}跑者出局`, 'PICKOFF', '#FF4444', G.outs >= 3); return;
             }
             if (n >= PICK_MAX) {                         // third unsuccessful attempt: balk, every runner moves up
@@ -3149,19 +3149,22 @@
             let teamDataIdx = sideIdx === 0 ? G.awayIdx : G.homeIdx;
             let roster = isPitcher ? TEAMS[teamDataIdx].roster.pitchers : TEAMS[teamDataIdx].roster.batters;
             let availIndices = [];
+            const tabsOn = G.subType === 'B' && !MP.active && G.runners.some(v => v), runMode = tabsOn && G.subMode === 'R', pickRunner = runMode && G.runSel == null;
             for (let i = 0; i < roster.length; i++) {
                 let isAvail = isPitcher ? (!G.usedPitchers[sideIdx][i] && G.pitchers[sideIdx] !== i) : (!G.usedBatters[sideIdx][i] && !G.lineups[sideIdx].includes(i));
                 if (isAvail) availIndices.push(i);
             }
             // 1 column up to 7 substitutes, otherwise 2 columns (a full 25-man roster has ~13 pitchers available)
-            const n = availIndices.length, cols = n > 7 || (portraitGame && n > 5) ? 2 : 1, perCol = Math.ceil(n / cols), rowH = portraitGame ? 40 : 46, step = portraitGame ? 45 : 52;
+            if (pickRunner) availIndices = [2, 1, 0].filter(k => G.runners[k] && runnerSlotAt(k) != null);      // runners, lead first
+            const n = availIndices.length, cols = pickRunner ? 1 : n > 7 || (portraitGame && n > 5) ? 2 : 1, perCol = Math.ceil(n / cols), rowH = portraitGame ? 40 : 46, step = portraitGame ? 45 : 52;
             const panelW = portraitGame ? W - 16 : cols === 2 ? 700 : 440;
-            const panelH = Math.max(250, 120 + Math.max(1, perCol) * step + 70);
+            const xt = tabsOn ? 44 : 0, panelH = Math.max(250, 120 + Math.max(1, perCol) * step + 70) + xt;
             const px = W / 2 - panelW / 2;
             const py = H / 2 - panelH / 2;
             const colW = (panelW - 40 - (cols - 1) * 12) / cols;
-            const slots = availIndices.map((idx, i) => ({ idx, x: px + 20 + Math.floor(i / perCol) * (colW + 12), y: py + 70 + (i % perCol) * step, w: colW, h: rowH }));
-            return { isPitcher, sideIdx, teamDataIdx, roster, availIndices, slots, panelW, panelH, px, py };
+            const slots = availIndices.map((idx, i) => ({ idx, x: px + 20 + Math.floor(i / perCol) * (colW + 12), y: py + 70 + xt + (i % perCol) * step, w: colW, h: rowH }));
+            const tabs = tabsOn ? [{ mode: 'H', label: '代打' }, { mode: 'R', label: '換帶跑' }].map((t, i) => Object.assign(t, { x: W / 2 - 134 + i * 140, y: py + 58, w: 128, h: 34 })) : null;
+            return { isPitcher, sideIdx, teamDataIdx, roster, availIndices, slots, panelW, panelH, px, py, tabs, runMode, pickRunner };
         }
 
         // ── computer manager: pull the pitcher when he is getting shelled, is worn out, or the game is slipping away ──
@@ -3437,12 +3440,30 @@
             else { G.stealOpts = opts; G.phase = PH.STEAL_MENU; }       // let the player choose
         }
 
+        // Who is on which base: the game only tracks occupied bases, so the lineup slot of each runner is inferred from how the bases change.
+        // Runners keep their order (the batter trails them); whoever scored or was put out comes off the lead end (steals and pickoffs say who explicitly).
+        function syncRunnerIds() {
+            if (G.scr !== SCR.GAME) return;
+            const r = G.runners, bo = G.batOrder[G.half];
+            let s = G._rs;
+            if (!s || s.half !== G.half) s = G._rs = { half: G.half, occ: [false, false, false], ids: [null, null, null], bo };
+            const batterIn = bo !== s.bo, same = r.every((v, i) => v === s.occ[i]);
+            if (same && !batterIn) return;
+            const out = G._rsOut || []; G._rsOut = null;
+            let cand = [2, 1, 0].filter(k => s.occ[k] && !out.includes(k)).map(k => s.ids[k]);
+            if (batterIn) cand.push(s.bo);
+            const nb = [2, 1, 0].filter(k => r[k]), take = nb.length ? cand.slice(-nb.length) : [], pad = nb.length - take.length, ids = [null, null, null];
+            nb.forEach((k, i) => { ids[k] = i < pad ? null : take[i - pad]; });
+            s.occ = [...r]; s.ids = ids; s.bo = bo;
+        }
+        const runnerSlotAt = k => (G._rs && G._rs.half === G.half && G.runners[k]) ? G._rs.ids[k] : null;
         function startSteal(opt) {
             const bat = G.half, roster = batTeamInfo().roster.batters;
             const spdAvg = G.lineups[bat].reduce((a, i) => a + roster[i].spd, 0) / 9;
             const dm = [0.10, -0.08, -0.14][G.difficulty];
             // chance a runner beats the throw: 2nd is easiest, 3rd harder, home very hard
-            const pOf = k => clamp([0.7, 0.46, 0.14][k] + (spdAvg - 60) / 220 + dm, 0.05, 0.88);
+            const spdOf = k => { const sl = runnerSlotAt(k); return sl != null ? roster[G.lineups[bat][sl]].spd : spdAvg; };      // the runner himself (a pinch runner counts)
+            const pOf = k => clamp([0.7, 0.46, 0.14][k] + (spdOf(k) - 60) / 220 + dm, 0.05, 0.88);
             const moves = opt.moves.map(k => ({ k, res: 'out' })); let leadK;
             if (moves.length === 1) { leadK = moves[0].k; moves[0].res = Math.random() < pOf(leadK) ? 'safe' : 'out'; }
             else if (opt.moves[1] === 1) {                                  // 1st + 2nd: the throw goes to 3rd
@@ -3462,6 +3483,7 @@
 
         function applySteal() {
             const st = G.steal, bat = G.half, nr = [...G.runners]; let outs = 0, runs = 0;
+            G._rsOut = st.moves.filter(m => m.res === 'out').map(m => m.k);
             st.moves.forEach(m => { if (m.res !== 'stay') nr[m.k] = false; });
             st.moves.forEach(m => {
                 if (m.res === 'safe') { if (m.k === 2) runs++; else nr[m.k + 1] = true; }
@@ -3891,6 +3913,7 @@
         }
 
         function update() {
+            syncRunnerIds();
             mpSyncInput();
             G.frame++;
             tickClock();
@@ -4010,11 +4033,18 @@
                         const layout = getSubMenuLayout();
                         const { isPitcher, sideIdx, slots, panelW, panelH, px, py } = layout;
                         const cHover = mouseX >= px + panelW / 2 - 100 && mouseX <= px + panelW / 2 + 100 && mouseY >= py + panelH - 60 && mouseY <= py + panelH - 20;
-                        if (cHover) { G.phase = G.prevPhase; break; }
+                        if (cHover) { G.phase = G.prevPhase; G.subMode = 'H'; G.runSel = null; break; }
+                        if (layout.tabs) { const tb = layout.tabs.find(t => mouseX >= t.x && mouseX <= t.x + t.w && mouseY >= t.y && mouseY <= t.y + t.h); if (tb) { G.subMode = tb.mode; G.runSel = null; break; } }
 
                         for (const sl of slots) {
                             if (mouseX >= sl.x && mouseX <= sl.x + sl.w && mouseY >= sl.y && mouseY <= sl.y + sl.h) {
                                 const rIdx = sl.idx;
+                                if (layout.pickRunner) { G.runSel = rIdx; break; }
+                                if (layout.runMode) {      // pinch runner: he takes the replaced runner's batting-order spot (and its stats) and runs from that base
+                                    const slot = runnerSlotAt(G.runSel);
+                                    if (slot != null) { G.lineups[sideIdx][slot] = rIdx; G.usedBatters[sideIdx][rIdx] = true; }
+                                    G.subMode = 'H'; G.runSel = null; G.phase = G.prevPhase; break;
+                                }
                                 if (isPitcher) {      // each pitcher keeps his own pitch count: the reliever starts fresh at 0
                                     G.pcBy[sideIdx][G.pitchers[sideIdx]] = G.pitchCounts[sideIdx];
                                     G.pitchers[sideIdx] = rIdx; G.pitchCounts[sideIdx] = G.pcBy[sideIdx][rIdx] || 0; G.usedPitchers[sideIdx][rIdx] = true;
@@ -4022,7 +4052,7 @@
                                 }
                                 else { let curOrder = G.batOrder[sideIdx]; G.lineups[sideIdx][curOrder] = rIdx; G.usedBatters[sideIdx][rIdx] = true; }       // the slot keeps its stats and today's at-bats: the substitute inherits them
 
-                                G.phase = G.prevPhase; break;
+                                G.subMode = 'H'; G.runSel = null; G.phase = G.prevPhase; break;
                             }
                         }
                     }
@@ -5115,18 +5145,23 @@
             if (G.subType === 'D') return renderDefMenu();
             ctx.fillStyle = 'rgba(0,0,0,0.7)'; ctx.fillRect(0, 0, W, H);
             const layout = getSubMenuLayout();
-            const { isPitcher, roster, availIndices, slots, panelW, panelH, px, py } = layout;
+            const { isPitcher, roster, availIndices, slots, panelW, panelH, px, py, tabs, runMode, pickRunner } = layout;
 
             drawRetroPanel(px, py, panelW, panelH, '#002244', '#FFF');
-            let title = isPitcher ? '更換後援投手 (Bullpen)' : '啟用代打 (Pinch Hitter)';
+            let title = isPitcher ? '更換後援投手 (Bullpen)' : runMode ? (pickRunner ? '選擇要換下的跑者' : `換帶跑：換下${BASE_NAME[G.runSel]}跑者`) : '啟用代打 (Pinch Hitter)';
             txt(title, W / 2, py + 40, 24, '#FFD700');
+            if (tabs) tabs.forEach(t => { const on = (G.subMode === 'R') === (t.mode === 'R'), hov = mouseX >= t.x && mouseX <= t.x + t.w && mouseY >= t.y && mouseY <= t.y + t.h; drawGlossyPill(t.x, t.y, t.w, t.h, hov, t.label, on ? '#aa7a10' : '#113355', on ? '#e0a825' : '#225588'); });
             slots.forEach(sl => {
+                if (pickRunner) {
+                    const rp = roster[G.lineups[layout.sideIdx][runnerSlotAt(sl.idx)]], hov = mouseX >= sl.x && mouseX <= sl.x + sl.w && mouseY >= sl.y && mouseY <= sl.y + sl.h;
+                    drawGlossyPill(sl.x, sl.y, sl.w, sl.h, hov, `${BASE_NAME[sl.idx]}　${rp.name}　走 ${rp.spd}`, '#113355', '#225588'); return;
+                }
                 const p = roster[sl.idx];
                 const btnHover = mouseX >= sl.x && mouseX <= sl.x + sl.w && mouseY >= sl.y && mouseY <= sl.y + sl.h;
-                const label = portraitGame ? (isPitcher ? `${p.name} 防${p.era}` : `${p.name} ${p.avg}`) : isPitcher ? `${p.name} (防 ${p.era} / 體力 ${p.stm})` : `${p.name} (率 ${p.avg} / 力量 ${p.pow})`;
+                const label = portraitGame ? (isPitcher ? `${p.name} 防${p.era}` : runMode ? `${p.name} 走${p.spd}` : `${p.name} ${p.avg}`) : isPitcher ? `${p.name} (防 ${p.era} / 體力 ${p.stm})` : runMode ? `${p.name} (跑速 ${p.spd} / 率 ${p.avg})` : `${p.name} (率 ${p.avg} / 力量 ${p.pow})`;
                 drawGlossyPill(sl.x, sl.y, sl.w, sl.h, btnHover, label, '#113355', '#225588');
             });
-            if (availIndices.length === 0) txt('已無可用球員', W / 2, py + 150, 20, '#AAA');
+            if (availIndices.length === 0) txt(pickRunner ? '無法判斷壘上跑者' : '已無可用球員', W / 2, py + 150 + (tabs ? 44 : 0), 20, '#AAA');
 
             const cx0 = px + panelW / 2 - 100, cHover = mouseX >= cx0 && mouseX <= cx0 + 200 && mouseY >= py + panelH - 60 && mouseY <= py + panelH - 20;
             drawGlossyPill(cx0, py + panelH - 60, 200, 40, cHover, '取消 (Cancel)', '#551111', '#882222');
