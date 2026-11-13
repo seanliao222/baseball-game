@@ -6385,12 +6385,18 @@
         // GAME LOOP & EVENTS
         // ==========================================
 
-        function loop() {
+        // The game logic counts frames, so it must tick at 60 per second whatever the screen refresh rate: a 120 Hz phone would otherwise play everything twice as fast.
+        const STEP_MS = 1000 / 60; let lastTs = 0, stepAcc = 0;
+        function loop(ts) {
+            ts = ts || performance.now();
+            stepAcc += lastTs ? Math.min(100, ts - lastTs) : STEP_MS; lastTs = ts;
+            const steps = Math.min(4, Math.floor((stepAcc + 2) / STEP_MS)); stepAcc = steps >= 4 ? 0 : stepAcc - steps * STEP_MS;
             if (MP.active && !MP.isHost) {
                 render(); joyGuestStep();
             } else {
-                update(); render();
-                if (MP.active && MP.isHost) mpBroadcastState();
+                for (let i = 0; i < steps; i++) update();
+                render();
+                if (MP.active && MP.isHost && steps) mpBroadcastState();
             }
             const btnS = document.getElementById('swing-btn'); const btnC = document.getElementById('change-btn'); const btnA = document.getElementById('sim-btn'); const btnSt = document.getElementById('steal-btn'); const btnBu = document.getElementById('bunt-btn'), btnPw = document.getElementById('power-btn');
             if (!(isMobile && G.scr === SCR.GAME && playerBatting() && !(MP.active && !MP.isHost))) { btnBu.classList.remove('show'); btnPw.classList.remove('show'); }
