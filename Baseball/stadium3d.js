@@ -880,6 +880,12 @@ const Stadium3D = (function () {
         Lions: { noPiping: true, lions: true, trim: '#111111', front: () => '', frontCol: '#111111', sock: '#111111', accent: '#111111', jerseyOverride: h => h ? '#FF6A13' : '#E6E7EA' },
         // 中華隊 2026: charcoal jersey with fine vertical stripes, white italic "Taiwan" script (blue outline), white pants, black cap
         'Chinese Taipei': { noPiping: true, taiwan: true, trim: '#9fb4c8', front: () => '', frontCol: '#ffffff', sock: '#ffffff', accent: '#9fb4c8', cap: '#111111', whitePants: true, jerseyOverride: () => '#2b2d31' },
+        // 亞冠賽 2026 中華隊: black jersey, big red "T" outlined in white on the chest, white pants, black cap
+        'APBC Chinese Taipei': { noPiping: true, tlogo: true, trim: '#2a2b2f', front: () => '', frontCol: '#ffffff', sock: '#ffffff', accent: '#2a2b2f', cap: '#111111', whitePants: true, jerseyOverride: () => '#5f6267' },
+        // 亞冠賽 2026 日本: white jersey with navy pinstripes, navy JAPAN with gold outline, navy cap, white pinstripe pants
+        'APBC Japan': { noPiping: true, jpn: true, pinstripe: '#1b2a5c', always: true, trim: '#1b2a5c', front: () => '', frontCol: '#1b2a5c', sock: '#1b2a5c', accent: '#1b2a5c', cap: '#14234d', whitePants: true, jerseyOverride: () => '#f6f6f8' },
+        // 亞冠賽 2026 韓國: white jersey, navy script "Korea" with red outline, navy side panels edged in red, white pants with navy side stripe, navy cap
+        'APBC South Korea': { noPiping: true, kor: true, trim: '#14234d', front: () => '', frontCol: '#14234d', sock: '#14234d', accent: '#C8102E', cap: '#14234d', whitePants: true, jerseyOverride: () => '#f6f6f8' },
         Yankees: { noPiping: true, pinstripe: '#0c2340', trim: '#0c2340', front: h => h ? '' : 'NEW YORK', frontCol: '#0c2340', sock: '#0c2340', accent: '#0c2340', frontSize: 34 }
     };
     function dressTeam(p, team, isHome, opts = {}) {
@@ -917,7 +923,27 @@ const Stadium3D = (function () {
                 g.lineWidth = 3; g.strokeStyle = '#ffffff'; g.strokeText(word, w / 2, 110);
                 g.fillStyle = '#ffffff'; g.fillText(word, w / 2, 110);
             }
-            if (U && U.pinstripe && isHome) { g.fillStyle = U.pinstripe; g.globalAlpha = 0.85; for (let x = 4; x < w; x += 9) g.fillRect(x, 0, 1.6, h); g.globalAlpha = 1; }   // home pinstripes
+            if (U && U.kor) {
+                g.fillStyle = '#14234d'; [0.25, 0.75].forEach(f => { g.fillRect(f * w - 16, 40, 32, h - 40); });
+                g.fillStyle = '#C8102E'; [0.25, 0.75].forEach(f => { g.fillRect(f * w - 19, 40, 3, h - 40); g.fillRect(f * w + 16, 40, 3, h - 40); });
+                const word = 'Korea'; g.font = 'italic 900 34px "Brush Script MT","Segoe Script",cursive'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.lineJoin = 'round';
+                g.lineWidth = 6; g.strokeStyle = '#ffffff'; g.strokeText(word, w / 2, 106); g.fillStyle = '#14234d'; g.fillText(word, w / 2, 106);
+                g.strokeStyle = '#C8102E'; g.lineWidth = 3; g.beginPath(); g.moveTo(w / 2 - 46, 126); g.quadraticCurveTo(w / 2, 134, w / 2 + 46, 126); g.stroke();
+            }
+            if (U && U.jpn) {
+                g.font = 'italic 900 31px Arial Black,Arial'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.lineJoin = 'round';
+                g.lineWidth = 6; g.strokeStyle = '#d9b44a'; g.strokeText('JAPAN', w / 2, 104); g.fillStyle = '#1b2a5c'; g.fillText('JAPAN', w / 2, 104);
+            }
+            if (U && U.tlogo) {
+                // charcoal-grey jersey: darker side panels, dark piped button placket, geometric shoulder yoke, small red "T" on the wearer's left chest
+                g.fillStyle = '#3b3d42'; [0.25, 0.75].forEach(f => g.fillRect(f * w - 20, 40, 40, h - 40));
+                g.fillStyle = '#2a2b2f'; g.fillRect(w / 2 - 1.5, 30, 3, h - 30); g.fillRect(w / 2 - 14, 30, 1.5, h - 30); g.fillRect(w / 2 + 12.5, 30, 1.5, h - 30);
+                g.fillStyle = '#2d2f33'; g.fillRect(0, 0, w, 24);
+                g.fillStyle = 'rgba(255,255,255,0.14)'; for (let x = 0; x < w; x += 12) { g.beginPath(); g.moveTo(x, 24); g.lineTo(x + 6, 4); g.lineTo(x + 12, 24); g.closePath(); g.fill(); }
+                g.font = 'italic 900 46px Arial Black,Arial'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.lineJoin = 'round';
+                g.lineWidth = 6; g.strokeStyle = '#ffffff'; g.strokeText('T', w / 2 + 44, 96); g.fillStyle = '#E0345E'; g.fillText('T', w / 2 + 44, 96);
+            }
+            if (U && U.pinstripe && (isHome || U.always)) { g.fillStyle = U.pinstripe; g.globalAlpha = 0.85; for (let x = 4; x < w; x += 9) g.fillRect(x, 0, 1.6, h); g.globalAlpha = 1; }   // home pinstripes
             g.fillStyle = 'rgba(0,0,0,0.18)'; g.fillRect(0, h - 10, w, 10);
             const fx = p.fancy && !U ? FANCY_TEAMS[team.name] : null;
             const front = fx ? '' : (U ? U.front(isHome) : (team.abbr || '')), lt = front.length;
@@ -942,8 +968,9 @@ const Stadium3D = (function () {
             g.strokeStyle = pipe; g.lineWidth = 4; g.beginPath(); g.moveTo(w / 2 - 22, 12); g.lineTo(w / 2, 36); g.lineTo(w / 2 + 22, 12); g.stroke();   // collar V
             p.jerseyT.needsUpdate = true;
             const q = p.pantsC.getContext('2d'); q.fillStyle = pantsHex; q.fillRect(0, 0, 64, 128);
-            if (U && U.lions) { q.fillStyle = '#FF6A13'; [16, 48].forEach(x => q.fillRect(x - 1.5, 0, 3, 128)); }
-            else if (U && U.pinstripe && isHome) { q.fillStyle = U.pinstripe; q.globalAlpha = 0.85; for (let x = 3; x < 64; x += 6) q.fillRect(x, 0, 1.2, 128); q.globalAlpha = 1; }
+            if (U && U.kor) { q.fillStyle = '#14234d'; [16, 48].forEach(x => q.fillRect(x - 2, 0, 4, 128)); }
+            else if (U && U.lions) { q.fillStyle = '#FF6A13'; [16, 48].forEach(x => q.fillRect(x - 1.5, 0, 3, 128)); }
+            else if (U && U.pinstripe && (isHome || U.always)) { q.fillStyle = U.pinstripe; q.globalAlpha = 0.85; for (let x = 3; x < 64; x += 6) q.fillRect(x, 0, 1.2, 128); q.globalAlpha = 1; }
             else if (!(U && U.noPiping)) { q.fillStyle = pipe; [16, 48].forEach(x => q.fillRect(x - 2, 0, 4, 128)); }
             for (let i = 0; i < 200; i++) { q.fillStyle = Math.random() < 0.5 ? 'rgba(0,0,0,0.04)' : 'rgba(255,255,255,0.05)'; q.fillRect(Math.random() * 64, Math.random() * 128, 2, 3); }
             p.pantsT.needsUpdate = true;

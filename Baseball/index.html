@@ -193,17 +193,19 @@
         .mbtn svg { width: 26px; height: 26px; fill: none; stroke: rgb(var(--ac)); stroke-width: 1.9; stroke-linecap: round; stroke-linejoin: round; filter: drop-shadow(0 0 4px rgba(var(--ac), 0.6)); }
         .mbtn span { color: #eaf1ff; }
         #sim-btn { --ac: 120,170,255; } #change-btn { --ac: 90,220,130; } #steal-btn { --ac: 255,185,70; }
-        #bunt-btn { --ac: 190,185,255; } #power-btn { --ac: 255,120,95; }
+        #bunt-btn { --ac: 190,185,255; } #power-btn { --ac: 255,120,95; } #hnr-btn { --ac: 255,205,90; }
         /* tactics buttons: smaller so they do not cover the field */
-        #sim-btn, #change-btn, #steal-btn, #bunt-btn, #power-btn { width: 54px; height: 54px; font-size: 10px; letter-spacing: 0; gap: 0; }
-        #sim-btn svg, #change-btn svg, #steal-btn svg, #bunt-btn svg, #power-btn svg { width: 21px; height: 21px; }
+        #sim-btn, #change-btn, #steal-btn, #bunt-btn, #power-btn, #hnr-btn { width: 54px; height: 54px; font-size: 10px; letter-spacing: 0; gap: 0; }
+        #sim-btn svg, #change-btn svg, #steal-btn svg, #bunt-btn svg, #power-btn svg, #hnr-btn svg { width: 21px; height: 21px; }
         #sim-btn, #steal-btn { bottom: calc(max(18px, env(safe-area-inset-bottom)) + 64px); }
         #bunt-btn { bottom: calc(max(18px, env(safe-area-inset-bottom)) + 128px); }
         #power-btn { bottom: calc(max(18px, env(safe-area-inset-bottom)) + 192px); }
+        #hnr-btn { left: max(18px, env(safe-area-inset-left)); bottom: calc(max(18px, env(safe-area-inset-bottom)) + 256px); }
         body.portrait #mobile-overlay #change-btn { left: 18px; bottom: 156px; }
         body.portrait #mobile-overlay #sim-btn, body.portrait #mobile-overlay #steal-btn { left: 80px; bottom: 156px; }
         body.portrait #mobile-overlay #bunt-btn { left: 142px; bottom: 156px; }
         body.portrait #mobile-overlay #power-btn { left: 204px; bottom: 156px; }
+        body.portrait #mobile-overlay #hnr-btn { left: 266px; bottom: 156px; }
         /* one small 戰術 button; the five tactic buttons only appear (and then fold away again) when it is tapped */
         #tac-btn { --ac: 200,214,238; width: 46px; height: 46px; font-size: 10px; letter-spacing: 0; gap: 0; right: 34px; bottom: calc(max(18px, env(safe-area-inset-bottom)) + 118px); }
         #tac-btn svg { width: 19px; height: 19px; }
@@ -317,6 +319,7 @@
         <button class="mbtn" id="bunt-btn"><svg viewBox="0 0 24 24"><path d="m3 20 11-11"/><path d="m11.5 6.5 6 6"/><circle cx="19" cy="5" r="2"/></svg><span>觸擊</span></button>
         <button class="mbtn" id="power-btn"><svg viewBox="0 0 24 24"><path d="M12 2.5v5M12 16.5v5M2.5 12h5M16.5 12h5M5.5 5.5l3.2 3.2M15.3 15.3l3.2 3.2M18.5 5.5l-3.2 3.2M8.7 15.3l-3.2 3.2"/></svg><span>強振</span></button>
         <button class="mbtn" id="swing-btn"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9.5"/><path d="M6 4.5c3 2.5 3 12.5 0 15M18 4.5c-3 2.5-3 12.5 0 15"/></svg><span>打擊!</span></button>
+        <button class="mbtn" id="hnr-btn"><svg viewBox="0 0 24 24"><path d="M3 18h9M3 12h6"/><circle cx="16" cy="6" r="2"/><path d="m15 9 2 4-3 3m3-3 3 1"/></svg><span>打跑</span></button>
         <button class="mbtn" id="tac-btn"><svg viewBox="0 0 24 24"><path d="M4 7h10M18 7h2M4 17h2M10 17h10"/><circle cx="16" cy="7" r="2"/><circle cx="8" cy="17" r="2"/></svg><span>戰術</span></button>
         <button class="mbtn" id="change-btn"><svg viewBox="0 0 24 24"><path d="M4 8h14l-3.5-3.5M20 16H6l3.5 3.5"/></svg><span>換人</span></button>
         <div id="joy"><div id="joy-knob"></div></div>
@@ -362,8 +365,8 @@
         </div>
     </div>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-    <script src="parks.js?v=20261104b"></script>
-    <script src="stadium3d.js?v=20261104c"></script>
+    <script src="parks.js?v=20261115a"></script>
+    <script src="stadium3d.js?v=20261104g"></script>
     <script src="https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.js"></script>
     <script>
@@ -472,7 +475,7 @@
                     { name: '岳東華', bats: 'L', throws: 'R', pos: '2B', avg: '.272', hr: 3, rbi: 35, con: 69, pow: 59, spd: 56, obp: 0.325, slg: 0.364, num: 98 },
                     { name: '詹子賢', def: 81, bats: 'R', throws: 'R', pos: 'LF', avg: '.257', hr: 2, rbi: 19, con: 63, pow: 56, spd: 45, obp: 0.326, slg: 0.335, num: 39 },
                     { name: '王政順', bats: 'L', throws: 'R', pos: '3B', avg: '.240', hr: 0, rbi: 12, con: 57, pow: 44, spd: 45, obp: 0.333, slg: 0.260, num: 61 },
-                    { name: '廖奕翔', bats: 'L', throws: 'R', pos: 'TWP', avg: '.275', hr: 30, rbi: 81, con: 70, pow: 90, spd: 73, obp: 0.377, slg: 0.512, num: 11 }
+                    { name: '廖奕翔', bats: 'L', throws: 'R', pos: 'TWP', avg: '.275', hr: 30, rbi: 81, con: 95, pow: 95, spd: 95, traj: 4, eye: 95, obp: 0.377, slg: 0.512, num: 11 }
                 ]
             },
             'UNI': {
@@ -663,6 +666,142 @@
                     { name: '費爾柴德', bats: 'R', throws: 'R', pos: 'OF', avg: '.158', hr: 0, rbi: 1, con: 45, pow: 42, spd: 48, obp: 0.407, slg: 0.158 },
                     { name: '林安可', bats: 'L', throws: 'L', pos: 'OF', avg: '.287', hr: 19, rbi: 69, con: 74, pow: 76, spd: 58, obp: 0.354, slg: 0.460, est: 1 },
                     { name: '吉力吉撈．鞏冠', bats: 'R', throws: 'R', pos: 'C', avg: '.252', hr: 13, rbi: 67, con: 62, pow: 69, spd: 72, obp: 0.330, slg: 0.388, est: 1 }
+                ]
+            },
+            'APT': {
+                pitchers: [
+                    { name: '李超', throws: 'R', vel: 90, ctrl: 69, stm: 49, era: '1.69', k: 26, pitches: [{ id: 0, lv: 3 }, { id: 2, lv: 4 }, { id: 5, lv: 6 }], num: 0 },
+                    { name: '陳克羿', throws: 'R', vel: 91, ctrl: 66, stm: 78, era: '4.25', k: 74, pitches: [{ id: 0, lv: 4 }, { id: 4, lv: 6 }, { id: 8, lv: 4 }, { id: 6, lv: 6 }], num: 19 },
+                    { name: '鍾允華', throws: 'R', vel: 92, ctrl: 63, stm: 49, era: '2.66', k: 45, pitches: [{ id: 0, lv: 4 }, { id: 2, lv: 4 }, { id: 5, lv: 3 }], num: 29 },
+                    { name: '邱駿威', throws: 'R', vel: 89, ctrl: 73, stm: 60, era: '3.40', k: 22, pitches: [{ id: 0, lv: 3 }, { id: 6, lv: 4 }, { id: 8, lv: 4 }], num: 46 },
+                    { name: '黃群', throws: 'L', vel: 92, ctrl: 54, stm: 48, era: '3.00', k: 34, pitches: [{ id: 0, lv: 4 }, { id: 3, lv: 6 }, { id: 1, lv: 5 }], hu: 1 },
+                    { name: '林子崴', throws: 'L', vel: 89, ctrl: 79, stm: 92, era: '2.08', k: 44, pitches: [{ id: 0, lv: 3 }, { id: 1, lv: 5 }, { id: 6, lv: 3 }, { id: 5, lv: 5 }], num: 54 },
+                    { name: '盧孟揚', throws: 'R', vel: 90, ctrl: 68, stm: 48, era: '3.80', k: 0, pitches: [{ id: 0, lv: 5 }, { id: 5, lv: 5 }, { id: 3, lv: 4 }], est: 1 },
+                    { name: '賴胤豪', throws: 'R', vel: 90, ctrl: 68, stm: 48, era: '3.80', k: 0, pitches: [{ id: 0, lv: 4 }, { id: 6, lv: 5 }, { id: 4, lv: 4 }, { id: 8, lv: 3 }], est: 1 },
+                    { name: '高偉強', throws: 'R', vel: 90, ctrl: 68, stm: 48, era: '3.80', k: 0, pitches: [{ id: 0, lv: 5 }, { id: 3, lv: 5 }, { id: 7, lv: 3 }], est: 1 },
+                    { name: '張誠恩', throws: 'R', vel: 90, ctrl: 68, stm: 48, era: '3.80', k: 0, pitches: [{ id: 0, lv: 4 }, { id: 1, lv: 4 }, { id: 5, lv: 5 }, { id: 2, lv: 3 }], est: 1 },
+                    { name: '李軍', throws: 'L', vel: 90, ctrl: 68, stm: 48, era: '3.80', k: 0, pitches: [{ id: 0, lv: 5 }, { id: 4, lv: 5 }, { id: 6, lv: 4 }], est: 1 },
+                    { name: '徐翔聖', throws: 'R', vel: 94, ctrl: 79, stm: 70, era: '2.60', k: 0, pitches: [{ id: 0, lv: 5 }, { id: 5, lv: 5 }, { id: 3, lv: 4 }], est: 1 },
+                    { name: '陳睦衡', throws: 'R', vel: 93, ctrl: 74, stm: 55, era: '3.20', k: 0, pitches: [{ id: 0, lv: 4 }, { id: 6, lv: 5 }, { id: 4, lv: 4 }, { id: 8, lv: 3 }], est: 1 }
+                ],
+                batters: [
+                    { name: '郭天信', lpos: 'CF', def: 90, bats: 'L', throws: 'R', pos: 'CF', avg: '.252', hr: 9, rbi: 41, con: 62, pow: 62, spd: 92, obp: 0.309, slg: 0.359, num: 2 },
+                    { name: '林佳緯', lpos: 'CF', bats: 'L', throws: 'R', pos: 'CF', avg: '.272', hr: 9, rbi: 39, con: 68, pow: 58, spd: 70, obp: 0.332, slg: 0.414, est: 1 },
+                    { name: '張士綸', lpos: '2B', bats: 'L', throws: 'R', pos: 'SS', avg: '.327', hr: 2, rbi: 39, con: 89, pow: 54, spd: 76, obp: 0.388, slg: 0.392, num: 4 },
+                    { name: '張仁瑋', lpos: 'RF', bats: 'R', throws: 'R', pos: '2B', avg: '.300', hr: 4, rbi: 53, con: 79, pow: 57, spd: 76, obp: 0.340, slg: 0.380, num: 28 },
+                    { name: '陽柏翔', bats: 'L', throws: 'R', pos: 'IF', avg: '.275', hr: 8, rbi: 40, con: 70, pow: 60, spd: 68, obp: 0.345, slg: 0.385, est: 1 },
+                    { name: '劉俊緯', lpos: 'DH', bats: 'R', throws: 'R', pos: 'SS', avg: '.272', hr: 3, rbi: 27, con: 69, pow: 56, spd: 61, obp: 0.320, slg: 0.346, num: 23 },
+                    { name: '馬傑森', lpos: 'SS', bats: 'R', throws: 'R', pos: 'SS', avg: '.280', hr: 3, rbi: 34, con: 72, pow: 55, spd: 51, obp: 0.330, slg: 0.353, num: 94 },
+                    { name: '董子恩', lpos: '3B', bats: 'R', throws: 'R', pos: '3B', avg: '.279', hr: 1, rbi: 26, con: 71, pow: 54, spd: 48, obp: 0.325, slg: 0.344, num: 78 },
+                    { name: '林子豪', lpos: '1B', bats: 'L', throws: 'R', pos: '3B', avg: '.269', hr: 4, rbi: 38, con: 68, pow: 59, spd: 56, obp: 0.335, slg: 0.359, num: 2 },
+                    { name: '王念好', lpos: '3B', bats: 'R', throws: 'R', pos: '3B', avg: '.211', hr: 6, rbi: 26, con: 47, pow: 67, spd: 55, obp: 0.300, slg: 0.338, num: 5 },
+                    { name: '曾聖安', bats: 'L', throws: 'R', pos: 'CF', avg: '.167', hr: 1, rbi: 12, con: 45, pow: 48, spd: 51, obp: 0.271, slg: 0.206, num: 50 },
+                    { name: '林泓弦', lpos: '2B', bats: 'L', throws: 'R', pos: 'SS', avg: '.230', hr: 0, rbi: 10, con: 54, pow: 50, spd: 54, obp: 0.278, slg: 0.277, num: 67 },
+                    { name: '張翔', bats: 'R', throws: 'R', pos: 'C', avg: '.260', hr: 6, rbi: 36, con: 66, pow: 62, spd: 58, obp: 0.325, slg: 0.395, est: 1 },
+                    { name: '林吳晉瑋', bats: 'R', throws: 'R', pos: 'C', avg: '.260', hr: 6, rbi: 36, con: 66, pow: 62, spd: 58, obp: 0.325, slg: 0.395, est: 1 },
+                    { name: '宋嘉翔', bats: 'L', throws: 'R', pos: 'C', avg: '.189', hr: 2, rbi: 20, con: 45, pow: 49, spd: 48, obp: 0.230, slg: 0.233, num: 2 }
+                ]
+            },
+            'APJ': {
+                pitchers: [
+                    { name: '金丸夢斗', throws: 'L', vel: 93, ctrl: 78, stm: 70, era: '2.91', k: 146, pitches: [{ id: 0, lv: 5 }, { id: 5, lv: 5 }, { id: 3, lv: 4 }], est: 1 },
+                    { name: '武内夏暉', throws: 'L', vel: 92, ctrl: 77, stm: 68, era: '3.27', k: 108, pitches: [{ id: 0, lv: 4 }, { id: 6, lv: 5 }, { id: 4, lv: 4 }, { id: 8, lv: 3 }], est: 1 },
+                    { name: '竹丸和幸', throws: 'L', vel: 94, ctrl: 77, stm: 63, era: '3.27', k: 142, pitches: [{ id: 0, lv: 5 }, { id: 3, lv: 5 }, { id: 7, lv: 3 }], est: 1 },
+                    { name: '髙橋宏斗', throws: 'R', vel: 94, ctrl: 80, stm: 71, era: '2.62', k: 135, pitches: [{ id: 0, lv: 4 }, { id: 1, lv: 4 }, { id: 5, lv: 5 }, { id: 2, lv: 3 }], est: 1 },
+                    { name: '石田裕太郎', throws: 'R', vel: 93, ctrl: 78, stm: 66, era: '2.91', k: 117, pitches: [{ id: 0, lv: 5 }, { id: 4, lv: 5 }, { id: 6, lv: 4 }], est: 1 },
+                    { name: '松本健吾', throws: 'R', vel: 93, ctrl: 73, stm: 50, era: '4.14', k: 88, pitches: [{ id: 0, lv: 4 }, { id: 2, lv: 5 }, { id: 8, lv: 4 }], est: 1 },
+                    { name: '髙太一', throws: 'L', vel: 94, ctrl: 82, stm: 38, era: '1.90', k: 53, pitches: [{ id: 0, lv: 5 }, { id: 5, lv: 5 }, { id: 3, lv: 4 }], est: 1 },
+                    { name: '吉田聖弥', throws: 'L', vel: 94, ctrl: 80, stm: 38, era: '2.44', k: 50, pitches: [{ id: 0, lv: 4 }, { id: 6, lv: 5 }, { id: 4, lv: 4 }, { id: 8, lv: 3 }], est: 1 },
+                    { name: '鈴木豪太', throws: 'R', vel: 93, ctrl: 83, stm: 38, era: '1.74', k: 40, pitches: [{ id: 0, lv: 5 }, { id: 3, lv: 5 }, { id: 7, lv: 3 }], est: 1 },
+                    { name: '篠原響', throws: 'R', vel: 94, ctrl: 81, stm: 38, era: '2.22', k: 50, pitches: [{ id: 0, lv: 4 }, { id: 1, lv: 4 }, { id: 5, lv: 5 }, { id: 2, lv: 3 }], est: 1 },
+                    { name: '九谷瑠', throws: 'R', vel: 94, ctrl: 82, stm: 38, era: '1.94', k: 44, pitches: [{ id: 0, lv: 5 }, { id: 4, lv: 5 }, { id: 6, lv: 4 }], est: 1 },
+                    { name: '中森俊介', throws: 'R', vel: 93, ctrl: 80, stm: 38, era: '2.40', k: 38, pitches: [{ id: 0, lv: 4 }, { id: 2, lv: 5 }, { id: 8, lv: 4 }], est: 1 },
+                    { name: '森田駿哉', throws: 'L', vel: 92, ctrl: 76, stm: 38, era: '3.38', k: 33, pitches: [{ id: 0, lv: 5 }, { id: 5, lv: 5 }, { id: 3, lv: 4 }], est: 1 }
+                ],
+                batters: [
+                    { name: '山口航輝', bats: 'R', throws: 'R', pos: 'IF', avg: '.277', hr: 38, rbi: 81, con: 71, pow: 99, spd: 48, obp: 0.329, slg: 0.602 },
+                    { name: '正木智也', bats: 'R', throws: 'R', pos: 'IF', avg: '.274', hr: 28, rbi: 59, con: 70, pow: 91, spd: 48, obp: 0.372, slg: 0.516 },
+                    { name: '長谷川信哉', bats: 'R', throws: 'R', pos: 'OF', avg: '.266', hr: 13, rbi: 39, con: 67, pow: 84, spd: 63, obp: 0.327, slg: 0.474 },
+                    { name: '宗山塁', bats: 'L', throws: 'R', pos: 'IF', avg: '.278', hr: 8, rbi: 27, con: 71, pow: 77, spd: 62, obp: 0.342, slg: 0.453 },
+                    { name: '西川史礁', bats: 'R', throws: 'R', pos: 'OF', avg: '.290', hr: 8, rbi: 53, con: 76, pow: 61, spd: 51, obp: 0.353, slg: 0.391 },
+                    { name: '進藤勇也', bats: 'R', throws: 'R', pos: 'C', avg: '.211', hr: 8, rbi: 18, con: 47, pow: 90, spd: 48, obp: 0.273, slg: 0.451 },
+                    { name: '佐々木俊輔', bats: 'L', throws: 'R', pos: 'OF', avg: '.253', hr: 10, rbi: 39, con: 62, pow: 71, spd: 62, obp: 0.318, slg: 0.399 },
+                    { name: '度会隆輝', bats: 'L', throws: 'R', pos: 'OF', avg: '.274', hr: 9, rbi: 51, con: 70, pow: 62, spd: 57, obp: 0.334, slg: 0.380 },
+                    { name: '小島大河', bats: 'L', throws: 'R', pos: 'C', avg: '.267', hr: 9, rbi: 40, con: 67, pow: 63, spd: 48, obp: 0.311, slg: 0.375 },
+                    { name: '渡部聖弥', bats: 'R', throws: 'R', pos: 'IF', avg: '.255', hr: 12, rbi: 48, con: 63, pow: 66, spd: 52, obp: 0.296, slg: 0.380 },
+                    { name: '松尾汐恩', bats: 'R', throws: 'R', pos: 'C', avg: '.248', hr: 4, rbi: 19, con: 61, pow: 61, spd: 50, obp: 0.303, slg: 0.350 },
+                    { name: '佐々木泰', bats: 'R', throws: 'R', pos: 'IF', avg: '.254', hr: 6, rbi: 26, con: 63, pow: 57, spd: 53, obp: 0.307, slg: 0.337 },
+                    { name: '庄子雄大', bats: 'L', throws: 'R', pos: 'IF', avg: '.244', hr: 1, rbi: 26, con: 59, pow: 51, spd: 87, obp: 0.307, slg: 0.297 },
+                    { name: '山縣秀', bats: 'R', throws: 'R', pos: 'IF', avg: '.227', hr: 0, rbi: 5, con: 53, pow: 49, spd: 54, obp: 0.265, slg: 0.268 },
+                    { name: '辰見鴻之介', bats: 'R', throws: 'R', pos: 'OF', avg: '.136', hr: 0, rbi: 2, con: 40, pow: 50, spd: 93, obp: 0.174, slg: 0.182 }
+                ]
+            },
+            'APK': {
+                pitchers: [
+                    { name: 'Kim Jin-uk', throws: 'L', vel: 93, ctrl: 74, stm: 61, era: '4.12', k: 123, pitches: [{ id: 0, lv: 5 }, { id: 5, lv: 5 }, { id: 3, lv: 4 }], est: 1 },
+                    { name: 'Kim Keon-woo', throws: 'L', vel: 93, ctrl: 64, stm: 52, era: '6.38', k: 120, pitches: [{ id: 0, lv: 4 }, { id: 6, lv: 5 }, { id: 4, lv: 4 }, { id: 8, lv: 3 }], est: 1 },
+                    { name: 'Kim Min-jun', throws: 'R', vel: 93, ctrl: 76, stm: 59, era: '3.56', k: 76, pitches: [{ id: 0, lv: 5 }, { id: 3, lv: 5 }, { id: 7, lv: 3 }], est: 1 },
+                    { name: 'Kim Tae-hyeong', throws: 'R', vel: 92, ctrl: 70, stm: 38, era: '4.99', k: 52, pitches: [{ id: 0, lv: 4 }, { id: 1, lv: 4 }, { id: 5, lv: 5 }, { id: 2, lv: 3 }], est: 1 },
+                    { name: 'Lee Ro-un', throws: 'R', vel: 93, ctrl: 68, stm: 38, era: '5.61', k: 66, pitches: [{ id: 0, lv: 5 }, { id: 4, lv: 5 }, { id: 6, lv: 4 }], est: 1 },
+                    { name: 'Jhun Jun-pyo', throws: 'R', vel: 91, ctrl: 73, stm: 38, era: '4.29', k: 37, pitches: [{ id: 0, lv: 4 }, { id: 2, lv: 5 }, { id: 8, lv: 4 }], est: 1 },
+                    { name: 'Choi Jun-yong', throws: 'R', vel: 94, ctrl: 75, stm: 38, era: '3.71', k: 62, pitches: [{ id: 0, lv: 5 }, { id: 5, lv: 5 }, { id: 3, lv: 4 }], est: 1 },
+                    { name: 'Park Si-won', throws: 'R', vel: 93, ctrl: 75, stm: 38, era: '3.79', k: 50, pitches: [{ id: 0, lv: 4 }, { id: 6, lv: 5 }, { id: 4, lv: 4 }, { id: 8, lv: 3 }], est: 1 },
+                    { name: 'Park Jeong-min', throws: 'R', vel: 94, ctrl: 75, stm: 38, era: '3.66', k: 66, pitches: [{ id: 0, lv: 5 }, { id: 3, lv: 5 }, { id: 7, lv: 3 }], est: 1 },
+                    { name: 'Sung Yeong-tak', throws: 'R', vel: 92, ctrl: 76, stm: 38, era: '3.47', k: 41, pitches: [{ id: 0, lv: 4 }, { id: 1, lv: 4 }, { id: 5, lv: 5 }, { id: 2, lv: 3 }], est: 1 },
+                    { name: 'Cho Dong-uk', throws: 'L', vel: 93, ctrl: 73, stm: 38, era: '4.31', k: 57, pitches: [{ id: 0, lv: 5 }, { id: 4, lv: 5 }, { id: 6, lv: 4 }], est: 1 },
+                    { name: 'Woo Kang-hoon', throws: 'R', vel: 93, ctrl: 69, stm: 38, era: '5.30', k: 48, pitches: [{ id: 0, lv: 4 }, { id: 2, lv: 5 }, { id: 8, lv: 4 }], est: 1 },
+                    { name: 'Kim Young-woo', throws: 'R', vel: 92, ctrl: 73, stm: 38, era: '4.17', k: 37, pitches: [{ id: 0, lv: 5 }, { id: 5, lv: 5 }, { id: 3, lv: 4 }], est: 1 },
+                    { name: 'Lee Jun-hyeok', throws: 'R', vel: 93, ctrl: 79, stm: 38, era: '2.78', k: 34, pitches: [{ id: 0, lv: 4 }, { id: 6, lv: 5 }, { id: 4, lv: 4 }, { id: 8, lv: 3 }], est: 1 }
+                ],
+                batters: [
+                    { name: 'Kim Do-yeong', bats: 'R', throws: 'R', pos: 'IF', avg: '.308', hr: 45, rbi: 118, con: 82, pow: 99, spd: 63, obp: 0.413, slg: 0.647 },
+                    { name: 'Ahn Hyun-min', bats: 'R', throws: 'R', pos: 'OF', avg: '.298', hr: 14, rbi: 63, con: 79, pow: 84, spd: 58, obp: 0.441, slg: 0.506 },
+                    { name: 'Han Dong-hui', bats: 'R', throws: 'R', pos: 'IF', avg: '.306', hr: 25, rbi: 81, con: 81, pow: 90, spd: 50, obp: 0.371, slg: 0.544 },
+                    { name: 'Moon Jeong-bin', bats: 'R', throws: 'R', pos: 'IF', avg: '.277', hr: 19, rbi: 66, con: 71, pow: 95, spd: 48, obp: 0.352, slg: 0.541 },
+                    { name: 'Kim Whee-jip', bats: 'R', throws: 'R', pos: 'IF', avg: '.279', hr: 14, rbi: 64, con: 72, pow: 83, spd: 61, obp: 0.371, slg: 0.485 },
+                    { name: 'Moon Hyun-bin', bats: 'L', throws: 'R', pos: 'OF', avg: '.297', hr: 15, rbi: 76, con: 78, pow: 74, spd: 64, obp: 0.375, slg: 0.457 },
+                    { name: 'Heo In-seo', bats: 'R', throws: 'R', pos: 'C', avg: '.283', hr: 20, rbi: 79, con: 73, pow: 80, spd: 48, obp: 0.349, slg: 0.472 },
+                    { name: 'Park Jae-hyun', bats: 'L', throws: 'R', pos: 'OF', avg: '.293', hr: 19, rbi: 69, con: 77, pow: 77, spd: 78, obp: 0.332, slg: 0.470 },
+                    { name: 'Kim Min-suk', bats: 'L', throws: 'R', pos: 'OF', avg: '.310', hr: 5, rbi: 57, con: 83, pow: 60, spd: 52, obp: 0.391, slg: 0.404 },
+                    { name: 'Lee Jae-hyeon', bats: 'R', throws: 'R', pos: 'IF', avg: '.222', hr: 17, rbi: 45, con: 51, pow: 89, spd: 50, obp: 0.337, slg: 0.456 },
+                    { name: 'Kim Ju-won', bats: 'S', throws: 'R', pos: 'IF', avg: '.280', hr: 18, rbi: 61, con: 72, pow: 71, spd: 92, obp: 0.361, slg: 0.427 },
+                    { name: 'An Jae-seok', bats: 'L', throws: 'R', pos: 'IF', avg: '.278', hr: 11, rbi: 67, con: 71, pow: 74, spd: 57, obp: 0.324, slg: 0.438 },
+                    { name: 'Kim Ji-chan', bats: 'L', throws: 'R', pos: 'OF', avg: '.315', hr: 0, rbi: 38, con: 85, pow: 49, spd: 79, obp: 0.397, slg: 0.359 },
+                    { name: 'Cho Hyeong-woo', bats: 'R', throws: 'R', pos: 'C', avg: '.268', hr: 8, rbi: 40, con: 68, pow: 69, spd: 48, obp: 0.324, slg: 0.404 }
+                ]
+            },
+            'APA': {
+                pitchers: [
+                    { name: 'J.Power', throws: 'R', vel: 91, ctrl: 68, stm: 48, era: '3.80', k: 0, pitches: [{ id: 0, lv: 5 }, { id: 5, lv: 5 }, { id: 3, lv: 4 }], est: 1 },
+                    { name: 'K.Partington-Hopes', throws: 'R', vel: 91, ctrl: 68, stm: 48, era: '3.80', k: 0, pitches: [{ id: 0, lv: 4 }, { id: 6, lv: 5 }, { id: 4, lv: 4 }, { id: 8, lv: 3 }], est: 1 },
+                    { name: 'R.Romero', throws: 'R', vel: 93, ctrl: 74, stm: 55, era: '3.20', k: 0, pitches: [{ id: 0, lv: 5 }, { id: 3, lv: 5 }, { id: 7, lv: 3 }], est: 1 },
+                    { name: 'L.Krkovski', throws: 'L', vel: 91, ctrl: 68, stm: 48, era: '3.80', k: 0, pitches: [{ id: 0, lv: 4 }, { id: 1, lv: 4 }, { id: 5, lv: 5 }, { id: 2, lv: 3 }], est: 1 },
+                    { name: 'A.Torpey', throws: 'R', vel: 91, ctrl: 68, stm: 48, era: '3.80', k: 0, pitches: [{ id: 0, lv: 5 }, { id: 4, lv: 5 }, { id: 6, lv: 4 }], est: 1 },
+                    { name: 'M.Beattie', throws: 'R', vel: 91, ctrl: 68, stm: 48, era: '3.80', k: 0, pitches: [{ id: 0, lv: 4 }, { id: 2, lv: 5 }, { id: 8, lv: 4 }], est: 1 },
+                    { name: 'K.Hampton', throws: 'R', vel: 91, ctrl: 68, stm: 48, era: '3.80', k: 0, pitches: [{ id: 0, lv: 5 }, { id: 5, lv: 5 }, { id: 3, lv: 4 }], est: 1 },
+                    { name: 'J.Grounds', throws: 'R', vel: 91, ctrl: 68, stm: 48, era: '3.80', k: 0, pitches: [{ id: 0, lv: 4 }, { id: 6, lv: 5 }, { id: 4, lv: 4 }, { id: 8, lv: 3 }], est: 1 },
+                    { name: 'L.Doolan', throws: 'R', vel: 91, ctrl: 68, stm: 48, era: '3.80', k: 0, pitches: [{ id: 0, lv: 5 }, { id: 3, lv: 5 }, { id: 7, lv: 3 }], est: 1 },
+                    { name: 'A.Bates', throws: 'R', vel: 93, ctrl: 74, stm: 55, era: '3.20', k: 0, pitches: [{ id: 0, lv: 4 }, { id: 1, lv: 4 }, { id: 5, lv: 5 }, { id: 2, lv: 3 }], est: 1 },
+                    { name: 'B.Walmsley', throws: 'L', vel: 91, ctrl: 68, stm: 48, era: '3.80', k: 0, pitches: [{ id: 0, lv: 5 }, { id: 4, lv: 5 }, { id: 6, lv: 4 }], est: 1 },
+                    { name: 'J.Bishopp', throws: 'R', vel: 89, ctrl: 62, stm: 42, era: '4.40', k: 0, pitches: [{ id: 0, lv: 4 }, { id: 2, lv: 5 }, { id: 8, lv: 4 }], est: 1 },
+                    { name: 'K.Hall', throws: 'R', vel: 91, ctrl: 68, stm: 48, era: '3.80', k: 0, pitches: [{ id: 0, lv: 5 }, { id: 5, lv: 5 }, { id: 3, lv: 4 }], est: 1 },
+                    { name: 'C.Myles', throws: 'L', vel: 89, ctrl: 62, stm: 42, era: '4.40', k: 0, pitches: [{ id: 0, lv: 4 }, { id: 6, lv: 5 }, { id: 4, lv: 4 }, { id: 8, lv: 3 }], est: 1 },
+                    { name: 'B.Cooper-Vassalakis', throws: 'R', vel: 89, ctrl: 62, stm: 42, era: '4.40', k: 0, pitches: [{ id: 0, lv: 5 }, { id: 3, lv: 5 }, { id: 7, lv: 3 }], est: 1 },
+                    { name: 'C.Morgan', throws: 'L', vel: 89, ctrl: 62, stm: 42, era: '4.40', k: 0, pitches: [{ id: 0, lv: 4 }, { id: 1, lv: 4 }, { id: 5, lv: 5 }, { id: 2, lv: 3 }], est: 1 }
+                ],
+                batters: [
+                    { name: 'J.Kim', bats: 'R', throws: 'R', pos: 'SS', avg: '.275', hr: 9, rbi: 48, con: 71, pow: 70, spd: 62, obp: 0.345, slg: 0.430, est: 1 },
+                    { name: 'M.Durrington', bats: 'L', throws: 'R', pos: 'OF', avg: '.275', hr: 9, rbi: 48, con: 71, pow: 70, spd: 62, obp: 0.345, slg: 0.430, est: 1 },
+                    { name: 'C.Burke', bats: 'L', throws: 'R', pos: 'OF', avg: '.275', hr: 9, rbi: 48, con: 71, pow: 70, spd: 62, obp: 0.345, slg: 0.430, est: 1 },
+                    { name: 'C.Campbell', bats: 'R', throws: 'R', pos: '3B', avg: '.275', hr: 9, rbi: 48, con: 71, pow: 70, spd: 62, obp: 0.345, slg: 0.430, est: 1 },
+                    { name: 'B.Iredale', bats: 'R', throws: 'R', pos: 'IF', avg: '.275', hr: 9, rbi: 48, con: 71, pow: 70, spd: 62, obp: 0.345, slg: 0.430, est: 1 },
+                    { name: 'B.Cavill', bats: 'L', throws: 'R', pos: 'IF', avg: '.260', hr: 6, rbi: 36, con: 66, pow: 62, spd: 58, obp: 0.325, slg: 0.395, est: 1 },
+                    { name: 'J.Rae', bats: 'R', throws: 'R', pos: 'IF', avg: '.260', hr: 6, rbi: 36, con: 66, pow: 62, spd: 58, obp: 0.325, slg: 0.395, est: 1 },
+                    { name: 'B.Armstrong', bats: 'R', throws: 'R', pos: 'IF', avg: '.260', hr: 6, rbi: 36, con: 66, pow: 62, spd: 58, obp: 0.325, slg: 0.395, est: 1 },
+                    { name: 'J.Stevens', bats: 'R', throws: 'R', pos: 'IF', avg: '.260', hr: 6, rbi: 36, con: 66, pow: 62, spd: 58, obp: 0.325, slg: 0.395, est: 1 },
+                    { name: 'A.Skepton', bats: 'R', throws: 'R', pos: 'IF', avg: '.245', hr: 3, rbi: 24, con: 61, pow: 55, spd: 55, obp: 0.305, slg: 0.360, est: 1 },
+                    { name: 'A.Hall', bats: 'S', throws: 'R', pos: 'C', avg: '.275', hr: 9, rbi: 48, con: 71, pow: 70, spd: 62, obp: 0.345, slg: 0.430, est: 1 },
+                    { name: 'Z.Skinner', bats: 'R', throws: 'R', pos: 'C', avg: '.245', hr: 3, rbi: 24, con: 61, pow: 55, spd: 55, obp: 0.305, slg: 0.360, est: 1 }
                 ]
             },
             'JPN': {
@@ -2277,6 +2416,11 @@
             { abbr: '波多黎各', name: 'Puerto Rico', lg: 'WBC', c1: '#EF3340', c2: '#003082', c3: '#FFF', jersey: '#FFFFFF', hatLogo: 'PR', roster: ROSTERS['PUR'] },
             { abbr: '墨西哥', name: 'Mexico', lg: 'WBC', c1: '#006847', c2: '#CE1126', c3: '#FFF', jersey: '#004d26', hatLogo: 'M', roster: ROSTERS['MEX'] },
             { abbr: '義大利', name: 'Italy', lg: 'WBC', c1: '#009246', c2: '#CE2B37', c3: '#FFF', jersey: '#FFFFFF', hatLogo: 'I', roster: ROSTERS['ITA'] },
+            // ── 亞冠賽 2026 (Tokyo Dome) ──
+            { abbr: '亞冠中華', name: 'APBC Chinese Taipei', lg: 'APBC', c1: '#111111', c2: '#E0345E', c3: '#FFF', jersey: '#5f6267', hatLogo: 'T', roster: ROSTERS['APT'] },
+            { abbr: '亞冠日本', name: 'APBC Japan', lg: 'APBC', c1: '#14234d', c2: '#C8102E', c3: '#FFF', jersey: '#F6F6F8', hatLogo: 'J', roster: ROSTERS['APJ'] },
+            { abbr: '亞冠韓國', name: 'APBC South Korea', lg: 'APBC', c1: '#14234d', c2: '#C8102E', c3: '#FFF', jersey: '#F6F6F8', hatLogo: 'K', roster: ROSTERS['APK'] },
+            { abbr: '亞冠澳洲', name: 'APBC Australia', lg: 'APBC', c1: '#006400', c2: '#FFD700', c3: '#FFF', jersey: '#004d00', hatLogo: 'A', roster: ROSTERS['APA'] },
             // ── MLB / NPB 全部球隊 ──
             { abbr: '紅襪', name: 'Red Sox', lg: 'MLB', c1: '#BD3039', c2: '#0C2340', c3: '#FFF', jersey: '#FFFFFF', hatLogo: 'B', roster: ROSTERS['BOS'] },
             { abbr: '藍鳥', name: 'Blue Jays', lg: 'MLB', c1: '#134A8E', c2: '#E8291C', c3: '#FFF', jersey: '#FFFFFF', hatLogo: 'TO', roster: ROSTERS['TOR'] },
@@ -2847,6 +2991,7 @@
         canvas.addEventListener('mousemove', e => updatePointerPos(e.clientX, e.clientY));
         canvas.addEventListener('mousedown', e => {
             updatePointerPos(e.clientX, e.clientY); isMouseJustPressed = true;
+            if (MP.active && MP.isHost && G.scr === SCR.GAME && !DUP() && canHnr() && inHnrBtn(realMX, realMY)) toggleHnr();
             if (playerBatting() && (G.phase === PH.WAIT_PITCH || G.phase === PH.BATTING)) {
                 G.isDraggingBat = true; G.dragStartX = mouseX; G.dragStartY = mouseY; G.baseCurX = G.curX; G.baseCurY = G.curY;
             }
@@ -2857,6 +3002,7 @@
             if (e.touches.length > 0) {
                 updatePointerPos(e.touches[0].clientX, e.touches[0].clientY);
                 isMouseJustPressed = true;
+                if (MP.active && MP.isHost && G.scr === SCR.GAME && !DUP() && canHnr() && inHnrBtn(realMX, realMY)) toggleHnr();
                 if (playerBatting() && (G.phase === PH.WAIT_PITCH || G.phase === PH.BATTING)) {
                     G.isDraggingBat = true; G.dragStartX = mouseX; G.dragStartY = mouseY; G.baseCurX = G.curX; G.baseCurY = G.curY;
                 }
@@ -3133,8 +3279,8 @@
         function ratingsOf(b) {
             if (b._r) return b._r;
             const avg = parseFloat(b.avg) || 0.24, obp = b.obp || avg + 0.065, slg = b.slg || avg + 0.15, iso = slg - avg, pos = b.pos;
-            const traj = iso >= 0.24 || b.hr >= 35 ? 4 : iso >= 0.17 ? 3 : iso >= 0.11 ? 2 : 1;
-            const eye = clamp(Math.round(50 + (obp - avg - 0.07) * 900), 25, 99);
+            const traj = b.traj || (iso >= 0.24 || b.hr >= 35 ? 4 : iso >= 0.17 ? 3 : iso >= 0.11 ? 2 : 1);
+            const eye = b.eye || clamp(Math.round(50 + (obp - avg - 0.07) * 900), 25, 99);
             const arm = b.arm || clamp(Math.round((POS_ARM[pos] || 55) + (b.pow - 70) * 0.25), 30, 99);
             const def = b.def || clamp(Math.round((POS_DEF[pos] || 55) + (b.spd - 60) * 0.3 - Math.max(0, iso - 0.2) * 40), 30, 99);      // a hand-set def / arm on the player (e.g. a multiple Golden Glove winner) overrides the estimate
             return (b._r = { traj, con: b.con, pow: b.pow, spd: b.spd, eye, arm, def });
@@ -3198,7 +3344,7 @@
 
         function startAtBat(isContinue = false) {
             if (!isContinue) { G.balls = 0; G.strikes = 0; G.pickoffs = 0; G.pitchLog = []; aiPitchingChange(); const ps = G.half === 0 ? 1 : 0; G.pApp[ps].bf++; }
-            G.ballActive = false; G.batSwingFrame = -999; G._pitchPending = false; G.bunt = false; G.power = false;
+            G.ballActive = false; G.batSwingFrame = -999; G._pitchPending = false; G.bunt = false; G.power = false; G.hnr = false;
             if (MP.active || !playerBatting()) {
                 G.phase = PH.PITCH_SELECT; G.pitchChoice = 0; G.aimX = 0; G.aimY = 0; G.gaugePos = 0; G.gaugeDir = 1; if (MP.active && uiBatting()) { G.curX = 0; G.curY = 0; }
             } else {
@@ -3287,8 +3433,9 @@
                 const skill = 1.0 + (batter.con - 60) / 250 - (eyeR - 60) / 400 * (far > 1 ? 1 : 0);
                 G.aiSwing = Math.random() < Math.min(0.95, base * prot * skill * aiSwingMult + (G.strikes >= 2 ? 0.08 : 0));
                 const sacSit = G.outs < 2 && (G.runners[0] || G.runners[1]) && !G.runners[2] && G.strikes < 2 && Math.abs(G.score[0] - G.score[1]) <= 2;
-                G.bunt = false; G.power = !G.bunt && batter.pow >= 72 && G.strikes < 2 && Math.random() < 0.18 + (batter.pow - 72) / 150;      // sluggers sometimes swing for the fences
+                G.bunt = false; G.hnr = hnrSit() && G.outs < 2 && Math.random() < 0.08; G.power = !G.hnr && !G.bunt && batter.pow >= 72 && G.strikes < 2 && Math.random() < 0.18 + (batter.pow - 72) / 150;      // sluggers sometimes swing for the fences
                 if (sacSit && Math.random() < clamp(0.22 - (batter.pow - 50) / 250, 0.04, 0.3)) { G.bunt = true; G.aiSwing = inZone && Math.random() < 0.9; }      // the computer sacrifices now and then
+                if (G.bunt) G.hnr = false; else if (G.hnr) G.aiSwing = G.aiSwing || Math.random() < 0.6;      // hit-and-run: the batter should offer at it
                 G.aiCX = G._actualAimX + rnd(-0.3, 0.3) * (100 - batter.con) / 30 * aiErrMult;
                 G.aiCY = G._actualAimY + rnd(-0.3, 0.3) * (100 - batter.con) / 30 * aiErrMult;
                 G.aiSwingFrame = G.ballFrame + G.ballDur + rndI(-8, 0);      // never later than the pitch arriving, or the swing would be shown but the pitch called a ball
@@ -3334,8 +3481,32 @@
             applyPlay(type);
         }
         function canBunt() { return !MP.active && playerBatting() && G.phase === PH.WAIT_PITCH; }
-        function toggleBunt() { if (canBunt()) { G.bunt = !G.bunt; if (G.bunt) G.power = false; } }
+        function toggleBunt() { if (canBunt()) { G.bunt = !G.bunt; if (G.bunt) { G.power = false; G.hnr = false; } } }
         function togglePower() { if (canBunt()) { G.power = !G.power; if (G.power) G.bunt = false; } }
+        // ── hit-and-run (打帶跑): runner on 1st (also 1st+2nd / 1st+3rd); the runners break with the pitch and the batter must protect them ──
+        function hnrSit() { const r = G.runners; return !!(r[0] && !(r[1] && r[2])); }      // runner on 1st; not with the bases loaded
+        function canHnr() { if (!hnrSit()) return false; return MP.active ? (uiBatting() && mpBatterWaiting()) : canBunt(); }      // online: the batter chooses it while the pitcher is still setting up
+        function toggleHnr() {
+            if (!canHnr()) return;
+            if (MP.active && !MP.isHost) { mpSend({ t: 'tac', k: 'hnr' }); return; }      // the guest asks the host, who owns the game state
+            G.hnr = !G.hnr; if (G.hnr) G.bunt = false;
+        }
+        const inHnrBtn = (x, y) => { const r = hnrBtnRect(); return x >= r.x && x <= r.x + r.w && y >= r.y && y <= r.y + r.h; };
+        const hnrBtnRect = () => ({ x: W - 130, y: H - 254, w: 120, h: 38 });
+        // no contact on a pitch (ball, called strike, swing and miss): the runner is already going, so it plays like a steal of 2nd
+        function hnrGo() {
+            if (!G.hnr || !hnrSit()) return null;
+            const bat = G.half, roster = batTeamInfo().roster.batters, dm = [0.10, -0.08, -0.14][G.difficulty];
+            const spdOf = k => { const sl = runnerSlotAt(k); return sl != null ? roster[G.lineups[bat][sl]].spd : 60; };
+            if (G.runners[1]) {                                              // 1st + 2nd: the throw goes to 3rd
+                if (Math.random() < clamp(0.56 + (spdOf(1) - 60) / 220 + dm, 0.2, 0.9)) { G.runners = [false, true, true]; return { txt: '打帶跑：兩名跑者各進一壘', end: false }; }
+                G._rsOut = [1]; G.runners = [false, true, false]; G.outs++; SFX.steal_fail();
+                return { txt: '打帶跑失敗，三壘前被刺殺', end: G.outs >= 3 };
+            }
+            if (Math.random() < clamp(0.68 + (spdOf(0) - 60) / 220 + dm, 0.3, 0.92)) { G.runners = [false, true, G.runners[2]]; return { txt: '打帶跑：跑者盜上二壘', end: false }; }
+            G._rsOut = [0]; G.runners = [false, false, G.runners[2]]; G.outs++; SFX.steal_fail();
+            return { txt: '打帶跑失敗，跑者被刺殺', end: G.outs >= 3 };
+        }
         const powerBtnRect = () => ({ x: W - 130, y: H - 200, w: 120, h: 38 });
 
         function contactScale(b) { return clamp(0.7 + (b.con - 45) * 0.014, 0.6, 1.5); }      // 巧打 → size of the contact box (0.7 at con 45, 1.0 at 66, 1.4 at 95)
@@ -3413,7 +3584,7 @@
             if (type === 'MISS') {                // swinging strike
                 G.strikes++; SFX.strike();
                 if (G.strikes >= 3) applyPlay('K');
-                else { showRes('揮棒落空！', 'SWINGING STRIKE', '#FF8844', false); G._continueAtBat = true; }
+                else { const h = hnrGo(); showRes('揮棒落空！' + (h ? '　' + h.txt : ''), 'SWINGING STRIKE', '#FF8844', !!(h && h.end)); G._continueAtBat = true; }
                 return;
             }
             applyPlay(type);
@@ -3511,7 +3682,7 @@
             if (inZone) {
                 G.strikes++;
                 SFX.strike();
-                if (G.strikes >= 3) { applyPlay('K'); } else { showRes('好球！', 'STRIKE', '#FF8844', false); G._continueAtBat = true; }
+                if (G.strikes >= 3) { applyPlay('K'); } else { const h = hnrGo(); showRes('好球！' + (h ? '　' + h.txt : ''), 'STRIKE', '#FF8844', !!(h && h.end)); G._continueAtBat = true; }
             } else {
                 const ax = G._actualAimX, ay = G._actualAimY, far = Math.max(Math.abs(ax), Math.abs(ay));
                 if (far > 1.35 && far < 2.4 && Math.abs(ax) >= 1.35 && Math.random() < 0.05) { applyPlay('HBP'); return; }       // inside pitch plunks the batter
@@ -3523,7 +3694,7 @@
                 }
                 G.balls++;
                 SFX.ball();
-                if (G.balls >= 4) { applyPlay('BB'); } else { showRes('壞球', 'BALL', '#4488FF', false); G._continueAtBat = true; }
+                if (G.balls >= 4) { applyPlay('BB'); } else { const h = hnrGo(); showRes('壞球' + (h ? '　' + h.txt : ''), 'BALL', '#4488FF', !!(h && h.end)); G._continueAtBat = true; }
             }
         }
 
@@ -3579,13 +3750,21 @@
                 text = (r[0] || r[1] || r[2]) ? '犧牲觸擊成功！' : '觸擊出局！';
                 if (G.outs < 3) { const runs = r[2] ? 1 : 0; G.runners = [false, r[0], r[1]]; if (runs) { G.score[bat] += runs; G.scoreFlash[bat] = 35; st.rbi += runs; text = '擠回一分！犧牲觸擊'; col = '#FFD24A'; } }
             } else if (type === '3B' || type === '2B' || type === '1B') {
-                const { nr, runs } = G.hitKind === 'bunt' ? { nr: [true, G.runners[0], G.runners[1]], runs: G.runners[2] ? 1 : 0 } : advanceHit(G.runners, type);
+                let { nr, runs } = G.hitKind === 'bunt' ? { nr: [true, G.runners[0], G.runners[1]], runs: G.runners[2] ? 1 : 0 } : advanceHit(G.runners, type);
+                let hnrTxt = '';
+                if (G.hnr && G.hitKind !== 'bunt' && G.runners[0] && G.runners[1] && !G.runners[2] && (type === '1B' || type === '2B')) {          // hit-and-run, runners on 1st + 2nd: both were already going
+                    if (type === '1B') { if (Math.random() < 0.9) { runs = 1; const to3 = Math.random() < 0.7; nr = [true, !to3, to3]; } else nr = [true, true, true]; hnrTxt = '　打帶跑奏效，兩名跑者跑動'; }
+                    else { const sc = Math.random() < 0.85; runs = sc ? 2 : 1; nr = [false, true, !sc]; hnrTxt = '　打帶跑奏效，跑者全速衝回'; }
+                } else if (G.hnr && G.hitKind !== 'bunt' && G.runners[0] && !G.runners[1]) {          // hit-and-run: the runner was already moving
+                    if (type === '1B' && !nr[2] && Math.random() < 0.75) { nr[1] = false; nr[2] = true; hnrTxt = '　打帶跑奏效，跑者直奔三壘'; }
+                    else if (type === '2B' && nr[2] && !G.runners[2] && Math.random() < 0.67) { nr[2] = false; runs++; hnrTxt = '　打帶跑奏效，一壘跑者回本壘'; }
+                }
                 G.score[bat] += runs; if (runs > 0) G.scoreFlash[bat] = 35;
                 G.runners = nr; col = '#44FF88'; SFX.crack();
                 if (type === '3B') { text = runs > 0 ? `三壘安打！${runs} 分` : '三壘安打！'; sub = '3 BASE HIT'; }
                 else if (type === '2B') { text = runs > 0 ? `二壘安打！${runs} 分` : '二壘安打！'; sub = '2 BASE HIT'; }
                 else { text = G.hitKind === 'bunt' ? (runs > 0 ? `觸擊安打！${runs} 分` : '觸擊安打！') : runs > 0 ? `安打！${runs} 分` : '安打！'; sub = 'HIT'; }
-                st.ab++; st.h++; st.rbi += runs;
+                text += hnrTxt; st.ab++; st.h++; st.rbi += runs;
             } else if (type === 'BB' || type === 'HBP' || type === 'ROE') {
                 const rbi = (G.runners[0] && G.runners[1] && G.runners[2]) ? 1 : 0;
                 if (G.runners[0] && G.runners[1] && G.runners[2]) G.score[bat]++;
@@ -3603,16 +3782,22 @@
                 SFX.out();
                 let runs = 0, dp = false;
                 // ground ball with a runner on 1st and fewer than 2 out: very likely a double play (~80%; better defence helps, a fast batter beats it out more often)
-                const dpChance = G.hitKind === 'bunt' ? 0.12 : clamp(0.80 + (fieldDef() - 65) / 300 - ((getBatter().spd || 60) - 60) / 400, 0.55, 0.92);
+                const hnrOn = !!(G.hnr && G.hitKind !== 'bunt' && hnrSit());
+                const dpChance = hnrOn ? 0 : G.hitKind === 'bunt' ? 0.12 : clamp(0.80 + (fieldDef() - 65) / 300 - ((getBatter().spd || 60) - 60) / 400, 0.55, 0.92);
                 if (G.outKind === 'ground' && G.runners[0] && outsBefore < 2 && Math.random() < dpChance) {
                     dp = true; G.dpPlay = true; G.runners[0] = false; G.outs++; text = '雙殺打！'; col = '#FF4444'; if (G.outs >= 3) endHalf = true;
                     if (G.runners[1] && G.outs < 3 && Math.random() < 0.7) { G.runners[1] = false; G.runners[2] = G.runners[2] || true; }
+                }
+                let hnrMoved = false;
+                if (hnrOn && !dp && G.outs < 3) {
+                    if (G.outKind === 'ground') { hnrMoved = true; if (Math.random() < 0.92) { if (G.runners[1]) { G.runners = [false, true, true]; text += '　打帶跑奏效，兩名跑者各進一壘'; } else { G.runners[0] = false; G.runners[1] = true; text += '　打帶跑奏效，跑者進二壘'; } } }
+                    else if (Math.random() < (G.hitKind === 'line' ? 0.4 : G.hitKind === 'pop' ? 0.3 : 0.25)) { G.runners[0] = false; G.outs++; dp = true; G.dpPlay = true; text = '打帶跑失敗，跑者被雙殺！'; col = '#FF4444'; if (G.outs >= 3) endHalf = true; }
                 }
                 if (!dp && G.outs < 3) {
                     if (G.outKind === 'fly') {            // sacrifice fly: runner tags up from 3rd
                         if (G.runners[2] && Math.random() < 0.75) { G.runners[2] = false; runs = 1; text = '犧牲飛球，得分！'; }
                         else if (G.runners[1] && !G.runners[2] && Math.random() < 0.3) { G.runners[1] = false; G.runners[2] = true; }
-                    } else if (G.outKind === 'ground') {    // ground out: runners may advance
+                    } else if (G.outKind === 'ground' && !hnrMoved) {    // ground out: runners may advance
                         if (G.runners[2] && Math.random() < 0.4) { G.runners[2] = false; runs++; }
                         if (G.runners[1] && !G.runners[2] && Math.random() < 0.5) { G.runners[1] = false; G.runners[2] = true; }
                         if (G.runners[0] && !G.runners[1] && Math.random() < 0.5) { G.runners[0] = false; G.runners[1] = true; }
@@ -3624,6 +3809,14 @@
             } else if (type === 'K') {
                 G.resBatter = getBatter();      // the lineup moves on at once, but the man who just struck out stays at the plate (and keeps his batting side) while the call is shown
                 G.outs++; text = '三振出局！'; sub = 'STRIKEOUT'; col = '#FF4444'; if (G.outs >= 3) endHalf = true;
+                if (G.hnr && !endHalf && hnrSit()) {          // strike-'em-out, throw-'em-out
+                    if (G.runners[1]) {
+                        if (Math.random() < 0.38) { G._rsOut = [1]; G.runners = [false, true, false]; G.outs++; text = '三振，打帶跑失敗，三壘前被刺殺！'; if (G.outs >= 3) endHalf = true; }
+                        else { G.runners = [false, true, true]; text = '三振出局！兩名跑者各進一壘'; }
+                    }
+                    else if (Math.random() < 0.35) { G._rsOut = [0]; G.runners[0] = false; G.outs++; text = '三振，打帶跑失敗，跑者被刺殺！'; if (G.outs >= 3) endHalf = true; }
+                    else { G.runners = [false, true, G.runners[2]]; text = '三振出局！跑者盜上二壘'; }
+                }
                 SFX.out();
                 st.ab++; st.k++;
             }
@@ -4115,11 +4308,13 @@
                     if (playerBatting() && J('KeyS') && canSteal()) { attemptSteal(); break; }
                     if (J('KeyB')) toggleBunt();
                     if (J('KeyV')) togglePower();
+                    if (J('KeyH')) toggleHnr();
                     if (playerBatting() && isMouseJustPressed) {
                         const bbx = W - 130, bby = H - 50;
                         if (!DUP() && mouseX >= bbx && mouseX <= bbx + 120 && mouseY >= bby && mouseY <= bby + 38) { G.subType = 'B'; G.prevPhase = G.phase; G.phase = PH.SUB_MENU; break; }
                         if (!DUP() && inR(buntBtnRect())) { toggleBunt(); break; }
                         if (!DUP() && inR(powerBtnRect())) { togglePower(); break; }
+                        if (!DUP() && canHnr() && inR(hnrBtnRect())) { toggleHnr(); break; }
                         const stx = W - 130, sty = H - 100;
                         if (!DUP() && canSteal() && mouseX >= stx && mouseX <= stx + 120 && mouseY >= sty && mouseY <= sty + 38) { attemptSteal(); break; }
                     }
@@ -4692,11 +4887,12 @@
             { id: 'MLB', label: '⚾ MLB 美國職棒', col: '#88AAFF', groups: [
                 ['美聯東區', ['洋基', '紅襪', '藍鳥', '金鶯', '光芒']], ['美聯中區', ['守護者', '老虎', '皇家', '雙城', '白襪']], ['美聯西區', ['太空人', '運動家', '水手', '遊騎兵', '天使']],
                 ['國聯東區', ['大都會', '費城人', '勇士', '馬林魚', '國民']], ['國聯中區', ['小熊', '釀酒人', '紅雀', '紅人', '海盜']], ['國聯西區', ['道奇', '教士', '巨人', '響尾蛇', '洛磯']]] },
+            { id: 'APBC', label: '🏆 亞冠賽 2026', col: '#FFD24A', groups: [['', ['亞冠中華', '亞冠日本', '亞冠韓國', '亞冠澳洲']]] },
             { id: 'WBC', label: '🌏 WBC 經典賽', col: '#44FFCC', groups: [['', ['中華', '日本', '韓國', '澳洲', '美國', '多明尼加', '波多黎各', '墨西哥', '義大利']]] }
         ];
         function selTabLayout() {
             if (portraitGame) { const g = 6, w = (W - 28 - g) / 2, h = 32; return LEAGUE_TABS.map((t, i) => ({ x: 14 + (i % 2) * (w + g), y: 88 + Math.floor(i / 2) * (h + g), w, h })); }
-            const w = 190, h = 30, g = 6, x0 = W / 2 - (4 * w + 3 * g) / 2;
+            const n = LEAGUE_TABS.length, w = Math.min(190, Math.floor((W - 20 - (n - 1) * 6) / n)), h = 30, g = 6, x0 = W / 2 - (n * w + (n - 1) * g) / 2;
             return LEAGUE_TABS.map((t, i) => ({ x: x0 + i * (w + g), y: 88, w, h }));
         }
         function teamBtnLayout() {
@@ -5876,10 +6072,13 @@
                 if (!DUP()) { const pbx = W - 130, pby = H - 50; const pHHover = mouseX >= pbx && mouseX <= pbx + 120 && mouseY >= pby && mouseY <= pby + 38; drawGlossyPill(pbx, pby, 120, 38, pHHover, '🔄 換投手', '#004422', '#007733', pHHover ? '#FFD700' : '#FFF'); }
             }
 
+            if (MP.active && !DUP() && canHnr()) { const hr = hnrBtnRect(), on = !!G.hnr; drawGlossyPill(hr.x, hr.y, hr.w, hr.h, inR(hr), on ? '✓ 打帶跑中 (H)' : '🏃 打帶跑 (H)', on ? '#7a5a00' : '#444455', on ? '#e0a020' : '#6a6a88', inR(hr) ? '#FFD700' : '#FFF'); }
+            else if (MP.active && !DUP() && G.hnr && G.phase !== PH.INNING_START && uiBatting()) { const hr = hnrBtnRect(); drawGlossyPill(hr.x, hr.y, hr.w, hr.h, false, '✓ 打帶跑中', '#7a5a00', '#e0a020', '#FFF'); }
             if (G.phase === PH.WAIT_PITCH && playerBatting()) {
                 if (!DUP()) { const bbx = W - 130, bby = H - 50; const bHover = mouseX >= bbx && mouseX <= bbx + 120 && mouseY >= bby && mouseY <= bby + 38; drawGlossyPill(bbx, bby, 120, 38, bHover, '🔄 換代打', '#004422', '#007733', bHover ? '#FFD700' : '#FFF'); }
                 if (!DUP()) { if (canBunt() || (!MP.active && playerBatting() && G.bunt)) { const br = buntBtnRect(), on = !!G.bunt; drawGlossyPill(br.x, br.y, br.w, br.h, inR(br), on ? '✓ 觸擊中 (B)' : '🏏 觸擊 (B)', on ? '#116622' : '#444455', on ? '#22aa44' : '#6a6a88', inR(br) ? '#FFD700' : '#FFF'); } }
                 if (!DUP()) { if (canBunt() || (!MP.active && playerBatting() && G.power)) { const pr = powerBtnRect(), on = !!G.power; drawGlossyPill(pr.x, pr.y, pr.w, pr.h, inR(pr), on ? '✓ 強振中 (V)' : '💥 強振 (V)', on ? '#882211' : '#444455', on ? '#dd5533' : '#6a6a88', inR(pr) ? '#FFD700' : '#FFF'); } }
+                if (!DUP()) { if (canHnr() || (!MP.active && playerBatting() && G.hnr)) { const hr = hnrBtnRect(), on = !!G.hnr; drawGlossyPill(hr.x, hr.y, hr.w, hr.h, inR(hr), on ? '✓ 打帶跑中 (H)' : '🏃 打帶跑 (H)', on ? '#7a5a00' : '#444455', on ? '#e0a020' : '#6a6a88', inR(hr) ? '#FFD700' : '#FFF'); } }
                 if (!DUP()) { if (canSteal()) { const stx = W - 130, sty = H - 100; const stHover = mouseX >= stx && mouseX <= stx + 120 && mouseY >= sty && mouseY <= sty + 38; drawGlossyPill(stx, sty, 120, 38, stHover, '🏃 盜壘', '#883300', '#CC5500', stHover ? '#FFD700' : '#FFF'); } }
                 if (mouseY >= H - 80 && !isMobile) txt('－ 投球暫停中 (思考戰術) －', W / 2, H - 20, 16, '#00FFFF', 'center', '', false);
             }
@@ -6175,6 +6374,7 @@
 
         function mpSyncInput() {
             if (!MP.active || !MP.isHost) return;
+            if (G.scr === SCR.GAME && canHnr() && J('KeyH')) toggleHnr();
             if (mpRemoteTurn()) {
                 mouseX = MP.remoteX; mouseY = MP.remoteY;
                 isMouseJustPressed = MP.remoteDown; isMouseJustReleased = MP.remoteUp;
@@ -6214,6 +6414,7 @@
         function mpHandleData(data) {
             if (!data || !data.t) return;
             if (data.t === 'ptr') { MP.remoteX = data.x; MP.remoteY = data.y; }
+            else if (data.t === 'tac' && MP.isHost) { if (data.k === 'hnr' && G.scr === SCR.GAME && !playerBatting() && mpBatterWaiting() && hnrSit()) { G.hnr = !G.hnr; if (G.hnr) G.bunt = false; } }      // the guest is batting and picks hit-and-run
             else if (data.t === 'down') { MP.remoteDown = true; }
             else if (data.t === 'up') { MP.remoteUp = true; }
             else if (data.t === 'pick' && MP.isHost) {               // guest chose a team
@@ -6371,11 +6572,15 @@
         });
         canvas.addEventListener('mousedown', e => {
             if (!MP.active || MP.isHost) return;
-            const p = mpCanvasXY(e.clientX, e.clientY); mpSend({ t: 'ptr', x: p.x, y: p.y }); mpSend({ t: 'down' });
+            const p = mpCanvasXY(e.clientX, e.clientY);
+            if (G.scr === SCR.GAME && !DUP() && canHnr() && inHnrBtn(p.x, p.y)) { toggleHnr(); return; }
+            mpSend({ t: 'ptr', x: p.x, y: p.y }); mpSend({ t: 'down' });
         });
         canvas.addEventListener('touchstart', e => {
             if (!MP.active || MP.isHost || e.touches.length === 0) return;
-            const p = mpCanvasXY(e.touches[0].clientX, e.touches[0].clientY); mpSend({ t: 'ptr', x: p.x, y: p.y });
+            const p = mpCanvasXY(e.touches[0].clientX, e.touches[0].clientY);
+            if (G.scr === SCR.GAME && !DUP() && canHnr() && inHnrBtn(p.x, p.y)) { toggleHnr(); return; }
+            mpSend({ t: 'ptr', x: p.x, y: p.y });
             if (!(isMobile && G.phase === PH.BATTING)) mpSend({ t: 'down' });
         });
         canvas.addEventListener('mouseup', () => { if (MP.active && !MP.isHost) mpSend({ t: 'up' }); });
@@ -6398,8 +6603,8 @@
                 render();
                 if (MP.active && MP.isHost && steps) mpBroadcastState();
             }
-            const btnS = document.getElementById('swing-btn'); const btnC = document.getElementById('change-btn'); const btnA = document.getElementById('sim-btn'); const btnSt = document.getElementById('steal-btn'); const btnBu = document.getElementById('bunt-btn'), btnPw = document.getElementById('power-btn');
-            if (!(isMobile && G.scr === SCR.GAME && playerBatting() && !(MP.active && !MP.isHost))) { btnBu.classList.remove('show'); btnPw.classList.remove('show'); }
+            const btnS = document.getElementById('swing-btn'); const btnC = document.getElementById('change-btn'); const btnA = document.getElementById('sim-btn'); const btnSt = document.getElementById('steal-btn'); const btnBu = document.getElementById('bunt-btn'), btnPw = document.getElementById('power-btn'), btnHn = document.getElementById('hnr-btn');
+            if (!(isMobile && G.scr === SCR.GAME && playerBatting() && !(MP.active && !MP.isHost))) { btnBu.classList.remove('show'); btnPw.classList.remove('show'); btnHn.classList.remove('show'); }
             if (MP.active && !MP.isHost) {
                 // guest on a phone: a swing button while it is their turn to bat (aim by dragging, then press swing)
                 if (isMobile && G.scr === SCR.GAME && mpRemoteTurn() && G.phase === PH.BATTING) btnS.classList.add('show'); else btnS.classList.remove('show');
@@ -6409,17 +6614,19 @@
                     btnS.classList.add('show'); btnC.classList.add('show'); btnA.classList.remove('show');
                     if (canSteal()) btnSt.classList.add('show'); else btnSt.classList.remove('show');
                     if (canBunt()) { btnBu.classList.add('show'); btnPw.classList.add('show'); } else { btnBu.classList.remove('show'); btnPw.classList.remove('show'); }
+                    if (canHnr()) btnHn.classList.add('show'); else btnHn.classList.remove('show');
                 } else if (!playerBatting() && G.phase === PH.PITCH_SELECT) {
                     btnS.classList.remove('show'); btnC.classList.add('show'); btnA.classList.add('show'); btnSt.classList.remove('show');
                 } else { btnS.classList.remove('show'); btnC.classList.remove('show'); btnA.classList.remove('show'); btnSt.classList.remove('show'); }
             } else { btnS.classList.remove('show'); btnC.classList.remove('show'); btnA.classList.remove('show'); btnSt.classList.remove('show'); }
-            if (G.scr !== SCR.GAME || !canBunt()) { btnBu.classList.remove('show'); btnPw.classList.remove('show'); }
+            if (G.scr !== SCR.GAME || !canBunt()) { btnBu.classList.remove('show'); btnPw.classList.remove('show'); btnHn.classList.remove('show'); }
+            if (MP.active && isMobile && G.scr === SCR.GAME && canHnr()) btnHn.classList.add('show');
             {   // tactics fold: the five buttons are hidden behind one small toggle
-                const tacs = [btnC, btnA, btnSt, btnBu, btnPw], tb = document.getElementById('tac-btn'), any = tacs.some(b => b.classList.contains('show'));
+                const tacs = [btnC, btnA, btnSt, btnBu, btnPw, btnHn], tb = document.getElementById('tac-btn'), any = tacs.some(b => b.classList.contains('show'));
                 if (!any) TAC.open = false;
                 if (!TAC.open) tacs.forEach(b => b.classList.remove('show'));
-                tb.classList.toggle('show', any); tb.classList.toggle('open', TAC.open); tb.classList.toggle('pitch', !playerBatting()); tb.classList.toggle('armed', !!(G.bunt || G.power));
-                tb.querySelector('span').textContent = TAC.open ? '收起' : G.bunt ? '觸擊中' : G.power ? '強振中' : '戰術';
+                tb.classList.toggle('show', any); tb.classList.toggle('open', TAC.open); tb.classList.toggle('pitch', !playerBatting()); tb.classList.toggle('armed', !!(G.bunt || G.power || G.hnr));
+                tb.querySelector('span').textContent = TAC.open ? '收起' : G.bunt ? '觸擊中' : G.power ? '強振中' : G.hnr ? '打帶跑' : '戰術';
             }      // not while a substitution menu (or anything else) covers the field
             { const show = joyShouldShow(), jo = document.getElementById('joy'); if (jo) jo.classList.toggle('show', show); document.getElementById('mobile-overlay').classList.toggle('joy-on', show); if (!show) { JOY.active = false; JOY.x = JOY.y = 0; } }
             requestAnimationFrame(loop);
@@ -6481,9 +6688,10 @@
         });
         document.getElementById('bunt-btn').addEventListener('touchstart', e => { e.preventDefault(); toggleBunt(); }, { passive: false });
         document.getElementById('power-btn').addEventListener('touchstart', e => { e.preventDefault(); togglePower(); }, { passive: false });
+        document.getElementById('hnr-btn').addEventListener('touchstart', e => { e.preventDefault(); toggleHnr(); }, { passive: false });
         { const tb = document.getElementById('tac-btn'), tg = e => { e.preventDefault(); TAC.open = !TAC.open; };
           tb.addEventListener('touchstart', tg, { passive: false }); tb.addEventListener('mousedown', tg);
-          ['sim-btn', 'change-btn', 'steal-btn', 'bunt-btn', 'power-btn'].forEach(id => { const e = document.getElementById(id), cl = () => { setTimeout(() => { TAC.open = false; }, 0); }; e.addEventListener('touchstart', cl, { passive: true }); e.addEventListener('mousedown', cl); }); }
+          ['sim-btn', 'change-btn', 'steal-btn', 'bunt-btn', 'power-btn', 'hnr-btn'].forEach(id => { const e = document.getElementById(id), cl = () => { setTimeout(() => { TAC.open = false; }, 0); }; e.addEventListener('touchstart', cl, { passive: true }); e.addEventListener('mousedown', cl); }); }
         document.getElementById('steal-btn').addEventListener('touchstart', e => {
             e.preventDefault(); attemptSteal();
         }, { passive: false });

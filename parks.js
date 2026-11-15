@@ -76,6 +76,7 @@ const PARKS = (function () {
         'MLB:Athletics': 'sutter', 'MLB:Mariners': 'tmobile', 'MLB:Rangers': 'globelife', 'MLB:Angels': 'angel', 'MLB:Mets': 'citi', 'MLB:Phillies': 'citizens',
         'MLB:Braves': 'truist', 'MLB:Marlins': 'loandepot', 'MLB:Nationals': 'nationals', 'MLB:Cubs': 'wrigley', 'MLB:Brewers': 'amfam', 'MLB:Cardinals': 'busch',
         'MLB:Reds': 'gabp', 'MLB:Pirates': 'pnc', 'MLB:Padres': 'petco', 'MLB:Giants': 'oracle', 'MLB:Diamondbacks': 'chase', 'MLB:Rockies': 'coors',
+        'APBC:APBC Chinese Taipei': 'tokyo_dome', 'APBC:APBC Japan': 'tokyo_dome', 'APBC:APBC South Korea': 'tokyo_dome', 'APBC:APBC Australia': 'tokyo_dome',   // 亞冠賽 2026: all games at Tokyo Dome
         'CPBL:Brothers': 'taichung', 'CPBL:Lions': 'tainan', 'CPBL:Monkeys': 'taoyuan', 'CPBL:Guardians': 'xinzhuang', 'CPBL:Dragons': 'tianmu', 'CPBL:Hawks': 'chengcing', 'CPBL:CPBL Legends': 'taipei_dome',
         'NPB:Giants': 'tokyo_dome', 'NPB:Tigers': 'koshien', 'NPB:Dragons': 'vantelin', 'NPB:Carp': 'mazda', 'NPB:Swallows': 'jingu', 'NPB:BayStars': 'yokohama',
         'NPB:Hawks': 'paypay', 'NPB:Fighters': 'escon', 'NPB:Buffaloes': 'kyocera', 'NPB:Marines': 'zozo', 'NPB:Lions': 'belluna', 'NPB:Eagles': 'rakuten_mobile',
