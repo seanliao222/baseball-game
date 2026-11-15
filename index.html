@@ -2466,8 +2466,9 @@
             { abbr: 'OB明星', name: 'CPBL Legends', lg: 'CPBL', c1: '#C9A227', c2: '#111111', c3: '#FFF', jersey: '#151515', hatLogo: 'OB', roster: ROSTERS['OBS'] }
         ];
 
-        // 廖宣皓/廖宣瑜 available in all teams as both batter and pitcher substitutes
+        // 廖宣皓/廖宣瑜 available in all teams as both batter and pitcher substitutes (except the 亞冠賽 Japan / Korea / Australia squads; 亞冠中華 keeps them)
         TEAMS.forEach(team => {
+            if (team.lg === 'APBC' && team.abbr !== '亞冠中華') return;
             team.roster.batters = team.roster.batters.filter(b => b.name !== '廖宣皓' && b.name !== '廖宣瑜');
             team.roster.batters.push({ name: '廖宣皓', bats: 'R', throws: 'R', pos: 'SS', avg: '.312', hr: 24, rbi: 78, con: 82, pow: 78, spd: 80, arm: 80, def: 78, obp: 0.407, slg: 0.560 });
             team.roster.batters.push({ name: '廖宣瑜', bats: 'R', throws: 'R', pos: 'CF', avg: '.325', hr: 30, rbi: 88, con: 86, pow: 84, spd: 76, arm: 82, def: 80, obp: 0.420, slg: 0.585 });
