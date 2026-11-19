@@ -475,7 +475,8 @@
                     { name: '岳東華', bats: 'L', throws: 'R', pos: '2B', avg: '.272', hr: 3, rbi: 35, con: 69, pow: 59, spd: 56, obp: 0.325, slg: 0.364, num: 98 },
                     { name: '詹子賢', def: 81, bats: 'R', throws: 'R', pos: 'LF', avg: '.257', hr: 2, rbi: 19, con: 63, pow: 56, spd: 45, obp: 0.326, slg: 0.335, num: 39 },
                     { name: '王政順', bats: 'L', throws: 'R', pos: '3B', avg: '.240', hr: 0, rbi: 12, con: 57, pow: 44, spd: 45, obp: 0.333, slg: 0.260, num: 61 },
-                    { name: '廖奕翔', bats: 'L', throws: 'R', pos: 'TWP', avg: '.275', hr: 30, rbi: 81, con: 95, pow: 95, spd: 95, traj: 4, eye: 95, obp: 0.377, slg: 0.512, num: 11 }
+                    { name: '廖奕翔', bats: 'L', throws: 'R', pos: 'TWP', avg: '.275', hr: 30, rbi: 81, con: 95, pow: 95, spd: 95, traj: 4, eye: 95, obp: 0.377, slg: 0.512, num: 11 },
+                    { name: '徐兆村', bats: 'R', throws: 'R', pos: 'IF', avg: '.320', hr: 28, rbi: 90, con: 95, pow: 95, spd: 90, traj: 4, eye: 95, obp: 0.410, slg: 0.600 }
                 ]
             },
             'UNI': {
@@ -491,7 +492,8 @@
                     { name: '胡智爲', throws: 'R', vel: 89, ctrl: 69, stm: 60, era: '7.30', k: 22, pitches: [{ id: 0, lv: 3 }, { id: 6, lv: 4 }, { id: 1, lv: 3 }], num: 58 },
                     { name: '吳承諭', throws: 'R', vel: 87, ctrl: 80, stm: 51, era: '2.03', k: 14, pitches: [{ id: 0, lv: 3 }, { id: 4, lv: 4 }, { id: 8, lv: 5 }], num: 57 },
                     { name: '邱浩鈞', throws: 'R', vel: 90, ctrl: 50, stm: 45, era: '2.68', k: 24, pitches: [{ id: 0, lv: 3 }, { id: 7, lv: 5 }, { id: 4, lv: 4 }], num: 37 },
-                    { name: '李其峰', throws: 'R', vel: 90, ctrl: 58, stm: 48, era: '3.09', k: 22, pitches: [{ id: 0, lv: 3 }, { id: 8, lv: 5 }, { id: 4, lv: 3 }], num: 30 }
+                    { name: '李其峰', throws: 'R', vel: 90, ctrl: 58, stm: 48, era: '3.09', k: 22, pitches: [{ id: 0, lv: 3 }, { id: 8, lv: 5 }, { id: 4, lv: 3 }], num: 30 },
+                    { name: '徐寧', throws: 'R', vel: 95, ctrl: 76, stm: 82, era: '2.60', k: 120, pitches: [{ id: 0, lv: 5 }, { id: 1, lv: 5 }, { id: 5, lv: 4 }, { id: 4, lv: 4 }] }
                 ],
                 batters: [
                     { name: '邱智呈', lpos: 'RF', bats: 'L', throws: 'L', pos: 'RF', avg: '.257', hr: 3, rbi: 31, con: 63, pow: 58, spd: 64, obp: 0.365, slg: 0.341, num: 14 },
@@ -507,7 +509,8 @@
                     { name: '蘇智傑', def: 81, bats: 'L', throws: 'R', pos: 'LF', avg: '.255', hr: 8, rbi: 40, con: 63, pow: 72, spd: 58, obp: 0.301, slg: 0.408, num: 32 },
                     { name: '張皓崴', bats: 'L', throws: 'R', pos: 'SS', avg: '.285', hr: 0, rbi: 12, con: 74, pow: 53, spd: 68, obp: 0.338, slg: 0.349, num: 38 },
                     { name: '李丞齡', bats: 'R', throws: 'R', pos: 'RF', avg: '.233', hr: 5, rbi: 21, con: 55, pow: 65, spd: 49, obp: 0.261, slg: 0.352, num: 6 },
-                    { name: '陳鏞基', bats: 'R', throws: 'R', pos: '3B', avg: '.276', hr: 1, rbi: 16, con: 70, pow: 47, spd: 48, obp: 0.353, slg: 0.310, num: 13 }
+                    { name: '陳鏞基', bats: 'R', throws: 'R', pos: '3B', avg: '.276', hr: 1, rbi: 16, con: 70, pow: 47, spd: 48, obp: 0.353, slg: 0.310, num: 13 },
+                    { name: '徐寧', bats: 'L', throws: 'R', pos: 'TWP', avg: '.290', hr: 18, rbi: 62, con: 88, pow: 85, spd: 82, obp: 0.365, slg: 0.490 }
                 ]
             },
             'RAK': {
@@ -2481,12 +2484,15 @@
         TEAMS.find(t => t.abbr === '樂天').roster.batters.push({ name: '陽柏翔', bats: 'R', throws: 'R', pos: 'IF', avg: '.275', hr: 8, rbi: 40, con: 70, pow: 60, spd: 68, obp: 0.345, slg: 0.385, est: 1 });
         // 特殊打者：阪神專屬的廖輝明（右打，平均 B 級；對上 MLB 球隊時打擊能力大幅提升）。開賽時依對手聯盟套用
         TEAMS.find(t => t.abbr === '阪神').roster.batters.push({ name: '廖輝明', bats: 'R', throws: 'R', pos: 'DH', avg: '.285', hr: 20, rbi: 70, con: 74, pow: 72, spd: 70, arm: 74, def: 72, obp: 0.385, slg: 0.470 });
+        TEAMS.find(t => t.abbr === '兄弟').roster.batters.push({ name: '廖輝明', bats: 'R', throws: 'R', pos: 'DH', avg: '.285', hr: 20, rbi: 70, con: 74, pow: 72, spd: 70, arm: 74, def: 72, obp: 0.385, slg: 0.470, est: 1 });
         function applyLiaoBoost() {
-            const hit = TEAMS.find(t => t.abbr === '阪神'), b = hit.roster.batters.find(x => x.name === '廖輝明'); if (!b) return;
+            ['阪神', '兄弟'].forEach(ab => {
+            const hit = TEAMS.find(t => t.abbr === ab), b = hit.roster.batters.find(x => x.name === '廖輝明'); if (!b) return;
             const opp = TEAMS[G.awayIdx] === hit ? TEAMS[G.homeIdx] : TEAMS[G.homeIdx] === hit ? TEAMS[G.awayIdx] : null;
             const mlb = !!opp && opp.lg === 'MLB';
             Object.assign(b, mlb ? { con: 90, pow: 90, spd: 76, avg: '.335', hr: 38, rbi: 105, obp: 0.440, slg: 0.640 } : { con: 74, pow: 72, spd: 70, avg: '.285', hr: 20, rbi: 70, obp: 0.385, slg: 0.470 });
             delete b._r;
+            });
         }
 
         const SCR = { TITLE: 0, SELECT: 1, LINEUP: 4, GAME: 2, OVER: 3, HALF_END: 5, HISTORY: 6 };
@@ -6221,19 +6227,21 @@
             ctx.shadowColor = '#FF0000'; ctx.shadowBlur = 20; txt('GAME OVER', W / 2, 38, 34, '#FF4444'); ctx.shadowBlur = 0;
             const aw = TEAMS[G.awayIdx], hw = TEAMS[G.homeIdx];
             txt(`${aw.abbr} ${G.score[0]} - ${G.score[1]} ${hw.abbr}`, W / 2, 84, 36, '#FFD700');
+            const hitsOf = si => G.batStats[si].reduce((t, b) => t + b.h, 0), hA = hitsOf(0), hB = hitsOf(1);
+            txt(`安打　${aw.abbr} ${hA}　-　${hB} ${hw.abbr}`, W / 2, 108, 17, '#9fd4ff');
             if (portraitGame) txt('⏱ 比賽時間 ' + clockText(), W / 2, H - 64, 15, 'rgba(255,255,255,0.75)'); else txt('⏱ 比賽時間 ' + clockText(), W - 20, 30, 15, 'rgba(255,255,255,0.75)', 'right');
             const diff = G.score[1] - G.score[0];
             let msg = ''; let col = '';
             if (diff > 0) { msg = '恭喜獲勝！ YOU WIN!'; col = '#44FF88'; }
             else if (diff < 0) { msg = '挑戰失敗 YOU LOSE'; col = '#FF4444'; }
             else { msg = '平局 DRAW'; col = '#AAAAAA'; }
-            txt(msg, W / 2, 116, 22, col);
+            txt(msg, W / 2, 134, 22, col);
 
             // Box score table
             const innings = Math.max(G.innScores[0].length, G.innScores[1].length, G.maxInn || 9);
             const colW = Math.min(36, Math.floor((W - 210) / Math.max(innings, 9)));
             const tX = W / 2 - (colW * innings + 198) / 2;
-            const tY = 128;
+            const tY = 148;
             const rowH = 28;
 
             // Header row
@@ -6278,7 +6286,7 @@
                 ctx.fillStyle = '#FFFFFF';
                 ctx.fillText(G.score[si], tX + 90 + innings * colW + 18, rowY + 2);
                 ctx.font = '15px Arial'; ctx.fillStyle = '#cfe0ff';
-                ctx.fillText(G.batStats[si].reduce((a, b) => a + b.h, 0), tX + 90 + innings * colW + 54, rowY + 2);
+                ctx.fillStyle = '#9fd4ff'; ctx.font = 'bold 15px Arial'; ctx.fillText(hitsOf(si), tX + 90 + innings * colW + 54, rowY + 2); ctx.font = '15px Arial'; ctx.fillStyle = '#cfe0ff';
                 ctx.fillText((G.errs || [0, 0])[si], tX + 90 + innings * colW + 90, rowY + 2);
             });
 
