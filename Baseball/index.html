@@ -3083,15 +3083,26 @@
 
         // ── starting-lineup defensive positions ──
         const POS_ORDER = ['C', '1B', '2B', '3B', 'SS', 'LF', 'CF', 'RF', 'DH'];
-        const POS_NAME = { IF: '內野', OF: '外野', TWP: '二刀',  C: '捕手', '1B': '一壘', '2B': '二壘', '3B': '三壘', SS: '游擊', LF: '左外', CF: '中外', RF: '右外', DH: '指定' };
+        const POS_NAME = { IF: '內野', OF: '外野', TWP: '二刀',  C: '捕手', '1B': '一壘', '2B': '二壘', '3B': '三壘', SS: '游擊', LF: '左外野', CF: '中外野', RF: '右外野', DH: '指定打擊', P: '投手' };
         const POS_FLEX = { IF: ['2B', 'SS', '3B', '1B'], OF: ['LF', 'CF', 'RF'], TWP: ['DH'], DH: ['DH'] };
         function defaultPositions(roster, lineup) {
-            const out = Array(lineup.length).fill(null), taken = {};
-            lineup.forEach((bi, k) => { const ps = roster[bi].lpos || roster[bi].pos; if (POS_NAME[ps] && !taken[ps]) { out[k] = ps; taken[ps] = true; } });
-            lineup.forEach((bi, k) => { if (out[k]) return; const pool = POS_FLEX[roster[bi].pos] || []; const f = pool.find(x => !taken[x]); if (f) { out[k] = f; taken[f] = true; } });
-            lineup.forEach((bi, k) => { if (out[k]) return; const f = POS_ORDER.find(x => !taken[x]); out[k] = f; taken[f] = true; });
+            const out = Array(lineup.length).fill(null), taken = {}, SPEC = new Set(POS_ORDER);
+            // 1) the position the player is listed at (generic IF / OF / TWP tags are not real slots)
+            lineup.forEach((bi, k) => { const ps = roster[bi].lpos || roster[bi].pos; if (SPEC.has(ps) && !taken[ps]) { out[k] = ps; taken[ps] = true; } });
+            // 2) the same family: outfielders to the other outfield spots, infielders to the other infield spots, TWP to DH
+            const fam = pl => pl.pos === 'TWP' ? ['DH'] : POS_FLEX[pl.pos] || (['LF', 'CF', 'RF'].includes(pl.pos) ? ['LF', 'RF', 'CF'] : ['SS', '2B', '3B', '1B'].includes(pl.pos) ? ['SS', '2B', '3B', '1B'] : []);
+            lineup.forEach((bi, k) => { if (out[k]) return; const f = fam(roster[bi]).find(x => !taken[x]); if (f) { out[k] = f; taken[f] = true; } });
+            // 3) whatever is left: catcher only for a real catcher, DH last, then any free spot
+            lineup.forEach((bi, k) => { if (out[k]) return; const order = roster[bi].pos === 'C' ? ['C', ...POS_ORDER] : ['1B', '2B', '3B', 'SS', 'LF', 'CF', 'RF', 'DH', 'C']; const f = order.find(x => !taken[x]); out[k] = f; taken[f] = true; });
             return out;
         }
+        // every default nine needs a real catcher: if the first nine of a roster has none, swap its best bench catcher in for whoever would have been stuck behind the plate
+        TEAMS.forEach(t => {
+            const B = t.roster.batters, lu = [0, 1, 2, 3, 4, 5, 6, 7, 8]; if (B.length < 10 || lu.some(i => B[i].pos === 'C')) return;
+            let bc = -1; for (let i = 9; i < B.length; i++) if (B[i].pos === 'C' && (bc < 0 || B[i].con + B[i].pow > B[bc].con + B[bc].pow)) bc = i; if (bc < 0) return;
+            const k = defaultPositions(B, lu).indexOf('C'); if (k < 0) return;
+            [B[k], B[bc]] = [B[bc], B[k]];
+        });
         function ensureLineupPos() {
             if (G.lineupPos) return;
             G.lineupPos = [0, 1].map(sd => defaultPositions(TEAMS[sd === 0 ? G.awayIdx : G.homeIdx].roster.batters, G.lineups[sd]));
@@ -3232,7 +3243,7 @@
                 const b = team.roster.batters[G.lineups[sd][r.i]], ps = G.lineupPos[sd][r.i], ok = dfNatural(sd, r.i), sel = G.dfSel === r.i;
                 if (sel) { ctx.fillStyle = 'rgba(255,215,0,0.18)'; ctx.fillRect(r.row.x, r.row.y, r.row.w, r.row.h); }
                 ctx.fillStyle = sel ? '#FFD700' : ok ? '#1c4f6e' : '#8a2a2a'; drawRoundRect(ctx, r.chip.x, r.chip.y, r.chip.w, r.chip.h, 6); ctx.fill();
-                ctx.font = 'bold 14px "PingFang TC", "Microsoft JhengHei", Arial'; ctx.textAlign = 'center'; ctx.fillStyle = sel ? '#222' : '#FFF'; ctx.fillText(POS_NAME[ps] || ps, r.chip.x + r.chip.w / 2, r.chip.y + 19);
+                ctx.font = `bold ${(POS_NAME[ps] || ps).length >= 4 ? 11 : 14}px "PingFang TC", "Microsoft JhengHei", Arial`; ctx.textAlign = 'center'; ctx.fillStyle = sel ? '#222' : '#FFF'; ctx.fillText(POS_NAME[ps] || ps, r.chip.x + r.chip.w / 2, r.chip.y + 19);
                 ctx.font = 'bold 17px "PingFang TC", "Microsoft JhengHei", Arial'; ctx.textAlign = 'left'; ctx.fillStyle = '#FFF'; ctx.fillText(`${r.i + 1}. ${b.name}`, r.chip.x + 70, r.chip.y + 20);
                 ctx.font = '12px "PingFang TC", Arial'; ctx.textAlign = 'right'; ctx.fillStyle = ok ? '#AAAAAA' : '#ff9a9a'; ctx.fillText((ok ? '可守 ' : '不熟 ⚠ 可守 ') + [...canPlay(b)].filter(x => POS_NAME[x] && x !== 'IF' && x !== 'OF' && x !== 'TWP' && x !== 'DH').slice(0, 3).map(x => POS_NAME[x]).join('/'), r.btn.x - 8, r.chip.y + 19);
                 ctx.fillStyle = '#2a5a2a'; drawRoundRect(ctx, r.btn.x, r.btn.y, r.btn.w, r.btn.h, 6); ctx.fill(); ctx.font = 'bold 15px Arial'; ctx.textAlign = 'center'; ctx.fillStyle = '#9dff9d'; ctx.fillText('⇄', r.btn.x + 17, r.btn.y + 19);
@@ -5308,7 +5319,7 @@
                     ctx.font = 'bold 16px Arial'; ctx.textAlign = 'left'; ctx.fillStyle = '#88AAFF'; ctx.fillText(`${i + 1}.`, x + 14, y);
                     const pos = (G.lineupPos && G.lineupPos[sd][i]) || '';
                     ctx.fillStyle = sel === 'pos' ? '#FFD700' : '#1c4f6e'; drawRoundRect(ctx, x + 38, y - 20, 50, Math.min(26, g.rp - 3), 6); ctx.fill();
-                    ctx.font = 'bold 14px "PingFang TC", "Microsoft JhengHei", Arial'; ctx.textAlign = 'center'; ctx.fillStyle = sel === 'pos' ? '#222' : '#BFE9FF'; ctx.fillText(POS_NAME[pos] || pos, x + 63, y - 2);
+                    ctx.font = `bold ${(POS_NAME[pos] || pos).length >= 4 ? 11 : 14}px "PingFang TC", "Microsoft JhengHei", Arial`; ctx.textAlign = 'center'; ctx.fillStyle = sel === 'pos' ? '#222' : '#BFE9FF'; ctx.fillText(POS_NAME[pos] || pos, x + 63, y - 2);
                     ctx.font = 'bold 17px "PingFang TC", "Microsoft JhengHei", Arial'; ctx.textAlign = 'left'; ctx.fillStyle = '#FFF'; ctx.fillText(b.name, x + 96, y);
                     ctx.font = '13px Arial'; ctx.textAlign = 'right'; ctx.fillStyle = '#AAAAAA'; ctx.fillText(`${b.avg}`, x + bw - 42, y);
                     if (canEdit) { ctx.fillStyle = '#2a5a2a'; drawRoundRect(ctx, x + bw - 36, y - 20, 28, Math.min(26, g.rp - 3), 6); ctx.fill(); ctx.font = 'bold 15px Arial'; ctx.textAlign = 'center'; ctx.fillStyle = '#9dff9d'; ctx.fillText('⇄', x + bw - 22, y - 1); }
@@ -5316,7 +5327,7 @@
                 const pLineY = g.pY;
                 ctx.strokeStyle = 'rgba(255,255,255,0.2)'; ctx.beginPath(); ctx.moveTo(x + 20, pLineY - (portraitGame ? 22 : 30)); ctx.lineTo(x + bw - 20, pLineY - (portraitGame ? 22 : 30)); ctx.stroke();
                 const p = team.roster.pitchers[pitcherIdx];
-                ctx.font = 'bold 16px Arial'; ctx.textAlign = 'left'; ctx.fillStyle = '#FF88AA'; ctx.fillText('P.', x + 30, pLineY);
+                ctx.font = 'bold 14px "PingFang TC", "Microsoft JhengHei", Arial'; ctx.textAlign = 'left'; ctx.fillStyle = '#FF88AA'; ctx.fillText('投手', x + 26, pLineY);
                 ctx.font = 'bold 18px "PingFang TC", "Microsoft JhengHei", Arial'; ctx.fillStyle = '#FFF'; ctx.fillText(p.name, x + 60, pLineY);
                 ctx.font = '13px Arial'; ctx.textAlign = 'right'; ctx.fillStyle = '#AAAAAA'; ctx.fillText(`${handText(p, false)} ERA ${p.era}`, x + bw - 42, pLineY);
                 if (!MP.active) { ctx.fillStyle = '#2a5a2a'; drawRoundRect(ctx, x + bw - 36, pLineY - 20, 28, 26, 6); ctx.fill(); ctx.font = 'bold 15px Arial'; ctx.textAlign = 'center'; ctx.fillStyle = '#9dff9d'; ctx.fillText('⇄', x + bw - 22, pLineY - 1); }
@@ -6209,7 +6220,7 @@
                 const pitIdx = G.pitchers[sideIdx];
                 const p = team.roster.pitchers[pitIdx];
                 ctx.strokeStyle = 'rgba(255,255,255,0.2)'; ctx.beginPath(); ctx.moveTo(panelX + padX, curY - 10); ctx.lineTo(panelX + colW - padX, curY - 10); ctx.stroke();
-                ctx.font = '14px Arial'; ctx.textAlign = 'left'; ctx.fillStyle = '#ff88aa'; ctx.fillText('P.', panelX + padX, curY + 10);
+                ctx.font = '14px "PingFang TC", "Microsoft JhengHei", Arial'; ctx.textAlign = 'left'; ctx.fillStyle = '#ff88aa'; ctx.fillText('投手', panelX + padX, curY + 10);
                 ctx.font = 'bold 15px "PingFang TC", "Microsoft JhengHei", Arial'; ctx.fillStyle = '#fff'; ctx.fillText(p.name, panelX + padX + 26, curY + 10);
                 const pc = G.pitchCounts[sideIdx];
                 ctx.font = '13px Arial'; ctx.textAlign = 'right'; ctx.fillStyle = '#aaa'; ctx.fillText(`用球數 ${pc}`, panelX + colW - padX, curY + 10);
