@@ -605,7 +605,7 @@
                     { name: '王順和', lpos: 'RF', bats: 'R', throws: 'R', pos: 'CF', avg: '.264', hr: 4, rbi: 26, con: 66, pow: 61, spd: 86, obp: 0.346, slg: 0.366, num: 24 },
                     { name: '吉力吉撈', bats: 'R', throws: 'R', pos: '1B', avg: '.208', hr: 3, rbi: 20, con: 46, pow: 55, spd: 47, obp: 0.302, slg: 0.278, num: 4 },
                     { name: '林辰勳', bats: 'R', throws: 'R', pos: 'C', avg: '.268', hr: 0, rbi: 15, con: 67, pow: 48, spd: 48, obp: 0.332, slg: 0.305, num: 9 },
-                    { name: '曾聖安', bats: 'L', throws: 'R', pos: 'CF', avg: '.167', hr: 1, rbi: 12, con: 45, pow: 48, spd: 51, obp: 0.271, slg: 0.206, num: 50 },
+                    { name: '曾聖安', bats: 'L', throws: 'R', pos: 'CF', avg: '.167', hr: 2, rbi: 14, con: 55, pow: 82, spd: 51, obp: 0.271, slg: 0.280, num: 50 },
                     { name: '張祐嘉', bats: 'L', throws: 'L', pos: 'RF', avg: '.228', hr: 0, rbi: 4, con: 53, pow: 45, spd: 50, obp: 0.271, slg: 0.253, num: 81 }
                 ]
             },
@@ -698,7 +698,7 @@
                     { name: '董子恩', lpos: '3B', bats: 'R', throws: 'R', pos: '3B', avg: '.279', hr: 1, rbi: 26, con: 71, pow: 54, spd: 48, obp: 0.325, slg: 0.344, num: 78 },
                     { name: '林子豪', lpos: '1B', bats: 'L', throws: 'R', pos: '3B', avg: '.269', hr: 4, rbi: 38, con: 68, pow: 59, spd: 56, obp: 0.335, slg: 0.359, num: 2 },
                     { name: '王念好', lpos: '3B', bats: 'R', throws: 'R', pos: '3B', avg: '.211', hr: 6, rbi: 26, con: 47, pow: 67, spd: 55, obp: 0.300, slg: 0.338, num: 5 },
-                    { name: '曾聖安', bats: 'L', throws: 'R', pos: 'CF', avg: '.167', hr: 1, rbi: 12, con: 45, pow: 48, spd: 51, obp: 0.271, slg: 0.206, num: 50 },
+                    { name: '曾聖安', bats: 'L', throws: 'R', pos: 'CF', avg: '.167', hr: 2, rbi: 14, con: 55, pow: 82, spd: 51, obp: 0.271, slg: 0.280, num: 50 },
                     { name: '林泓弦', lpos: '2B', bats: 'L', throws: 'R', pos: 'SS', avg: '.230', hr: 0, rbi: 10, con: 54, pow: 50, spd: 54, obp: 0.278, slg: 0.277, num: 67 },
                     { name: '張翔', bats: 'R', throws: 'R', pos: 'C', avg: '.260', hr: 6, rbi: 36, con: 66, pow: 62, spd: 58, obp: 0.325, slg: 0.395, est: 1 },
                     { name: '林吳晉瑋', bats: 'R', throws: 'R', pos: 'C', avg: '.260', hr: 6, rbi: 36, con: 66, pow: 62, spd: 58, obp: 0.325, slg: 0.395, est: 1 },
@@ -4062,7 +4062,7 @@
                     const desc = `${b.ab}打${b.h}安` + (b.hr ? ` ${b.hr}轟` : '') + (b.rbi ? ` ${b.rbi}打點` : '');
                     if (!best || sc > best.sc) best = { sc, name: nm, desc };
                 });
-                [[winO, 6], [sm.svO, 5]].forEach(([o, bonus]) => { if (!o) return; const sc = o.outs * 0.8 - o.runs * 2.5 + bonus; if (!best || sc > best.sc) best = { sc, name: pitNameAt(W, o.idx), desc: `${ipStr(o)} 失${o.runs}分` + (o === winO ? ' 勝投' : ' 救援成功') }; });
+                [[winO, 6], [sm.svO, 5]].forEach(([o, bonus0]) => { if (!o) return; const bonus = bonus0 * Math.min(1, (G.maxInn || 9) / 9); /* a short game (3 / 5 innings) shrinks the pitcher's win / save bonus */ const sc = o.outs * 0.8 - o.runs * 2.5 + bonus; if (!best || sc > best.sc) best = { sc, name: pitNameAt(W, o.idx), desc: `${ipStr(o)} 失${o.runs}分` + (o === winO ? ' 勝投' : ' 救援成功') }; });
                 if (best) sm.mvp = { name: best.name, desc: best.desc, team: teamOfSide(W).abbr };
             }
             T.sum = sm; return sm;
@@ -6274,10 +6274,11 @@
                 ctx.lineWidth = 1; ctx.strokeRect(tX, tY + hdrH + si * rowH, tW, rowH);
 
                 // Team name
-                const abbrSz = team.abbr.length <= 2 ? 15 : 11;
+                const abbrSz = team.abbr.length <= 2 ? 15 : 13;
                 ctx.font = `bold ${abbrSz}px "PingFang TC","Microsoft JhengHei",Arial`;
-                ctx.textAlign = 'center'; ctx.fillStyle = team.c1;
-                ctx.fillText(team.abbr, tX + 45, rowY + 2);
+                const lum = c => { const h = c.replace('#', ''), f = h.length === 3 ? h.replace(/./g, '$&$&') : h; return (0.299 * parseInt(f.slice(0, 2), 16) + 0.587 * parseInt(f.slice(2, 4), 16) + 0.114 * parseInt(f.slice(4, 6), 16)) / 255; };
+                ctx.textAlign = 'center'; ctx.fillStyle = [team.c1, team.c2].find(c => lum(c) > 0.4) || '#FFFFFF';       // team colour only when it is readable on the dark table, else white
+                ctx.fillText(team.abbr, tX + 45, rowY + 2, 84);
 
                 // Per-inning scores
                 ctx.font = '13px Arial'; ctx.textAlign = 'center';
